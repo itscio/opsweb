@@ -1,0 +1,31 @@
+.datalist{
+    border:1px solid #0058a3;   /* 表格边框 */
+    font-family:Arial;
+    border-collapse:collapse;   /* 边框重叠 */
+    background-color:#c7e5ff;   /* 表格背景色 */
+    font-size:14px;
+}
+.datalist th{
+    border:2px solid #0058a3;   /* 行名称边框 */
+    background-color:#4bacff;   /* 行名称背景色 */
+    color:#FFFFFF;              /* 行名称颜色 */
+    font-weight:bold;
+    padding-top:5px; padding-bottom:5px;
+    padding-left:5px; padding-right:5px;
+    text-align:center;
+}
+.datalist td.tdcenter{
+    border:1px solid #0058a3;   /* 单元格边框 */
+    text-align:center;
+    padding-top:5px; padding-bottom:5px;
+    padding-left:5px; padding-right:5px;
+}
+.datalist td.tdleft{
+    border:1px solid #0058a3;   /* 单元格边框 */
+    text-align:left;
+    padding-top:5px; padding-bottom:5px;
+    padding-left:5px; padding-right:5px;
+}
+.datalist tr.altrow{
+    background-color:#eaf5ff;   /* 隔行变色 */
+}
