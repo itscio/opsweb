@@ -1,0 +1,12 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>查询及清除REDIS缓存</p></div>
+<div align="center" style="margin-top: 8%">
+    <form action="/clear_redis" method="post">
+        {{ form.csrf_token }}
+        <p>选择端口:{{ form.select_port }}&nbsp选择操作:{{ form.select_action }}&nbsp输入KEY(不能含*):</p>
+        <p class="font1">说明:6380及68xx的端口号为代理模式,69xx的端口号为集群模式,集群模式下只需对主redis进行操作即可.</p>
+        <p>{{ form.text(cols = 80, rows = 12) }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </form>
+</div>

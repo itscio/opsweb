@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <div class=".header">
+        <title>百合网运维平台</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/font-awesome.min.css" />
+        <script src="/static/js/jquery.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+        <script src="/static/js/iframepage.js"></script>
+        <script src="/static/js/menu.js"></script>
+        <script type="text/javascript">
+            var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+        </script>
+        <script src="/static/js/highcharts.js"></script>
+        <script src="ck/static/chartkick.js"></script>
+        {{ moment.include_moment() }}
+        {{ moment.lang("zh-CN") }}
+    </div>
+</head>
+<body>
+{% block error %} {% endblock error %}
+{% block login %} {% endblock login %}
+{% block index %} {% endblock index %}
+{% block password %} {% endblock password %}
+{% block chart %} {% endblock chart %}
+</body>
+</html>

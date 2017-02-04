@@ -1,0 +1,15 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+<p class="div">定时计划任务(开发中......)</p>
+<div align="center" style="margin-top: 8%">
+    <form action="/Scheduler" method="post">
+        {{ form.csrf_token }}
+        <p>定时计划:{{ form.cron(cols = 20, rows = 1) }}&nbsp;主机:{{ form.host(cols = 20, rows = 1) }}&nbsp;用户{{ form.user }}</p>
+        <p>完整远程命令:{{ form.job(cols = 80, rows = 1) }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </form>
+</div>
+<div align="center" style="margin-top: 10%">
+    <p>计划任务执行情况:</p>
+</div>

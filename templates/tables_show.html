@@ -1,0 +1,42 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+<div align="total_div">
+    <div align="left_div">
+        <table class="datalist" border="1">
+                <tr>
+                    {% for t in tables %}
+                        <td>{{ t }}</td>
+                    {% endfor %}
+                </tr>
+                {% for value in values %}
+                    {% for va in value %}
+                        <tr class="altrow">
+                        {% for v in va %}
+                            <td>{{v}}</td>
+                        {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+        </table>
+    </div>
+    <div align="right_div">
+        <div class="font3">
+            <p>
+                {% for i in range(40) %}
+                    --
+                {% endfor %}
+            </p>
+            {% for indexs in INDEXS %}
+                    {% for index in indexs %}
+                        <p>{{ index|join(" ") }}</p>
+                    {% endfor %}
+                <p>
+                    {% for i in range(40) %}
+                        --
+                    {% endfor %}
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block login %}
+    <script type="text/javascript">
+    function getImgCode()
+        {
+        var getimagecode = document.getElementById("getCode");
+        getimagecode.src="/verifycode?sid="+Math.radom();
+        }
+    </script>
+    <img src="/static/images/logo.jpg">
+    <div class="content" style="margin-top: 14%;" >
+        <form action="/login" method="post" class="login-form">
+            {{ form.csrf_token }}
+            <p style="margin-left:25%;">用户:{{ form.name(size=15,autocomplete="on",style="width:150px") }}</p>
+            <p style="margin-left:25%;">密码:{{ form.password(size=15,style="width:150px") }}</p>
+            {% if verify_incr >= 5 %}
+                <a href=""><img id="getCode" style="margin-left: 40%" onclick="getImgCode()" src="/verifycode"/></a>
+                <p style="margin-left:22%;">验证码:{{ form.code(style="width:150px") }}</p>
+            {% endif %}
+            <p align="center">{{ form.remember_me }}免密码登录</p>
+            <p align="center">{{ form.submit(class="Button")}}</p>
+        </form>
+        <br>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <p style="font-size:10pt;color:red;text-align: center">{{ messages[-1] }}</p>
+            {% endif %}
+        {% endwith %}
+    </div>
+    <div class="footer" style="margin-top: 18%">
+        <p>北京百合在线科技有限公司|版权所有© 2005-2017 百合网|运维邮箱:alarm@baihe.com</p>
+    </div>
+{% endblock login %}

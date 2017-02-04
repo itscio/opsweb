@@ -1,0 +1,23 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+<div class="center">
+<div align="center" >
+ <table class="datalist" border="1">
+    <tr>
+        {% for t in tables %}
+            <td class="tdcenter">{{ t }}</td>
+        {% endfor %}
+    </tr>
+  {% for value in values %}
+        {% for val in value %}
+        <tr class="altrow">
+            {% for va in val %}
+                <td>{{ va }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    {% endfor %}
+ </table>
+</div>
+</div>

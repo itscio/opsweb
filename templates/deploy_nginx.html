@@ -1,0 +1,26 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/btn.js"></script>
+<div class="div"><p>NGINX虚拟主机部署</p></div>
+<div align="center" style="margin-top: 4%">
+    <form action="/deploy_nginx" method="post">
+        {{ form.csrf_token }}
+        <br>
+        <p>{{ form.haproxy }}{{ form.haproxy.label }}  {{ form.haproxy_intranet }}{{ form.haproxy_intranet.label }}</p>
+        <p><font color="red" size="1">(根据项目部署情况选择HAPROXY)</font></p>
+        <p>项目域名:{{ form.input_domain }}</p>
+        <p><font color="red" size="1">(项目对应多个域名需以,分割)</font></p>
+        <p>项目路径:{{ form.input_root }}</p>
+        <p><font color="red" size="1">(项目路径是指nginx虚拟主机的root配置项)</font></p>
+        <p>{{ form.select }}&nbsp;&nbsp;请输入服务器IP:</p>
+        <p>{{ form.ip(cols = 33, rows = 10)}}</p>
+        <a onclick="btn()">{{form.submit(class="Button")}}</a>
+    </form>
+</div>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+            {% for message in messages %}
+                <p align="center" style="font-size:10pt;color:red">{{ message }}</p>
+            {% endfor %}
+    {% endif %}
+{% endwith %}

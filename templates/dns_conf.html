@@ -1,0 +1,23 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/btn.js"></script>
+<div class="div"><p>线上内部DNS操作</p></div>
+<div style="margin-top: 8%;margin-left: 42%">
+    <form action="/dns_conf" method="post">
+        {{ form.csrf_token }}
+        <p>{{ form.select_sys }}&nbsp;顶级域名:{{ form.select_domain}}</p>
+        <p>二级域名:{{ form.field(style="width:170px") }} </p>
+        <p>类型:{{ form.select_type }}&nbsp&nbsp;操作:{{ form.select_action }}</p>
+        <p>IP地址/主机名:{{ form.ip(style="width:130px") }}</p>
+        <a onclick="btn()" style="margin-left: 10%">{{ form.submit(class="Button") }}</a>
+    </form>
+</div>
+<div>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+            {% for message in messages %}
+                <p align="center" style="font-size:10pt;color:red">{{ message }}</p>
+            {% endfor %}
+    {% endif %}
+{% endwith %}
+</div>

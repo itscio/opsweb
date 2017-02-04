@@ -1,0 +1,34 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/btn.js"></script>
+<div class="div"><p>标准化JBOSS环境部署</p></div>
+<br>
+<div align="center" style="margin-top: 4%">
+    <form action="/deploy_jboss" method="post">
+        {{ form.csrf_token }}
+        <p>{{ form.haproxy }}{{ form.haproxy.label }}  {{ form.haproxy_intranet }}{{ form.haproxy_intranet.label }}</p>
+        <p><font color="red" size="1">(根据项目部署情况选择HAPROXY)</font></p>
+        <p>项目域名:{{ form.input_domain }}</p>
+        <p><font color="red" size="1">(项目对应多个域名需以,分割)</font></p>
+        <hr width="25%" color=#987cb9 SIZE=1>
+        {% if g.grade == 0 %}
+            <p>线上JBOSS环境部署:</p>
+            <p>请输入War包名:{{form.input_produce}}</p>
+            <p>选择要部署的服务器:{{ form.select_produce }}</p>
+            <a onclick="btn()">{{form.submit_produce(class="Button")}}</a>
+            <hr width="25%" color=#987cb9 SIZE=1>
+        {% endif %}
+        <p>测外JBOSS环境部署:</p>
+        <p>请输入War包名:{{form.input_test}} </p>
+        <p>选择要部署的服务器:{{ form.select_test}}</p>
+        <a onclick="btn()">{{form.submit_test(class="Button")}}</a>
+    </form>
+</div>
+<br>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <p align="center" style="font-size:10pt;color:red">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+{% endwith %}

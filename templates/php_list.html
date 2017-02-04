@@ -1,0 +1,21 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>PHP配置列表修改</p></div>
+<br>
+<div align="center" style="margin-top: 8%">
+    <form action="/php_list" method="post">
+        {{ form.csrf_token }}
+        <p>{{ form.select }} 请选择项目名称:{{ form.Project}}  {{ form.submit_query(class="Button") }}</p>
+        <p>请复制整行查询结果,粘贴到下面文本框并进行相应修改:</p>
+        <p class="font1">说明:新项目按照此格式输入:xxx = ['ip','ip','ip'],xxx为项目名称,ip为服务器完整ip地址,删除项目按照此格式输入:xxx = [],xxx为项目名称.</p>
+        <p>{{ form.text(cols = 120, rows = 4) }}</p>
+        <p>{{ form.submit_modify(class="Button") }}</p>
+    </form>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+            {% for message in messages %}
+                <p style="font-size:10pt;color:red">{{ message }}</p>
+            {% endfor %}
+    {% endif %}
+{% endwith %}
+</div>

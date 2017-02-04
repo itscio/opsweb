@@ -1,0 +1,34 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/jquery.min.js"></script>
+<script type="text/javascript">
+function countDown(secs,url){
+ var jumpTo = document.getElementById('jumpTo');
+ jumpTo.innerHTML=secs;
+ if(--secs>0){
+     setTimeout("countDown("+secs+",'"+url+"')",1000);
+     }
+ else{
+     location.href=url;
+     }
+ }
+</script>
+
+<body>
+<br><br>
+<div style="padding-left:4%;padding-top: 4%;padding-right:4%;text-align: left;font-size:10pt;color:red">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+    {% endif %}
+    {% endwith %}
+    <span id="jumpTo">30</span>秒后页面自动跳转到首页......
+    <script type="text/javascript">
+     var jumpTo = document.getElementById('jumpTo');
+     secs = jumpTo.innerHTML;
+    countDown(secs,'/chart');
+    </script>
+</div>
+</body>

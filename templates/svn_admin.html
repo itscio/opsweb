@@ -1,0 +1,21 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>SVN账号管理</p></div>
+<form action="/svn_admin" method="post">
+<div style="margin-top: 8%">
+    {{ form.csrf_token }}
+    <div class="left2_div">
+            <div align="center">
+                <p>选择操作:{{ form.select_action }}(支持批量操作)</p>
+                <p>{{ form.text(cols = 80, rows = 12) }}</p>
+                <p>{{ form.submit(class="Button") }}</p>
+            </div>
+    </div>
+    <div class="right_div1">
+        <div align="center">
+            <p>用户组（<font color="red" size="1">开通账号需选择用户组</font>）</p>
+            <p>{{ form.select_groups(size = 11) }}</p>
+        </div>
+    </div>
+</div>
+</form>

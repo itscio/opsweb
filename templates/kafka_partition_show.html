@@ -1,0 +1,18 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>{{ topic_info }}主题信息</p></div>
+<div class="left_txt">
+    <p>{{ topic_info }}主题有<font color="red">{{ partition_info|length }}</font>个分区,详细信息如下:</p>
+    <ul>
+        {% for i in  range(partition_info|length) %}
+            {% set info = partition_info[i|string] %}
+            <li>
+                分区:{{ info[1] }}
+                &nbsp;&nbsp;主节点:<font color="red" >{{ info[2] }}</font>
+                &nbsp;&nbsp;节点集群:{{ info[3] }}
+                &nbsp;&nbsp;可用节点:{{ info[4] }}
+            </li>
+            <br>
+        {% endfor %}
+    </ul>
+</div>

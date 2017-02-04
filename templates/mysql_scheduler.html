@@ -1,0 +1,32 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+<p class="div">SQL语句定时执行</p>
+<div align="center" style="margin-top: 8%">
+    <form action="/sql_scheduler" method="post">
+        {{ form.csrf_token }}
+        <p>输入数据库名:{{ form.db_name(cols = 20, rows = 1) }}</p>
+        <p>请输入完整sql语句,每句以分号结尾:<font color="red" size="1" >(仅限于update,delete,alter语句,每天凌晨2点执行）</font></p>
+        <p>{{ form.sql_text(cols = 120, rows = 15) }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </form>
+</div>
+<div align="center" style="margin-top: 10%">
+    <p>最近20条SQL语句计划执行情况:</p>
+    <table class="datalist" border="1">
+        <tr>
+            {% for t in tables %}
+                <td>{{ t }}</td>
+            {% endfor %}
+        </tr>
+        {% if val_scheduler %}
+            {% for value in val_scheduler %}
+                <tr class="altrow">
+                    {% for v in value %}
+                        <td>{{ v }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        {% endif %}
+    </table>
+</div>

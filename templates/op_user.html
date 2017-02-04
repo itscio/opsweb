@@ -1,0 +1,12 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>OP系统账号管理</p></div>
+<br>
+<div align="center" style="margin-top: 8%">
+    <form action="/op_user" method="post">
+        {{ form.csrf_token }}
+        <p> 请选择操作:{{ form.select }}(支持批量操作)</p>
+        <p>{{ form.text(cols = 80, rows = 12) }}</p>
+        <p>{{ form.submit(class="Button")}}</p>
+    </form>
+</div>

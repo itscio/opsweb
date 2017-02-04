@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block chart %}
+<script language="JavaScript">
+function myrefresh()
+{
+   window.location.reload();
+}
+setTimeout('myrefresh()',600000); //指定60秒刷新一次
+</script>
+<div class="div"><p>线上业务项目流量(外部)</p></div>
+<br>
+<form action="/chart_center_traffic" method="post">
+    <div align="center">
+        {{ form.csrf_token }}
+        <p>请选择域名:{{ form.select_internet }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </div>
+</form>
+<div class="total_div">
+    <div class="left1_div">
+        {% if Traffic_cli_DATA %}
+            <strong>{{ Traffic_cli_DATA[0]['name'] }}请求流量(Mbps)</strong>
+            {% line_chart Traffic_cli_DATA %}
+        {% endif %}
+            <br>
+        {% if Traffic_ser_DATA %}
+            <strong>{{ Traffic_ser_DATA[0]['name'] }}响应流量(Mbps)</strong>
+            {% line_chart Traffic_ser_DATA %}
+        {% endif %}
+    </div>
+</div>
+    <br>
+<div style="text-align:center;margin-top: 2%;color: red">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+{% endblock chart %}

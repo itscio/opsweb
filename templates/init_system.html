@@ -1,0 +1,19 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/btn.js"></script>
+<div class="div"><p>服务器系统初始化</p></div>
+<div align="center" style="margin-top: 8%">
+    <form action="/init" method="post">
+        {{ form.csrf_token }}
+        <p>请输入服务器IP地址:</p>
+        <p>{{ form.text(cols = 80, rows = 10) }}</p>
+        <a onclick="btn()">{{ form.submit(class="Button") }}</a>
+    </form>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+            {% for message in messages %}
+                <p align="left" style="font-size:10pt;color:dodgerblue">{{ message }}</p>
+            {% endfor %}
+    {% endif %}
+{% endwith %}
+</div>

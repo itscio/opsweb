@@ -1,0 +1,18 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/jquery.min.js"></script>
+<script type="text/javascript">
+    var id = setInterval("startRequest()",200);
+    function startRequest(){
+        $.get("/publish_query",function(data){
+        if (data != "End"){$("#BUT").before("<p>"+data+"</p>");}
+        else {$("#BUT").before("<p>本次操作执行完毕!</p>");clearInterval(id);}
+        window.scrollTo(0,document.body.scrollHeight);});
+    }
+</script>
+<body>
+<div>
+    <p>运行结果(执行时间可能会稍长):</p>
+    <p id="BUT"></p>
+</div>
+</body>

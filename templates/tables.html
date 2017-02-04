@@ -1,0 +1,11 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div" style="margin-top: 8%"><p>数据库表状态查询</p></div>
+<div align="center" style="margin-top: 2%">
+    <form action="/tables" method="post">
+    {{ form.csrf_token }}
+    <p>请输入数据库库名:{{ form.text2(cols = 20, rows = 1) }}及该库下单个或多个表名:</p>
+    <p>{{ form.text(cols = 80, rows = 10) }}</p>
+    <p>{{ form.submit(class="Button") }}</p>
+</form>
+</div>

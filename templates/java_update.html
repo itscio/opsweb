@@ -1,0 +1,12 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>Jboss项目 增量上线</p></div>
+<div align="center" style="margin-top: 8%">
+    <form action="/update_java" method="post">
+        {{ form.csrf_token }}
+        <p> {{ form.selectAction }}&nbsp;{{ form.Gray }}灰度发布</p>
+        <p>请输入WAR包名称<font color="red" size="1">(仅适用于war包不需修改直接上线)</font>:</p>
+        <p>{{ form.text(cols = 80, rows = 12) }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </form>
+</div>

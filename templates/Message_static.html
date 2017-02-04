@@ -1,0 +1,13 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div style="padding-left:4%;padding-top: 4%;padding-right:4%;text-align:left;font-size:10pt">
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div style="color:#0077b3">
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+</div>

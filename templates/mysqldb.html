@@ -1,0 +1,28 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+<div align="center" >
+ <table class="datalist" border="1">
+    <tr>
+        {% for t in tables %}
+            <td class="tdcenter">{{ t }}</td>
+        {% endfor %}
+    </tr>
+    {% for value in values %}
+        <tr class="altrow">
+            <td>{{value[0]}}</td>
+            <td>{{value[1]}}</td>
+            <td>
+            {% for v in value[2].split('|') %}
+                <br>{{ v }}
+            {% endfor %}
+            </td>
+            <td>
+            {% for v in value[3] %}
+                <br>{{ v }}
+            {% endfor %}
+            </td>
+        </tr>
+    {% endfor %}
+ </table>
+ </div>

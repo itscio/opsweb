@@ -1,0 +1,16 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+<div class="div"><p>VPN账号查询结果:</p></div>
+<div>
+ <table class="datalist" border="1">
+    <tr>
+        <td>账号</td><td>密码</td>
+    </tr>
+    {% for user in user_list %}
+        <tr class="altrow">
+            <td>{{ user[0] }}</td><td>{{ user[1] }}</td>
+        </tr>
+    {% endfor %}
+ </table>
+</div>

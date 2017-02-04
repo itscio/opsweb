@@ -1,0 +1,26 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<script src="/static/js/btn.js"></script>
+<div class="div"><p>PHP环境部署</p></div>
+<div align="center" style="margin-top: 8%">
+    <form action="/deploy_php" method="post">
+        {{ form.csrf_token }}
+        <br>
+        {% if g.grade == 0 %}
+            <p>线上PHP环境部署:</p>
+            <p>选择服务器:{{ form.select_produce}} PHP版本:{{ form.ver_produce }}</p>
+            <a onclick="btn()">{{form.submit_produce(class="Button")}}</a>
+            <hr width="25%" color=#987cb9 SIZE=1>
+        {% endif %}
+        <p>测外PHP环境部署:</p>
+        <p>选择服务器:{{ form.select_test}} PHP版本:{{ form.ver_test }}</p>
+        <a onclick="btn()">{{form.submit_test(class="Button")}}</a>
+    </form>
+</div>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+            {% for message in messages %}
+                <p align="center" style="font-size:10pt;color:red">{{ message }}</p>
+            {% endfor %}
+    {% endif %}
+{% endwith %}

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block index %}
+    <div style="display: inline">
+        <div style="display:inline">
+            <img src="/static/images/logo.jpg">
+        </div>
+        <div style="font-size:9pt;float:right;text-align:right;display: inline;margin-top: 2%">
+            <p>
+                你好:<font color="#006400" style="font-weight:bold">{{ datas[0] }}</font>
+                &nbsp;<a  href={{ url_for('pw.pw') }}>修改密码</a>
+                &nbsp;<a  href={{ url_for('logout.logout',_external=True,_scheme='https') }}>退出</a>
+            </p>
+        </div>
+    </div>
+    <div align="right" style="font-size:9pt;text-align:right">
+        <p>
+            {{ moment().format('YYYY-MM-DD') }}
+            &nbsp;今日报警值班:<font color=#ff4500 style="font-weight:bold">{{ datas[1] }}</font>
+            &nbsp;明日报警值班:<font color=#006400 style="font-weight:bold">{{ datas[2] }}</font>
+            &nbsp;来源IP:<font color="#006400">{{ ip }} </font>
+        </p>
+    </div>
+    <div id="navMenu">
+        <ul>
+            <li><a href="/index" target="_self">首页</a></li>
+            <li><a rel='PHP_up' target="page">PHP上线</a></li>
+            <li><a rel='JAVA_up' target="page">JAVA上线</a></li>
+            {% if grade == 0 %}
+                <li><a rel='Deploy' target="page">环境部署</a></li>
+            {% endif %}
+            <li><a rel='sql_query' target="page">SQL执行</a></li>
+            <li><a rel='queryMeun' target="page">资源查询</a></li>
+            <li><a rel='totalMenu' target="page">资源汇总</a></li>
+            <li><a rel='topMenu' target="page">实时数据</a></li>
+            <li><a rel='moniter' target="page">监控平台</a></li>
+        </ul>
+    </div>
+    <script type='text/javascript' src='/static/js/dropdown.js'></script>
+        <ul id="PHP_up" class="dropMenu">
+            <li><a target="page" href={{ url_for('publish_php.publish_php') }} > PHP整包上线</a></li>
+            <li><a target="page" href={{ url_for('update_php.update_php') }} > PHP增量上线</a></li>
+            <li><a target="page" href="{{ url_for('php_list.List') }}">PHP配置表</a></li>
+        </ul>
+        <ul id="JAVA_up" class="dropMenu">
+            <li><a target="page" href="{{ url_for('publish_java.publish_java') }}" > JBOSS整包上线</a></li>
+            <li><a target="page" href="{{ url_for('update_java.update_java') }}" > JBOSS增量上线</a></li>
+            <li><a target="page" href={{ url_for('java_list.List') }}>JAVA配置表</a></li>
+        </ul>
+        <ul id="sql_query" class="dropMenu">
+            <li><a target='page' href={{ url_for('sql_query.sql_query') }} >SQL语句查询</a></li>
+        </ul>
+        <ul id="topMenu" class="dropMenu">
+            <li><a target='page' href={{ url_for('chart_center.chart_center_internet') }}>对外业务状态</a></li>
+            <li><a target='page' href={{ url_for('chart_center.chart_center_intranet') }}>对内业务状态</a></li>
+            <li><a target='page' href={{ url_for('chart_center.chart_center_traffic') }}>对外响应流量</a></li>
+            <li><a target='page' href={{ url_for('chart_center.chart_center_domain') }}>业务访问占比</a></li>
+            <li><a target='page' href={{ url_for('chart_center.chart_center_area') }}>用户地区分布</a></li>
+        </ul>
+        <ul id="Deploy" class="dropMenu">
+            <li><a target="page" href={{ url_for('deploy.deploy_php') }} > PHP环境部署</a></li>
+            <li><a target="page" href={{ url_for('deploy.deploy_nginx') }} > NGINX主机部署</a></li>
+            <li><a target="page" href={{ url_for('deploy.deploy_jboss') }} > JBOSS环境部署</a></li>
+            <li><a target="page" href={{ url_for('haproxy_reload.haproxy_reload') }} >HAPROXY重载</a></li>
+            <li><a target="page" href="{{ url_for('clean_project.clean_project') }}" >项目下线</a></li>
+        </ul>
+        <ul id="queryMeun" class="dropMenu">
+            <li><a target='page' href={{ url_for('slow_redis.slow_redis') }} >redis慢查询</a></li>
+            <li><a target='page' href={{ url_for('sql_app.tables') }} >数据库表查询</a></li>
+            <li><a target='page' href={{ url_for('sql_app.app') }} >应用部署查询</a></li>
+            <li><a target='page' href={{ url_for('sql_app.servers') }} >服务器资源查询</a></li>
+        </ul>
+        <ul id="totalMenu" class="dropMenu">
+            <li><a target='page' href={{ url_for('sql_app.mysqldb') }} >MYSQL信息</a></li>
+            <li><a target='page' href={{ url_for('sql_app.twemproxy') }} >REDIS信息</a></li>
+            <li><a target='page' href={{ url_for('kafka_info.kafka_info') }} >KAFKA信息</a></li>
+            <li><a target='page' href={{ url_for('sql_app.kestrel') }} >KESTREL信息</a></li>
+            <li><a target='page' href={{ url_for('zookeeper_info.Zookeeper_Info') }} >ZOOKEEPER信息</a></li>
+        </ul>
+        <ul id="moniter" class="dropMenu">
+            <li><a href="http://zabbix.ibaihe.com/zabbix" target="_blank">zabbix监控</a></li>
+            <li><a href="http://172.16.16.160:9001" target="_blank">kafka监控</a></li>
+            <li><a href="http://172.16.16.160:8080" target="_blank">kafka offset</a></li>
+            <li><a href="http://172.16.4.135:8088" target="_blank">mongo监控</a></li>
+        </ul>
+    <script type="text/javascript">cssdropdown.startchrome("navMenu")</script>
+    <br>
+    <div style="display: inline">
+        <div class="fl">
+            <ul id="accordion" class="accordion">
+                {% if grade == 0 %}
+                    <li>
+                        <div class="link"><i class="fa fa-paint-brush"></i>运维管理<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a target="page" href={{ url_for('init_system.init_system') }} > 系统初始化</a></li>
+                            <li><a target="page" href={{ url_for('cdn.curl') }} > 刷新CDN缓存</a></li>
+                            <li><a target="page" href={{ url_for('clear_redis.clear_redis') }} > 查询及清除redis缓存</a></li>
+                            <li><a target="page" href={{ url_for('dns_conf.dns_conf') }} >线上内部DNS操作</a></li>
+                            <li><a target="page" href={{ url_for('Scheduler.Scheduler') }} >定时计划任务</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <div class="link"><i class="fa fa-paint-brush"></i>账号管理<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a target="page" href={{ url_for('vpn_admin.vpn_admin') }} > VPN账号管理</a></li>
+                            <li><a target="page" href={{ url_for('svn_admin.svn_admin') }} > SVN账号管理</a></li>
+                            <li><a target="page" href={{ url_for('git_admin.git_admin') }} > GIT账号管理</a></li>
+                            <li><a target="page" href={{ url_for('op_user.op_user') }} > OP账号管理</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <div class="link"><i class="fa fa-paint-brush"></i>MYSQL管理<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a target="page" href={{ url_for('sql_run.sql_run') }} > SQL语句执行</a></li>
+                            <li><a target="page" href={{ url_for('mysql_parse.mysql_parse') }} > SQL语句审查</a></li>
+                            <li><a target="page" href={{ url_for('sql_scheduler.sql_scheduler') }} > SQL定时执行</a></li>
+                            <li><a target="page" href={{ url_for('sql_kill.sql_kill') }} > SQL连接进程清除</a></li>
+                        </ul>
+                    </li>
+                    <li><div class="link"><i class="fa fa-paint-brush"></i>第三方平台<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a href="http://www.dns-diy.com/" target="_blank">DNS管理系统</a></li>
+                            <li><a href="http://www.qcloud.com/" target="_blank">腾讯云</a></li>
+                            <li><a href="http://support.21vianet.com/" target="_blank">世纪互联后台</a></li>
+                            <li><a href="http://www.net.cn" target="_blank">万网后台</a></li>
+                            <li><a href="http://mgt.dns.com.cn" target="_blank">新网互联后台</a></li>
+                            <li><a href="http://35.com" target="_blank">35互联后台</a></li>
+                        </ul>
+                    </li>
+                    <li><div class="link"><i class="fa fa-paint-brush"></i>OP系统审查<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a target="page" href={{ url_for('examine.operation') }} > 上线操作记录</a></li>
+                            <li><a target="page" href={{ url_for('examine.op_log') }} > OP访问记录</a></li>
+                            <li><a target="page" href={{ url_for('examine.code') }} > 上线申请记录</a></li>
+                        </ul>
+                    </li>
+                    <li><div class="link"><i class="fa fa-paint-brush"></i>IDC资源汇总<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a target='page' href={{ url_for('sql_app_op.rack') }} >机柜使用汇总</a></li>
+                            <li><a target='page' href={{ url_for('sql_app_op.store') }} >存储设备汇总</a></li>
+                            <li><a target='page' href={{ url_for('sql_app_op.network') }}>网络设备汇总</a></li>
+                        </ul>
+                    </li>
+                    <li><div class="link"><i class="fa fa-paint-brush"></i>F5负载均衡<i class="fa fa-chevron-down"></i></div>
+                        <ul class="submenu">
+                            <li><a href="https://172.16.16.53" target="_blank">F5负载均衡(主）</a></li>
+                            <li><a href="https://172.16.16.54" target="_blank">F5负载均衡(备）</a></li>
+                        </ul>
+                    </li>
+                {% endif %}
+                <li><div class="link"><i class="fa fa-paint-brush"></i>HAPROXY(对外)<i class="fa fa-chevron-down"></i></div>
+                    <ul class="submenu">
+                        <li><a href="http://172.16.16.36/haproxy" target="_blank">haproxy58_16.36</a></li>
+                        <li><a href="http://172.16.16.37/haproxy" target="_blank">haproxy58_16.37</a></li>
+                        <li><a href="http://172.16.16.38/haproxy" target="_blank">haproxy162_16.38</a></li>
+                        <li><a href="http://172.16.16.39/haproxy" target="_blank">haproxy162_16.39</a></li>
+                    </ul>
+                </li>
+                <li><div class="link"><i class="fa fa-paint-brush"></i>HAPROXY(对内)<i class="fa fa-chevron-down"></i></div>
+                    <ul class="submenu">
+                        <li><a href="http://172.16.16.23/haproxy" target="_blank">haproxy13_16.23</a></li>
+                        <li><a href="http://172.16.16.24/haproxy" target="_blank">haproxy13_16.24</a></li>
+                        <li><a href="http://172.16.16.61/haproxy" target="_blank">haproxy11_16.61</a></li>
+                        <li><a href="http://172.16.16.62/haproxy" target="_blank">haproxy11_16.62</a></li>
+                    </ul>
+                </li>
+                <li><div class="link"><i class="fa fa-paint-brush"></i>HAPROXY(TCP)<i class="fa fa-chevron-down"></i></div>
+                    <ul class="submenu">
+                        <li><a href="http://172.16.16.21/haproxy" target="_blank">haproxy_16.21</a></li>
+                        <li><a href="http://172.16.16.22/haproxy" target="_blank">haproxy_16.22</a></li>
+                    </ul>
+                </li>
+                <li><div class="link"><i class="fa fa-paint-brush"></i>HAPROXY(内部)<i class="fa fa-chevron-down"></i></div>
+                    <ul class="submenu">
+                        <li><a href="http://172.16.16.162/haproxy" target="_blank">haproxy(其它)</a></li>
+                    </ul>
+                </li>
+                <li><div class="link"><i class="fa fa-paint-brush"></i>HAPROXY(测外)<i class="fa fa-chevron-down"></i></div>
+                    <ul class="submenu">
+                        <li><a href="http://211.151.58.17/haproxy" target="_blank">haproxy(外部)</a></li>
+                        <li><a href="http://172.16.9.108/haproxy" target="_blank">haproxy(内部)</a></li>
+                    </ul>
+                </li>
+                <li><div class="link"><i class="fa fa-paint-brush"></i>内部友情链接<i class="fa fa-chevron-down"></i></div>
+                    <ul class="submenu">
+                        <li><a href="http://nc.baihe.com/portal" >NC系统</a></li>
+                        <li><a href="http://rd.ibaihe.com" >文档中心</a></li>
+                        <li><a href="http://zen.ibaihe.com" >禅道系统</a></li>
+                        <li><a href="http://git.baihe.com" >GIT系统</a></li>
+                        <li><a href="http://172.16.3.94:8020/solrcloud/#/~cloud" >SOLR系统</a></li>
+                        <li><a href="http://172.16.5.43:9200/_plugin/kopf/#!/cluster" >ES(kopf)</a></li>
+                        <li><a href="http://172.16.4.140:5601/" >ES(Kibana)</a></li>
+                        <li><a href="http://172.16.10.25:7180/cmf/home" >HBase</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div class="Page">
+            <iframe  name="page"  id="iframepage" frameBorder=0 scrolling=no width=100% onLoad="javascript:iFrameHeight()" src="/chart"></iframe>
+        </div>
+    </div>
+    <div class="footer">
+        <p>北京百合在线科技有限公司|版权所有© 2005-2017 百合网|运维邮箱:alarm@baihe.com</p>
+    </div>
+{% endblock index %}

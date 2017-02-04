@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block chart %}
+<script language="JavaScript">
+function myrefresh()
+{
+   window.location.reload();
+}
+setTimeout('myrefresh()',600000); //指定60秒刷新一次
+</script>
+<div class="div"><p>线上业务项目状态(intranet)</p></div>
+<br>
+<form action="/chart_center_intranet" method="post">
+    <div align="center">
+        {{ form.csrf_token }}
+        <p>请选择域名:{{ form.select_intranet }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </div>
+</form>
+<div class="total_div">
+    <div class="left1_div">
+        {% if DOMAIN_DATA %}
+            <strong class="left">{{ DOMAIN_DATA[0]['name'] }} 访问并发(分钟)</strong>
+            {% line_chart DOMAIN_DATA %}
+            <br>
+            <strong class="left">{{ RT_DATA[0]['name'] }} 响应时间(毫秒)</strong>
+            {% line_chart RT_DATA %}
+            <br>
+        {% else %}
+            <strong class="left">LVS负载活动连接数（1天）</strong>
+            {% line_chart LVS_DATA %}
+        {% endif %}
+    </div>
+</div>
+    <br>
+    <br>
+<div style="text-align:center;margin-top: 2%;color: red">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+{% endblock chart %}

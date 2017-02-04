@@ -1,0 +1,11 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>VPN账号管理</p></div>
+<div align="center" style="margin-top: 8%">
+    <form action="/vpn_admin" method="post">
+        {{ form.csrf_token }}
+        <p>选择操作:{{ form.select_action }}&nbsp（支持批量操作）:</p>
+        <p>{{ form.text(cols = 80, rows = 12) }}</p>
+        <p>{{ form.submit(class="Button") }}</p>
+    </form>
+</div>

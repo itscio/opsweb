@@ -1,0 +1,11 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+<div class="div"><p>腾讯CDN刷新</p></div>
+<form action="/cdn" method="post">
+<div align="center" style="margin-top: 10%">
+            {{ form.csrf_token }}
+            <p>请输入完整URL地址(<font class="font1">刷新目录需以/结尾</font>):</p>
+            <p>{{ form.text(cols = 120, rows = 15) }}</p>
+            <p>{{ form.submit(class="Button") }}</p>
+</div>
+</form>
