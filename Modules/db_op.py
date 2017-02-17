@@ -286,26 +286,26 @@ class dns_innr(DB.Model):
         values = (self.domain,self.field,self.Type, self.ip,self.stats,self.system)
         return '%s,%s,%s,%s,%s,%s' % values
 
-class Scheduler(DB.Model):
-    __tablename__ = 'Scheduler'
+class op_menu(DB.Model):
+    __tablename__ = 'op_menu'
     __bind_key__ = 'op'
     id = DB.Column(DB.Integer, primary_key=True, autoincrement=True)
-    user = DB.Column(DB.String(20))
-    host = DB.Column(DB.String(20))
-    job = DB.Column(DB.String(200))
-    cron = DB.Column(DB.String(50))
-    describe = DB.Column(DB.String(100))
-    lasttime = DB.Column(DB.String(50))
-    job_id = DB.Column(DB.String(200))
-    def __init__(self,user,host,job,cron,describe,lasttime,job_id):
-        self.user = user
-        self.host = host
-        self.job = job
-        self.cron = cron
-        self.describe = describe
-        self.lasttime = lasttime
-        self.job_id = job_id
+    Menu = DB.Column(DB.String(10))
+    Menu_id = DB.Column(DB.Integer)
+    Menu_name = DB.Column(DB.String(10))
+    id_name = DB.Column(DB.String(20))
+    module_name = DB.Column(DB.String(50))
+    action_name = DB.Column(DB.String(50))
+    grade = DB.Column(DB.Integer)
+    def __init__(self,Menu,Menu_id,Menu_name,id_name,module_name,action_name,grade):
+        self.Menu = Menu
+        self.Menu_id = Menu_id
+        self.Menu_name = Menu_name
+        self.id_name = id_name
+        self.module_name = module_name
+        self.action_name = action_name
+        self.grade = grade
 
     def __repr__(self):
-        values = (self.user,self.host,self.job,self.cron, self.describe,self.lasttime,self.job_id)
+        values = (self.Menu,self.Menu_id,self.Menu_name,self.id_name,self.module_name,self.action_name,self.grade)
         return '%s,%s,%s,%s,%s,%s,%s' % values

@@ -83,8 +83,8 @@ class Purged(object):
                 return req.text
 
         class Cdn:
-            requestHost = ''
-            requestUri = ''
+            requestHost = 'cdn.api.qcloud.com'
+            requestUri = '/v2/index.php'
             _params = {}
             def __init__(self, config):
                 self.secretId = config['secretId']
@@ -118,10 +118,10 @@ class Purged(object):
                 return request.send(self.requestHost, self.requestUri, self._params, files, self.method)
         #config配置
         self.config = {
-            'Region': '',
-            'secretId': '',
-            'secretKey': '',
-            'method': ''
+            'Region': 'gz',
+            'secretId': 'AKIDOwvPN48Pblh0M2lqFsAZDAwxPA6Sp9XU',
+            'secretKey': 'Utt22g4kdbBSoDNqu7tAQbVE65VItdR1',
+            'method': 'post'
         }
         #params 请求参数
         self.params = {

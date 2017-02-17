@@ -36,7 +36,7 @@ def Async_log(user,url):
         Proc.join()
 def send_sms(mobile=None,content=None):
     t = time.strftime("%H:%M", time.localtime())
-    url = 'http://'
+    url = 'http://emg.baihe.com/inner/sms/send.json'
     if isinstance(mobile,str):
         Mobile = [mobile,]
     elif isinstance(mobile,list):
@@ -47,7 +47,7 @@ def send_sms(mobile=None,content=None):
         params = {"content":"{0} {1}".format(content,t),"mobile":mobile,"appKey":"800"}
         params = json.dumps(params)
         params = urllib.quote(params)
-        data = "%s" %params
+        data = "traceID=123&systemID=123&serviceName=op.alarm.sms&params=%s" %params
         try:
             values = urllib.urlopen(url,data)
             fd = values.read()

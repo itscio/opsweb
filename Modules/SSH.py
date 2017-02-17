@@ -14,7 +14,7 @@ class ssh(object):
                 self.key = paramiko.DSSKey.from_private_key_file(self.key_file)
             self._ssh.connect(self.ip, 22, self.username, pkey=self.key, timeout=30)
         else:
-            self.pw = '{0}'.format(username)
+            self.pw = '{0}@baihe.op'.format(username)
             self._ssh.connect(self.ip, 22, self.username, password=self.pw, timeout=30)
     def Run(self,cmd):
         if isinstance(cmd,str):

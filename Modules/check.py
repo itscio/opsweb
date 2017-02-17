@@ -4,6 +4,7 @@ import datetime,time
 import db_op
 import redis
 from functools import wraps
+import loging
 import __init__
 app = __init__.app
 redis_host = app.config.get('REDIS_HOST')
@@ -34,7 +35,7 @@ def login_required(grade = 0,page=None):
                         g.secret_key = request.cookies.get('secret_key')
                         db = db_op.idc_users
                         val = db.query.with_entities(db.grade).filter(db.name == user).all()
-                        g.grade = int(val[0][0]) if val else 2
+                        g.grade = int(val[0][0]) if val else 10
                         if g.grade > grade:
                             return render_template_string('无权限访问该页面!')
                         return func(*args, **kwargs)
@@ -54,6 +55,21 @@ def login_required(grade = 0,page=None):
                 db_op.DB.session.remove()
         return Login
     return login_check
+
+def acl_ip(func):
+    @wraps(func)
+    def check_ip(*args, **kwargs):
+        try:
+            if request.headers['X-Forwarded-For']:
+                ip = request.headers['X-Forwarded-For']
+        except:
+            ip = request.remote_addr
+        if '172.16.' not in ip:
+            loging.write(ip)
+            return render_template_string('非法IP地址访问!')
+        return func(*args, **kwargs)
+    return check_ip
+
 
 
 

@@ -10,6 +10,11 @@ import __init__
 app = __init__.app
 nodes = app.config.get('NODES')
 rc = RedisCluster(startup_nodes=nodes,decode_responses=True)
+class MyForm_Submit(Form):
+    submit1 = SubmitField('提交',id='btn1')
+    submit2 = SubmitField('提交', id='btn2')
+    submit3 = SubmitField('提交', id='btn3')
+
 class myform(Form):
     text = TextAreaField(validators=[DataRequired()])
     input = StringField('Input', validators=[DataRequired()])
@@ -174,8 +179,9 @@ class MyForm_deploy_nginx(Form):
     submit = SubmitField('提交',id='btn1')
 
 class MyForm_chart_center(Form):
-    select_internet = SelectField(choices = [(str(domain),str(domain)) for domain in rc.smembers('haproxy_topic')])
-    select_intranet = SelectField(choices = [(str(domain),str(domain)) for domain in rc.smembers('haproxy2_topic')])
+    tt = int(time.strftime('%Y%m%d', time.localtime()))
+    select_internet = SelectField(choices = [(str(domain),str(domain)) for domain in rc.smembers('haproxy_topic_%s'%tt)])
+    select_intranet = SelectField(choices = [(str(domain),str(domain)) for domain in rc.smembers('haproxy2_topic_%s'%tt)])
     submit = SubmitField('生成',id='btn1')
 
 class MyForm_dns_conf(Form):

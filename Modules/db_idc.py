@@ -40,7 +40,7 @@ class idc_servers(DB.Model):
     mem = DB.Column(DB.String(30))
     disk_size = DB.Column(DB.Integer)
     ip = DB.Column(DB.String(30))
-    department = DB.Column(DB.Enum('','','','','','','','','',''))
+    department = DB.Column(DB.Enum('线上业务中心','线下业务支撑部','婚恋教育事业部','数据中心组','总裁办','架构组','用户关系组','百合婚恋组','机动创新组','相亲组'))
     status = DB.Column(DB.Enum('未使用','使用中','维护中'))
     application = DB.Column(DB.String(20))
     comment = DB.Column(DB.String(30))
