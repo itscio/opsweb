@@ -1,8 +1,7 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+{% extends "page.html" %}
+{% block vpn_admin_show %}
 <div class="div"><p>VPN账号查询结果:</p></div>
-<div>
+<div style="padding-top: 12%;padding-left:43%">
  <table class="datalist" border="1">
     <tr>
         <td>账号</td><td>密码</td>
@@ -14,3 +13,4 @@
     {% endfor %}
  </table>
 </div>
+{% endblock vpn_admin_show %}

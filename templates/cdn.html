@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block cdn %}
 <div class="div"><p>腾讯CDN刷新</p></div>
 <form action="/cdn" method="post">
 <div align="center" style="margin-top: 10%">
@@ -9,3 +9,4 @@
             <p>{{ form.submit(class="Button") }}</p>
 </div>
 </form>
+{% endblock cdn %}

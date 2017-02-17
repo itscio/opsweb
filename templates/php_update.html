@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block php_update %}
 <div class="div"><p>PHP增量上线</p></div>
 <div align="center" style="margin-top: 8%">
     <form name="myform" action="/update_php" method="post">
@@ -10,3 +10,4 @@
         <p>{{ form.submit(class="Button") }}</p>
     </form>
 </div>
+{% endblock php_update %}

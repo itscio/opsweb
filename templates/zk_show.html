@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block zk_show %}
 <div class="div"><p>Zookeeper信息汇总</p></div>
 <div class="left_txt">
     <p>{{ URLS[:]|join('>') }}信息:</p>
@@ -21,3 +21,4 @@
         {% endif %}
     </ul>
 </div>
+{% endblock zk_show %}

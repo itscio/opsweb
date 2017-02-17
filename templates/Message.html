@@ -1,6 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-<script src="/static/js/jquery.min.js"></script>
+{% extends "page.html" %}
+{% block Message %}
 <script type="text/javascript">
 function countDown(secs,url){
  var jumpTo = document.getElementById('jumpTo');
@@ -13,10 +12,8 @@ function countDown(secs,url){
      }
  }
 </script>
-
-<body>
 <br><br>
-<div style="padding-left:4%;padding-top: 4%;padding-right:4%;text-align: left;font-size:10pt;color:red">
+<div style="padding-top: 12%;text-align:center;font-size:15pt;color:red">
     {% with messages = get_flashed_messages() %}
     {% if messages %}
             {% for message in messages %}
@@ -31,4 +28,4 @@ function countDown(secs,url){
     countDown(secs,'/chart');
     </script>
 </div>
-</body>
+{% endblock Message %}

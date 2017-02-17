@@ -1,4 +1,5 @@
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block app %}
 <div class="div" style="margin-top: 8%"><p>应用部署查询</p></div>
 <br>
 <div align="center">
@@ -10,3 +11,4 @@
     {{ form.submit(class="Button") }}
 </form>
 </div>
+{% endblock app %}

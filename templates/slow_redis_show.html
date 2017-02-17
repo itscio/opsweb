@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block slow_redis_show %}
 <div>
     <form action="/slow_redis" method="post">
         {{ form.csrf_token }}
@@ -15,3 +15,4 @@
     {% endif %}
 {% endwith %}
 </div>
+{% endblock slow_redis_show %}

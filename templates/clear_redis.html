@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block clear_redis %}
 <div class="div"><p>查询及清除REDIS缓存</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/clear_redis" method="post">
@@ -10,3 +10,4 @@
         <p>{{ form.submit(class="Button") }}</p>
     </form>
 </div>
+{% endblock clear_redis %}

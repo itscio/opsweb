@@ -1,6 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-<script src="/static/js/btn.js"></script>
+{% extends "page.html" %}
+{% block deploy_jboss %}
 <div class="div"><p>标准化JBOSS环境部署</p></div>
 <br>
 <div align="center" style="margin-top: 4%">
@@ -15,13 +14,13 @@
             <p>线上JBOSS环境部署:</p>
             <p>请输入War包名:{{form.input_produce}}</p>
             <p>选择要部署的服务器:{{ form.select_produce }}</p>
-            <a onclick="btn()">{{form.submit_produce(class="Button")}}</a>
+            {{form.submit_produce(class="Button")}}
             <hr width="25%" color=#987cb9 SIZE=1>
         {% endif %}
         <p>测外JBOSS环境部署:</p>
         <p>请输入War包名:{{form.input_test}} </p>
         <p>选择要部署的服务器:{{ form.select_test}}</p>
-        <a onclick="btn()">{{form.submit_test(class="Button")}}</a>
+        {{form.submit_test(class="Button")}}
     </form>
 </div>
 <br>
@@ -32,3 +31,4 @@
         {% endfor %}
     {% endif %}
 {% endwith %}
+{% endblock deploy_jboss %}

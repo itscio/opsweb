@@ -1,4 +1,5 @@
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block server %}
 <div class="div" style="margin-top: 8%"><p>服务器资源查询</p></div>
 <div align="center" style="margin-top: 2%">
     <form action="/servers" method="post">
@@ -10,3 +11,4 @@
 
 </form>
 </div>
+{% endblock server %}

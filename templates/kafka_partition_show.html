@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block kafka_partition_show %}
 <div class="div"><p>{{ topic_info }}主题信息</p></div>
 <div class="left_txt">
     <p>{{ topic_info }}主题有<font color="red">{{ partition_info|length }}</font>个分区,详细信息如下:</p>
@@ -16,3 +16,4 @@
         {% endfor %}
     </ul>
 </div>
+{% endblock kafka_partition_show %}

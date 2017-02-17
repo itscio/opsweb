@@ -1,8 +1,7 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-<script src="/static/js/jquery.min.js"></script>
+{% extends "page.html" %}
+{% block php_publish_show %}
 <script type="text/javascript">
-    var id = setInterval("startRequest()",200);
+    var id = setInterval("startRequest()",1000);
     function startRequest(){
         $.get("/publish_query",function(data){
         if (data != "End"){$("#BUT").before("<p>"+data+"</p>");}
@@ -10,9 +9,8 @@
         window.scrollTo(0,document.body.scrollHeight);});
     }
 </script>
-<body>
 <div>
     <p>运行结果(执行时间可能会稍长):</p>
     <p id="BUT"></p>
 </div>
-</body>
+{% endblock php_publish_show %}

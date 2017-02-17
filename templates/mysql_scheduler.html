@@ -1,6 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-<link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
+{% extends "page.html" %}
+{% block mysql_scheduler %}
 <p class="div">SQL语句定时执行</p>
 <div align="center" style="margin-top: 8%">
     <form action="/sql_scheduler" method="post">
@@ -30,3 +29,4 @@
         {% endif %}
     </table>
 </div>
+{% endblock mysql_scheduler %}

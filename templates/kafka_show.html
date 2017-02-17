@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block kafka_show %}
 <div class="div"><p>Kafka信息汇总</p></div>
 <div class="total_div">
     <div class="left_div">
@@ -19,3 +19,4 @@
         </ul>
     </div>
 </div>
+{% endblock kafka_show %}

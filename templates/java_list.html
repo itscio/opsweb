@@ -1,5 +1,5 @@
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+{% extends "page.html" %}
+{% block java_list %}
 <div class="div"><p>JAVA配置列表修改</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/java_list" method="post">
@@ -24,3 +24,4 @@
     {% endif %}
 {% endwith %}
 </div>
+{% endblock java_list %}

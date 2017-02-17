@@ -9,14 +9,14 @@ setTimeout('myrefresh()',600000); //指定60秒刷新一次
 </script>
 <div class="div"><p>线上业务项目状态(internet)</p></div>
 <br>
-<form action="/chart_center_internet" method="post">
-    <div align="center">
-        {{ form.csrf_token }}
-        <p>请选择域名:{{ form.select_internet }}</p>
-        <p>{{ form.submit(class="Button") }}</p>
-    </div>
-</form>
-<div class="total_div">
+<div>
+    <form action="/chart_center_internet" method="post">
+        <div align="center">
+            {{ form.csrf_token }}
+            <p>请选择域名:{{ form.select_internet }}</p>
+            <p>{{ form.submit(class="Button") }}</p>
+        </div>
+    </form>
     <div class="left1_div">
         {% if DOMAIN_DATA %}
             <strong class="left">{{ DOMAIN_DATA[0]['name'] }} 访问并发(分钟)</strong>
@@ -32,9 +32,7 @@ setTimeout('myrefresh()',600000); //指定60秒刷新一次
         {% endif %}
     </div>
 </div>
-    <br>
-    <br>
-<div style="text-align:center;margin-top: 2%;color: red">
+<div style="text-align:center;color: red">
     {% with messages = get_flashed_messages() %}
         {% if messages %}
                 {% for message in messages %}
