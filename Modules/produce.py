@@ -62,7 +62,6 @@ def scheduler_lock():
         log_path = '/tmp/scheduler_lock.log'
         if RC.exists('scheduler_lock') and RC.exists('%s_lock'%HOST):
             if HOST == RC.get('scheduler_lock') and PID == RC.get('%s_lock' %HOST):
-                # 随机休眠
                 RC.set('scheduler_lock', HOST)
                 RC.expire('scheduler_lock', 15)
                 RC.set('%s_lock' % HOST, PID)
