@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 from random import choice
 import string
-import datetime
+import mysql_scheduler
 from multiprocessing.dummy import Pool
 import  Mysql
 import urllib
@@ -15,9 +15,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import time
 import analytics_logs
+import Task
 import __init__
 app = __init__.app
-ip = socket.gethostbyname(socket.gethostname())
+HOST = socket.gethostbyname(socket.gethostname())
+PID = os.getppid()
 nodes = app.config.get('NODES_PRODUCE')
 RC = RedisCluster(startup_nodes=nodes, decode_responses=True)
 jobstores = {'default': SQLAlchemyJobStore(url=app.config.get('SQLALCHEMY_BINDS')['op'])}
@@ -57,14 +59,18 @@ def send_sms(mobile=None,content=None):
 #分布式全局锁
 def scheduler_lock():
     try:
-        if RC.exists('scheduler_lock'):
-            if ip != RC.get('scheduler_lock'):
-                # 随机休眠
-                time.sleep(choice([1,2,3,2,1]))
+        if RC.exists('scheduler_lock') and RC.exists('%s_lock'%HOST):
+            if HOST != RC.get('scheduler_lock') or PID != RC.get('%s_lock' %HOST):
+                time.sleep(choice([1, 2, 3]))
                 raise AssertionError
         else:
-            RC.set('scheduler_lock', ip)
-            RC.expire('scheduler_lock',5)
+            # 随机休眠
+            RC.set('scheduler_lock',HOST)
+            RC.expire('scheduler_lock',30)
+            time.sleep(choice([1,2,3,4,5,6,7,8,9]))
+            RC.set('%s_lock' %HOST,PID)
+            RC.expire('%s_lock' % HOST,30)
+            loging.write('lock_info:host>>%s  pid>>%s' %(HOST,PID))
     except Exception as e:
         loging.write(e)
 def scheduler_tasks():
@@ -72,37 +78,18 @@ def scheduler_tasks():
     scheduler.add_job(analytics_logs.internet_topic,'cron',second = '0',minute = '*/5',id='internet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.intranet_topic,'cron',second = '0',minute = '*/5',id='intranet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.kafka_web,'cron',second = '0',minute = '*',id='kafka_web',replace_existing=True)
+    scheduler.add_job(Task.task_tables_info, 'cron', second='0', minute='0',hour='*',id='task_tables_info', replace_existing=True)
+    scheduler.add_job(mysql_scheduler.mysql_scheduler,'cron', second='0', minute='0',hour='2', id='mysql_scheduler', replace_existing=True)
+    scheduler.add_job(Task.check_publish, 'cron', second='0', minute='*/5',hour='10-18',id='check_publish',replace_existing=True)
+    scheduler.add_job(Task.clear_kestrel, 'cron', second='0', minute='0', hour='2', id='clear_kestrel',replace_existing=True)
+    scheduler.add_job(Task.get_twemproxy_redis, 'cron', second='0', minute='*/30',hour='10-18', id='get_twemproxy_redis',replace_existing=True)
     scheduler.start()
-#sql定时执行
-def mysql_scheduler():
-    path = '%s/../Script/mysql_scheduler.py' % app.root_path
-    os.system('/usr/bin/python %s' % path)
-def Scheduler_sql_run():
-    tt = datetime.datetime.now()+datetime.timedelta(days=1)
-    tt = tt.strftime('%Y-%m-%d')
-    scheduler.add_job(mysql_scheduler, 'date', run_date='%s 02:00:00' %tt,id='sql_run',replace_existing=True)
 #线上任务执行
 class Scheduler_publish(object):
     def __init__(self):
         self.tm = time.strftime('%M',time.localtime())
         self.scheduler = BackgroundScheduler({'apscheduler.job_defaults.max_instances': '5'})
         self.scheduler.configure(timezone=pytz.timezone('Asia/Shanghai'))
-        self.path = app.root_path
-    def job_update_java(self):
-        path = '%s/../Script/java_update_script.py' % self.path
-        os.system('/usr/bin/python %s' % path)
-
-    def job_publish_java(self):
-        path = '%s/../Script/java_publish_script.py' % self.path
-        os.system('/usr/bin/python %s' % path)
-
-    def job_update_php(self):
-        path = '%s/../Script/php_update_script.py' % self.path
-        os.system('/usr/bin/python %s' % path)
-
-    def job_publish_php(self):
-        path = '%s/../Script/php_publish_script.py' % self.path
-        os.system('/usr/bin/python %s' % path)
-    def Scheduler_mem(self,func):
-        self.scheduler.add_job(func,'cron', second='*/2',minute = self.tm )
+    def Scheduler_mem(self,func,publish_key = 'None',taskKey = 'None',):
+        self.scheduler.add_job(func,'cron', second='*/2',minute = self.tm,args=[publish_key,taskKey],id='%s_%s'%(taskKey,self.tm))
         return self.scheduler

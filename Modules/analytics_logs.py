@@ -7,7 +7,7 @@ import requests
 #import loging
 import __init__
 app = __init__.app
-nodes = app.config.get('NODES')
+nodes = app.config.get('NODES_PRODUCE')
 bootstrap_servers = app.config.get('KAFKA_CLUSTER')
 rc = RedisCluster(startup_nodes=nodes,decode_responses=True)
 def internet_topic():
@@ -24,7 +24,6 @@ def internet_topic():
             traffic_Key = 'traffic_Keys_%s' % tt
             for KEY in (H_key, pv_key, uv_key, area_key, traffic_Key):
                 rc.expire(KEY, 86400)
-            mm = int(time.strftime('%S', time.localtime()))
             Msg = message.value.strip()
             def Get_Area(ip):
                 # 获取ip对应地区信息
@@ -72,11 +71,13 @@ def internet_topic():
                         rc.sadd(traffic_Key,Tra_ser_Key)
                         rc.sadd(H_key,Topic)
                         rc.incr(Ha_Key)
-                        if mm == 59:
+                        if not rc.exists('incr_time'):
                             for Key in rc.smembers(traffic_Key):
                                 if rc.exists(Key):
                                     rc.set('{0}_old'.format(Key),rc.lrange(Key, 0, -1))
                                     rc.delete(Key)
+                            rc.set('incr_time', '180s')
+                            rc.expire('incr_time',180)
                         TT = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                         if traffic_cli:
                             rc.lpush(Tra_cli_Key,int(traffic_cli))
@@ -88,7 +89,7 @@ def internet_topic():
                                 data = eval(str(rc.get(Tra_key)))
                                 if data and isinstance(data,list):
                                     va = int(reduce(lambda x, y: int(x) + int(y),data))
-                                    v = va * 8 / 1024 / 1024
+                                    v = va * 8 / 1024 / 1024 /180
                                     if v > 1:
                                         rc.rpush('Topic.%s' % key,[TT,v])
                         if Rtime:

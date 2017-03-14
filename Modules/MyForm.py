@@ -8,7 +8,7 @@ from sqlalchemy import distinct
 from rediscluster import RedisCluster
 import __init__
 app = __init__.app
-nodes = app.config.get('NODES')
+nodes = app.config.get('NODES_PRODUCE')
 rc = RedisCluster(startup_nodes=nodes,decode_responses=True)
 class MyForm_Submit(Form):
     submit1 = SubmitField('提交',id='btn1')
@@ -60,7 +60,7 @@ class MyForm_php(Form):
     text = TextAreaField(validators=[DataRequired()])
     changelog = TextAreaField(validators=[DataRequired()])
     selectaction = SelectField(choices=[('publish', '上线'), ('recover', '回滚')])
-    selecttype = SelectField(choices=[('2', '测外'),('1', '线上')])
+    selecttype = SelectField(choices=[('2', '测外'),('1', '生产')])
     selectWay = SelectField(choices=[('SVN', 'SVN'), ('GIT', 'GIT')])
     selectwork = SelectField(choices=[('BUG', 'Bug修复'), ('NEW', '新增需求')])
     selectgrade = SelectField(choices=[('7', '7'), ('6', '6'), ('5', '5'), ('4', '4'), ('3', '3'), ('2', '2'), ('1', '1')])
@@ -72,7 +72,7 @@ class MyForm_publishJboss(Form):
     text = TextAreaField(validators=[DataRequired()])
     changelog = TextAreaField(validators=[DataRequired()])
     selectAction = SelectField(choices=[('publish', '上线'),('rollback','回滚'),('restart', '重启')])
-    selectType = SelectField(choices=[('2', '测外'),('1', '线上')])
+    selectType = SelectField(choices=[('2', '测外'),('1', '生产')])
     selectWay = SelectField(choices=[('SVN', 'SVN'), ('GIT', 'GIT')])
     selectwork = SelectField(choices=[('BUG', 'Bug修复'), ('NEW', '新增需求')])
     selectgrade = SelectField(choices=[('7', '7'), ('6', '6'), ('5', '5'), ('4', '4'), ('3', '3'), ('2', '2'), ('1', '1')])

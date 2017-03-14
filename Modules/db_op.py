@@ -137,6 +137,19 @@ class svn_permission(DB.Model):
         values=(self.groups,self.path,self.permission)
         return '%s,%s,%s'%values
 
+class svn_groups(DB.Model):
+    __tablename__ = 'svn_groups'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    groups = DB.Column(DB.String(50))
+    users = DB.Column(DB.String(50))
+    def __init__(self,groups,users):
+        self.groups = groups
+        self.users = users
+    def __repr__(self):
+        values=(self.groups,self.users)
+        return '%s,%s'%values
+
 class sql_scheduler(DB.Model):
     __tablename__ = 'sql_scheduler'
     __bind_key__='op'
@@ -309,3 +322,18 @@ class op_menu(DB.Model):
     def __repr__(self):
         values = (self.Menu,self.Menu_id,self.Menu_name,self.id_name,self.module_name,self.action_name,self.grade)
         return '%s,%s,%s,%s,%s,%s,%s' % values
+
+class apscheduler_jobs(DB.Model):
+    __tablename__ = 'apscheduler_jobs'
+    __bind_key__ = 'op'
+    id = DB.Column(DB.String(200),primary_key=True)
+    next_run_time = DB.Column(DB.BigInteger)
+    job_state = DB.Column(DB.BLOB)
+    def __init__(self,id,next_run_time,job_state):
+        self.id = id
+        self.next_run_time = next_run_time
+        with open(job_state,'rb') as f:
+            self.job_state = f.read()
+    def __repr__(self):
+        values = (self.id,self.next_run_time,self.job_state)
+        return '%s,%s,%r' % values
