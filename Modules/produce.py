@@ -59,18 +59,22 @@ def send_sms(mobile=None,content=None):
 #分布式全局锁
 def scheduler_lock():
     try:
+        log_path = '/tmp/scheduler_lock.log'
         if RC.exists('scheduler_lock') and RC.exists('%s_lock'%HOST):
-            if HOST != RC.get('scheduler_lock') or PID != RC.get('%s_lock' %HOST):
-                time.sleep(choice([1, 2, 3]))
-                raise AssertionError
+            if HOST == RC.get('scheduler_lock') and PID == RC.get('%s_lock' %HOST):
+                # 随机休眠
+                RC.set('scheduler_lock', HOST)
+                RC.expire('scheduler_lock', 15)
+                RC.set('%s_lock' % HOST, PID)
+                RC.expire('%s_lock' % HOST, 15)
         else:
             # 随机休眠
             RC.set('scheduler_lock',HOST)
-            RC.expire('scheduler_lock',30)
-            time.sleep(choice([1,2,3,4,5,6,7,8,9]))
+            RC.expire('scheduler_lock',15)
+            time.sleep(choice([i for i in xrange(15)]))
             RC.set('%s_lock' %HOST,PID)
-            RC.expire('%s_lock' % HOST,30)
-            loging.write('lock_info:host>>%s  pid>>%s' %(HOST,PID))
+            RC.expire('%s_lock' % HOST,15)
+        loging.write('lock_info:host>>%s  pid>>%s' %(HOST,PID),log_path=log_path)
     except Exception as e:
         loging.write(e)
 def scheduler_tasks():
