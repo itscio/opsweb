@@ -1,0 +1,19 @@
+{% extends "page.html" %}
+{% block tables_show %}
+<div align="center" style="margin-top: 8%">
+        <table class="datalist" border="1">
+                <tr>
+                    {% for t in tables %}
+                        <td>{{ t }}</td>
+                    {% endfor %}
+                </tr>
+                {% for value in values %}
+                    <tr class="altrow">
+                        {% for val in value %}
+                            <td>{{val}}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+        </table>
+</div>
+{% endblock tables_show %}

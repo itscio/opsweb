@@ -4,7 +4,7 @@
 <div align="center" style="margin-top: 8%">
     <form action="/mysql_parse" method="post">
         {{ form.csrf_token }}
-        <p>输入数据库库名:{{ form.input }} &nbsp;请输入完整sql语句,每句以分号结尾:</p>
+        <p>数据库库名:{{ form.input }} &nbsp;请输入完整sql语句<font color="red">(仅限delete,update,alter)</font>,每句以分号结尾:</p>
         <p>{{ form.text(cols = 120, rows = 15) }}</p>
         {{ form.submit(class="Button") }}
     </form>
