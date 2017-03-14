@@ -36,6 +36,6 @@ def mongodb_info():
         return  render_template_string('数据获取错误!')
     return render_template('mongodb_show.html', shards=shards)
 @page_mongodb_info.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)

@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import redis
-from flask import Blueprint,redirect,url_for,render_template,render_template_string,g,flash,request
-from Modules import check,MyForm,db_op,Mysql,produce
+from flask import Blueprint,render_template,render_template_string,g,flash,request
+from Modules import check,MyForm,db_op,Mysql,produce,loging,php_publish
 import re
 from sqlalchemy import and_
 import string
@@ -14,7 +14,7 @@ redis_port = app.config.get('REDIS_PORT')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port)
 page_publish_php = Blueprint('publish_php',__name__)
 @page_publish_php.route('/publish_query',methods = ['GET', 'POST'])
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def publish_query():
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_publish_php' %K
@@ -22,33 +22,37 @@ def publish_query():
 @page_publish_php.route('/qrcode_php/<User>/<Grade>')
 def Qrcode(User = None,Grade = None):
     try:
-        if User and Grade == '2':
-            verify_key = "{0}_{1}".format(User,Grade)
-            code = produce.Produce(length=6, chars=string.digits)
-            Redis.set(verify_key,code)
-            Redis.expire(verify_key, 900)
-            # send sms
-            result = produce.send_sms(content='上线码:{0} 申请人:{1} 15分钟内有效!'.format(code,User), mobile=Mobile)
-            if isinstance(result, dict):
-                if result['code'] == 200:
-                    INFO = '上线码已成功发送给领导!'
+        if User and Grade:
+            if User and int(Grade) >= 2:
+                verify_key = "{0}_{1}".format(User,Grade)
+                code = produce.Produce(length=6, chars=string.digits)
+                Redis.set(verify_key,code)
+                Redis.expire(verify_key, 900)
+                # send sms
+                result = produce.send_sms(content='上线码:{0} 申请人:{1} 15分钟内有效!'.format(code,User), mobile=Mobile)
+                if isinstance(result, dict):
+                    if result['code'] == 200:
+                        INFO = '上线码已成功发送给领导!'
+                    else:
+                        INFO = '上线码发送失败!'
                 else:
                     INFO = '上线码发送失败!'
             else:
-                INFO = '上线码发送失败!'
+                INFO =  "无需申请上线码!"
         else:
-            INFO =  "无权请求上线码!"
+            INFO = "非法请求信息!"
     except Exception as e:
         INFO = str(e)
     return render_template('qrcode.html',INFO=INFO)
 @page_publish_php.route('/publish_php',methods = ['GET', 'POST'])
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def publish_php():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_publish_php' %K
+    publish_key = '%s_publish_php' %g.user
     form = MyForm.MyForm_php()
-    qrcode_url = "https://xxx.baihe.com/xxx/{0}/{1}".format(g.user,g.grade)
+    qrcode_url = "https://op.baihe.com/qrcode_php/{0}/{1}".format(g.user,g.grade)
     if form.submit.data:
         try:
             Redis.lpush(Key, 'check env......')
@@ -97,8 +101,8 @@ def publish_php():
                         raise flash('错误:' + Tags[0] + '路径需以"http://"开头!')
                     elif not Tags[0].strip().endswith('.git'):
                         raise flash('错误:' + Tags[0] + '应该以".git"结尾!')
-                    elif 'tag' not in Tags[1]:
-                        raise flash('错误:没有tag版本号!')
+                    elif not Tags[1].strip().startswith('tag-'):
+                        raise flash('错误:输入的tag版本号格式错误!')
                     path = ';'.join(Tags)
                     path = path.replace('http://git.baihe.com/', '/')
                     App = Tags[0].strip().split('/')[-1]
@@ -110,24 +114,26 @@ def publish_php():
                 pass
         else:
             try:
-                #用户权限判断
-                if g.grade == 2:
-                    if code:
-                        verify_key = "{0}_{1}".format(g.user,g.grade)
-                        verify_code = Redis.get(verify_key)
-                        if verify_code == str(code):
-                            Redis.lpush(Key, '    --->verify code pass!')
-                            Redis.delete(verify_key)
-                            code_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                            db = db_op.publish_code
-                            db_op.DB.session.add(db(project=App, code=str(code), platfrom=platfrom, user=g.user, Time=code_time))
-                            db_op.DB.session.commit()
-                        else:
-                            flash('上线码验证错误!')
-                            return redirect(url_for('publish_php.publish_php'))
+                publish_time = time.strftime("%H", time.localtime())
+                if code:
+                    verify_key = "{0}_{1}".format(g.user, g.grade)
+                    verify_code = Redis.get(verify_key)
+                    if verify_code == str(code):
+                        Redis.lpush(Key, '    --->verify code pass!')
+                        Redis.delete(verify_key)
+                        code_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                        db = db_op.publish_code
+                        db_op.DB.session.add(
+                            db(project=App, code=str(code), platfrom=platfrom, user=g.user, Time=code_time))
+                        db_op.DB.session.commit()
                     else:
-                        flash('上线码不能为空!')
-                        return redirect(url_for('publish_php.publish_php'))
+                        raise flash('上线码验证错误!')
+                else:
+                    # 用户权限判断
+                    if g.grade >= 2 and Type == 1 and int(grade) >=5:
+                        raise flash('需申请验证码!')
+                    if g.grade >= 2 and int(grade) <=4 and Type == 1 and (int(publish_time) >= 17 or int(publish_time) <= 9):
+                        raise flash('仅允许在10-17点时间段进行自助操作，需申请验证码!')
                 Redis.lpush(Key,'    --->check env pass!')
                 Redis.lpush(Key,'-'*80+'\n')
                 db = db_op.php_list
@@ -161,28 +167,26 @@ def publish_php():
                         sip = [v[0].encode('UTF-8') for v in val if v]
                     else:
                         raise flash('%s 没有在上线列表中找到!' %App)
-                Redis.delete(Key)
                 Info = {}
                 Info['action'] = action
-                Info['key'] = Key
                 Info['path'] = path
                 Info['app'] = App
                 Info['sip'] = sip
                 Info['gray'] = Gray
                 Info['Type'] = Type
                 Info['Way'] = Way
-                Redis.lpush('publish_php',str(Info))
+                Redis.delete(Key)
+                Redis.lpush(publish_key,str(Info))
                 mysql_operation = Mysql.mysql_op(g.user,action,Type,App,version,Gray,work,grade,changelog)
                 mysql_operation.op_operation()
                 Scheduler = produce.Scheduler_publish()
-                Scheduler = Scheduler.Scheduler_mem(Scheduler.job_publish_php)
+                Scheduler = Scheduler.Scheduler_mem(php_publish.php_publish,publish_key,Key)
                 Scheduler.start()
             except Exception as e:
                 if 'old' not in str(e):
                     flash(e)
-                Redis.lpush(Key,'End')
-                return render_template('Message.html')
-            return render_template('php_publish_show.html')
+            else:
+                return render_template('php_publish_show.html')
     return render_template('php_publish.html',form=form,qrcode_url = qrcode_url )
 
 @page_publish_php.teardown_request

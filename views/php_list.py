@@ -75,7 +75,7 @@ def List():
             flash('修改数据失败!')
     return render_template('php_list.html',form=form)
 @page_php_list.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)
 @page_php_list.teardown_request

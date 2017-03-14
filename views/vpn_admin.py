@@ -25,7 +25,7 @@ def vpn_admin():
             return render_template('Message.html')
         action = form.select_action.data
         key = 'vpn2_list'
-        sender = "xxx@baihe.com"
+        sender = "alarm@baihe.com"
         if action == 'query':
             List = []
             user_list = Redis.hgetall(key)

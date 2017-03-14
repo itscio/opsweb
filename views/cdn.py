@@ -14,8 +14,8 @@ def curl():
                 continue
             else:
                 url = url.strip()
-            if not url.startswith('http://'):
-                flash('url begin with http://')
+            if not url.startswith('http'):
+                flash('url begin with http(s)://')
                 return render_template('Message.html')
             #clear ats cache
             '''
@@ -31,6 +31,6 @@ def curl():
         return render_template('Message.html')
     return render_template('cdn.html',form=form)
 @page_cdn.before_request
-@check.login_required(grade=0)
+@check.login_required(grade=9)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)

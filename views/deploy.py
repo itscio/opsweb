@@ -75,7 +75,7 @@ def deploy_jboss():
                         db_idc.DB.session.add(c)
                         db_idc.DB.session.commit()
                         # 调用haproxy APi接口
-                        URL = "https://"
+                        URL = "https://op.baihe.com/haproxy_conf"
                         Params = {'type':Type, 'ip':'{0}:{1}'.format(ip,ports[user]),'domain':Domain}
                         if internet:
                             Params['intranet'] = 'True'
@@ -118,7 +118,7 @@ def deploy_nginx():
                     db = db_op.php_list
                     val = db.query.filter(and_(db.ip == ip, db.project == project, db.type == Type)).all()
                     if val:
-                        flash('{0} {1} nginx虚拟主机配置文件已部署!'.format(ip,project))
+                        flash('{0} {1}项目 nginx虚拟主机配置文件已存在!'.format(ip,project))
                     else:
                         ssh = SSH.ssh('work',ip)
                         try:
@@ -159,7 +159,7 @@ def deploy_nginx():
                                     if ',' in Domain:
                                         Domains = Domain.split(',')
                                     for Domain in Domains:
-                                        URL = "https://"
+                                        URL = "https://op.baihe.com/haproxy_conf"
                                         Params = {'type': Type, 'ip': '{0}:80'.format(ip),'domain': Domain}
                                         if internet:
                                             Params['intranet'] = 'True'
@@ -224,17 +224,18 @@ def deploy_php():
 @page_haproxy_reload.route('/haproxy_reload')
 @page_haproxy_reload.route('/haproxy_reload/<Type>')
 def haproxy_reload(Type=None):
+    form = MyForm.MyForm_Submit()
     if Type:
         if Type == 'internet':
-            URL = "https://"
+            URL = "http://op.baihe.com/haproxy_conf?type=cw&ip=127.0.0.1:80&domain=test.baihe.com"
         else:
-            URL = "https://"
-        f = requests.request('get', URL, timeout=10)
+            URL = "http://op.baihe.com/haproxy_conf?type=cw&ip=127.0.0.1:80&domain=test.baihe.com&intranet=True"
+        f = requests.get(URL,timeout=10)
         Info = f.json()
         if 'result' in f.json():
             Info = f.json()['result']
         return render_template('qrcode.html', INFO=Info)
-    return render_template('haproxy_reload.html')
+    return render_template('haproxy_reload.html',form=form)
 @page_deploy.before_request
 @check.login_required(grade=0)
 def check_login(error=None):

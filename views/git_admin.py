@@ -10,15 +10,15 @@ mail = Mail(app)
 page_git_admin = Blueprint('git_admin',__name__)
 @page_git_admin.route('/git_admin',methods = ['GET', 'POST'])
 def git_admin():
-    params = {}
-    URL = ""
+    params = {'private_token':'g-1h1deDz-ghC_xU4DjM'}
+    URL = "http://git.baihe.com/api/v3/users?"
     def Get_user(user):
         username = user.split('@')[0]
         params['search'] = username
         r = requests.request('get',URL,timeout=3,params=params)
         return r.json()
 
-    def Add_user(user):
+    def Add_user(user,pw):
         username = user.split('@')[0]
         params['username'] = username
         params['name'] = username
@@ -31,19 +31,19 @@ def git_admin():
         return r.json()
 
     def Del_user(id):
-        URL = "http://xxx.baihe.com/api/v3/users/%s/block" %id
+        URL = "http://git.baihe.com/api/v3/users/%s/block" %id
         requests.request('put', URL, timeout=3, params=params)
-        URL = "http://xxx.baihe.com/api/v3/users/%s" % id
+        URL = "http://git.baihe.com/api/v3/users/%s" % id
         r = requests.request('delete',URL,timeout=3,params=params)
         return r.json()
 
     form = MyForm.MyForm_git_admin()
     if form.submit.data:
-        sender = "xxx@baihe.com"
-        pw = produce.Produce(13)
+        sender = "alarm@baihe.com"
         names = form.text.data.strip().splitlines()
         action = form.select_action.data
         for name in names:
+            name = name.strip()
             if '@' in name:
                 if action == 'query':
                     INFOS = ('id','username','name','email','state','projects_limit','can_create_group','web_url','current_sign_in_at','created_at')
@@ -60,10 +60,11 @@ def git_admin():
                     if Get_user(name):
                         flash('%s 账号已存在!' %name)
                     else:
-                        if Add_user(name):
+                        pw = produce.Produce(13)
+                        if Add_user(name,pw):
                                 #开通成功后再发送邮件
                                 msg = Message("GIT账号信息",sender=sender,recipients=[name])
-                                msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>GIT访问地址:http://xxx.baihe.com/</p><p><font color="red">勿邮件回复!</font></p>' %(name,pw)
+                                msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>GIT访问地址:http://git.baihe.com/</p><p><font color="red">勿邮件回复!</font></p>' %(name,pw)
                                 with app.app_context():
                                     try:
                                         mail.send(msg)

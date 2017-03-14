@@ -28,6 +28,6 @@ def slow_redis():
             flash(results)
     return render_template('slow_redis_show.html',form = form)
 @page_slow_redis.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)

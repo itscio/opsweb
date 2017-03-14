@@ -2,18 +2,20 @@
 from flask import Blueprint,render_template,render_template_string
 from Modules import check,loging
 from rediscluster import RedisCluster
+import time
 import __init__
 app = __init__.app
-nodes = app.config.get('NODES')
+nodes = app.config.get('NODES_PRODUCE')
 RC = RedisCluster(startup_nodes=nodes,decode_responses=True,)
 page_chart = Blueprint('chart', __name__)
 @page_chart.route('/chart')
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def charts():
     try:
         val_cli = {}
         val_ser = {}
-        traffic_key = 'traffic_Keys'
+        tt = int(time.strftime('%Y%m%d', time.localtime()))
+        traffic_key = 'traffic_Keys_%s' %tt
         for key in RC.smembers(traffic_key):
             key = '{0}_old'.format(key)
             if RC.exists(key):
@@ -22,7 +24,7 @@ def charts():
                     va = int(reduce(lambda x, y: int(x) + int(y), data))
                     v = va * 8 / 1024 / 1024
                     key = key.split('_')
-                    domain = str(key[1])
+                    domain = str(key[-2])
                     if v > 1:
                         if 'traffic.client' in str(key[0]):
                             val_cli[domain] = v

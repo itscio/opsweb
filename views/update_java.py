@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import redis
 from flask import Blueprint,render_template,render_template_string,g,flash,request
-from Modules import check,MyForm,db_op,loging,Mysql,produce
+from Modules import check,MyForm,db_op,loging,Mysql,produce,java_update
 import __init__
 app = __init__.app
 page_update_java = Blueprint('update_java',__name__)
@@ -9,7 +9,7 @@ redisHost = app.config.get('REDIS_HOST')
 redisPort = app.config.get('REDIS_PORT')
 myRedis = redis.StrictRedis(host=redisHost,port=redisPort)
 @page_update_java.route('/update_java_query', methods = ['GET','POST'])
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def update_java_query():
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_update_java' % K
@@ -21,7 +21,7 @@ def update_java():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_update_java' % K
-    taskKey = 'update_java'
+    publish_key = '%s_update_java' % g.user
     form = MyForm.MyForm_updateJboss()
     if form.submit.data:
         try:
@@ -54,14 +54,13 @@ def update_java():
                     information['project'] = project
                     information['ServerList'] = ServerList
                     information['Action'] = Action
-                    information['key'] = messageKey
                     information['Gray'] = Gray
                     myRedis.delete(messageKey)
-                    myRedis.lpush(taskKey,information)
+                    myRedis.lpush(publish_key,information)
                     mysql_operation = Mysql.mysql_op(g.user,Action,Type,project,Gray)
                     mysql_operation.op_operation()
                     Scheduler = produce.Scheduler_publish()
-                    Scheduler = Scheduler.Scheduler_mem(Scheduler.job_update_java)
+                    Scheduler = Scheduler.Scheduler_mem(java_update.java_update,publish_key,messageKey)
                     Scheduler.start()
                 else:
                     flash('%s Not found' % warname)

@@ -26,6 +26,6 @@ def kafka_info(topic_info = None):
         loging.write(e)
         return  render_template_string('数据获取错误!')
 @page_kafka_info.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)

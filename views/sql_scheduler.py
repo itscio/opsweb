@@ -2,7 +2,7 @@
 from flask import Blueprint,redirect,render_template,g,flash,url_for,request
 from Modules import produce,check,MyForm,db_op,db_idc,loging
 from sqlalchemy import and_,desc
-import time
+import datetime
 page_sql_scheduler=Blueprint('sql_scheduler',__name__)
 @page_sql_scheduler.route('/sql_scheduler',methods = ['GET', 'POST'])
 def sql_scheduler():
@@ -15,7 +15,7 @@ def sql_scheduler():
         #获取页面相关信息
         if form.sql_text.data:
             db_name = form.db_name.data.strip()
-            Year = time.strftime('%Y-%m-%d',time.localtime())
+            Time = datetime.date.today()+datetime.timedelta(days=1)
             cmds = form.sql_text.data.strip()
             if cmds:
                 try:
@@ -28,7 +28,7 @@ def sql_scheduler():
                             if sql_cmd:
                                 sql_cmd = sql_cmd.strip()
                                 sql_cmd = '%s;'%sql_cmd
-                                if 'update' in sql_cmd.lower() or 'delete' in sql_cmd.lower() or 'alter' in sql_cmd.lower():
+                                if sql_cmd.lower().startswith('update') or sql_cmd.lower().startswith('delete') or sql_cmd.lower().startswith('alter'):
                                     if sql_cmd.lower().startswith('update'):
                                         table_name = sql_cmd.split()[1]
                                     else:
@@ -45,7 +45,7 @@ def sql_scheduler():
                                             #将sql计划任务相关信息写入数据库
                                             master_ip,master_port,master_db = info
                                             if db_name in master_db.split('|'):
-                                                c = db_op.sql_scheduler(master_ip = master_ip,master_port = master_port,db = db_name,time = Year,sql_cmd=sql_cmd,status='未执行',results='None')
+                                                c = db_op.sql_scheduler(master_ip = master_ip,master_port = master_port,db = db_name,time = Time,sql_cmd=sql_cmd,status='未执行',results='None')
                                                 db_op.DB.session.add(c)
                                                 db_op.DB.session.commit()
                                     else:
@@ -57,11 +57,7 @@ def sql_scheduler():
                 except Exception as e:
                     #loging.write(e)
                     return render_template('Message_static.html')
-            return redirect(url_for("sql_scheduler.sql_scheduler"))
-        try:
-            produce.Scheduler_sql_run()
-        except Exception as e:
-            loging.write(e)
+                return redirect(url_for("sql_scheduler.sql_scheduler"))
     return render_template('mysql_scheduler.html',form=form,val_scheduler=val_scheduler,tables=tables)
 
 @page_sql_scheduler.before_request

@@ -31,7 +31,7 @@ def pw():
     return render_template('password.html',form=form)
 
 @page_pw.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)
 

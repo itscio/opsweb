@@ -69,7 +69,7 @@ def sql_query():
         return render_template('Message_static.html')
     return render_template('mysql_query.html',form=form)
 @page_sql_query.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)
 

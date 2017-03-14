@@ -4,12 +4,13 @@ from Modules import check,loging,MyForm,produce
 import redis
 from rediscluster import RedisCluster
 import json
+import time
 import __init__
 app = __init__.app
 host = app.config.get('REDIS_HOST')
 port = app.config.get('REDIS_PORT')
 Redis = redis.StrictRedis(host=host,port=port,db=0,socket_timeout=1)
-nodes = app.config.get('NODES')
+nodes = app.config.get('NODES_PRODUCE')
 RC = RedisCluster(startup_nodes=nodes,decode_responses=True)
 page_chart_center = Blueprint('chart_center', __name__)
 @page_chart_center.route('/chart_center_internet',methods = ['GET', 'POST'])
@@ -19,12 +20,13 @@ def chart_center_internet():
         form = MyForm.MyForm_chart_center()
         DOMAIN_DATA = None
         RT_DATA = None
-        PV = RC.get('baihe_pv') or 'None'
-        UV = len(RC.smembers('baihe_uv')) or 'None'
+        tt = int(time.strftime('%Y%m%d', time.localtime()))
+        PV = RC.get('baihe_pv_%s'%tt) or 'None'
+        UV = len(RC.smembers('baihe_uv_%s'%tt)) or 'None'
         if form.submit.data:
             Domain = form.select_internet.data
-            Key = 'internet_access_%s' %Domain
-            web_rt_key = 'internet_rt_%s' % Domain
+            Key = 'internet_access_%s_%s'%(tt,Domain)
+            web_rt_key = 'internet_rt_%s_%s'%(tt,Domain)
             if RC.exists(Key):
                 #获取响应时间
                 DATA = [eval(v) for v in RC.lrange(web_rt_key, 0, -1)]
@@ -35,7 +37,7 @@ def chart_center_internet():
                 DATA = [DATA[i] for i in xrange(0, len(DATA), 3)]
                 DOMAIN_DATA = [{'data': DATA, 'name': str(Domain)}]
             else:
-                 flash('暂时还没%s的相关数据!' %Domain)
+                 flash('%s的相关数据为空!' %Domain.strip())
         DATA = [eval(v) for v in Redis.lrange('lvs_internet', 0, -1)]
         LVS_DATA = [{'data': DATA, 'name': 'INTERNET_LVS'}]
         return render_template('chart_center_internet.html',form = form,LVS_DATA=LVS_DATA,DOMAIN_DATA=DOMAIN_DATA,RT_DATA=RT_DATA,PV=PV,UV=UV)
@@ -47,13 +49,14 @@ def chart_center_internet():
 def chart_center_intranet():
     try:
         reload(MyForm)
+        tt = int(time.strftime('%Y%m%d', time.localtime()))
         form = MyForm.MyForm_chart_center()
         DOMAIN_DATA = None
         RT_DATA = None
         if form.submit.data:
             Domain = form.select_intranet.data
-            Key = 'intranet_access_%s' % Domain
-            web_rt_key = 'intranet_rt_%s' % Domain
+            Key = 'intranet_access_%s_%s'%(tt,Domain)
+            web_rt_key = 'intranet_rt_%s_%s'%(tt,Domain)
             if RC.exists(Key):
                 # 获取响应时间
                 DATA = [eval(v) for v in RC.lrange(web_rt_key, 0, -1)]
@@ -64,7 +67,7 @@ def chart_center_intranet():
                 DATA = [DATA[i] for i in xrange(0, len(DATA), 3)]
                 DOMAIN_DATA = [{'data': DATA, 'name': str(Domain)}]
             else:
-                 flash('暂时还没%s的相关数据!' %Domain)
+                 flash('%s的相关数据为空!' %Domain.strip())
         DATA = [eval(v) for v in Redis.lrange('lvs_intranet', 0, -1)]
         LVS_DATA=[{'data': DATA, 'name': 'INTRANET_LVS'}]
         return render_template('chart_center_intranet.html',form = form,LVS_DATA=LVS_DATA,DOMAIN_DATA=DOMAIN_DATA,RT_DATA=RT_DATA)
@@ -74,16 +77,17 @@ def chart_center_intranet():
 
 @page_chart_center.route('/chart_center_domain')
 def chart_center_domain():
+    tt = int(time.strftime('%Y%m%d', time.localtime()))
     try:
         INTERNET_DOMAIN = {}
         INTRANET_DOMAIN = {}
-        for domain in RC.smembers('haproxy_topic'):
-            Count = int(RC.get('haproxy_logs_%s' %domain))
+        for domain in RC.smembers('haproxy_topic_%s' %tt):
+            Count = int(RC.get('haproxy_logs_%s_%s'%(tt,domain)))
             if Count == 0:
                 continue
             INTERNET_DOMAIN[str(domain)] = Count
-        for domain in RC.smembers('haproxy2_topic'):
-            Count = int(RC.get('haproxy2_logs_%s' %domain))
+        for domain in RC.smembers('haproxy2_topic_%s' %tt):
+            Count = int(RC.get('haproxy2_logs_%s_%s'%(tt,domain)))
             if Count == 0:
                 continue
             INTRANET_DOMAIN[str(domain)] = Count
@@ -94,9 +98,10 @@ def chart_center_domain():
 
 @page_chart_center.route('/chart_center_area')
 def chart_center_area():
+    tt = int(time.strftime('%Y%m%d', time.localtime()))
     try:
         AREA_DATA = {}
-        area_key = 'Area_Keys'
+        area_key = 'Area_Keys_%s' %tt
         for area in RC.smembers(area_key):
             Count = int(RC.get(area))
             if Count == 0:
@@ -110,14 +115,15 @@ def chart_center_area():
 
 @page_chart_center.route('/chart_center_traffic',methods = ['GET', 'POST'])
 def chart_center_traffic():
+    tt = int(time.strftime('%Y%m%d', time.localtime()))
     try:
         reload(MyForm)
         form = MyForm.MyForm_chart_center()
         Traffic_ser_DATA = Traffic_cli_DATA = None
         if form.submit.data:
             Domain = form.select_internet.data
-            Cli_Key = 'Topic.traffic.client_%s' % Domain
-            Ser_Key = 'Topic.traffic.server_%s' % Domain
+            Cli_Key = 'Topic.traffic.client_%s_%s' % (tt,Domain)
+            Ser_Key = 'Topic.traffic.server_%s_%s' % (tt,Domain)
             if RC.exists(Cli_Key):
                 # 获取请求流量
                 DATA = [eval(v) for v in RC.lrange(Cli_Key, 0, -1)]
@@ -129,13 +135,13 @@ def chart_center_traffic():
                 DATA = [DATA[i] for i in xrange(0, len(DATA), 10)]
                 Traffic_ser_DATA = [{'data': DATA, 'name': str(Domain)}]
             if not Traffic_ser_DATA and not Traffic_cli_DATA:
-                 flash('暂时还没%s的相关数据!' %Domain)
+                 flash('%s的相关数据为空!' %Domain.strip())
         return render_template('chart_center_traffic.html',form = form,Traffic_cli_DATA = Traffic_cli_DATA,Traffic_ser_DATA=Traffic_ser_DATA)
     except Exception as e:
         loging.write(e)
         return render_template_string('获取数据错误!')
 
 @page_chart_center.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)

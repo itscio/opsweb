@@ -45,7 +45,7 @@ def Zookeeper_Info():
         return  render_template_string(str(e))
 
 @page_zk_info.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)
 

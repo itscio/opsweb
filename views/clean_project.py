@@ -12,9 +12,9 @@ def clean_project():
     form_java = MyForm.MyFrom_java_list()
     def _CURL_API():
         try:
-			#调用API接口
-            URLS = ["http://",
-                    "http://"]
+            #调用API接口
+            URLS = ["http://op.ibaihe.com/haproxy_conf?type=cw&ip=127.0.0.1:80&domain=test.baihe.com&intranet=True",
+                    "http://op.ibaihe.com/haproxy_conf?type=cw&ip=127.0.0.1:80&domain=test.baihe.com"]
             for URL in URLS:
                 requests.request('get', URL, timeout=10)
         except Exception as e:

@@ -156,7 +156,7 @@ def tables():
     return render_template('tables.html',form=form)
 
 @page_mysql.before_request
-@check.login_required(grade=2)
+@check.login_required(grade=10)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)
 
