@@ -9,7 +9,7 @@ from views import sql_app,php_list,publish_java,publish_php,pw,update_php,vpn_ad
 from views import cdn,init_system,java_list,clear_redis,Chart,svn_admin,chart_center
 from views import kafka_info,zookeeper_info,slow_redis ,mysql_parse,deploy
 from views import sql_scheduler,git_admin,sql_kill,sql_run,update_java
-from views import clean_project,sql_query,dns_conf,Scheduler
+from views import clean_project,sql_query,dns_conf,scheduler_list
 from admin import examine,op_user
 from flask_limiter import Limiter
 from flask_limiter.util import get_ipaddr
@@ -18,7 +18,7 @@ from Modules import produce
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 produce.scheduler_tasks()
-limiter = Limiter(app,key_func=get_ipaddr,global_limits=["30/minute"])
+limiter = Limiter(app,key_func=get_ipaddr,global_limits=["60/minute"])
 app.config.from_pyfile('conf/main.conf')
 app.config.from_pyfile('conf/redis.conf')
 page_ck = Blueprint('ck_page', __name__, static_folder=chartkick.js(),static_url_path='/static')
@@ -58,4 +58,4 @@ app.register_blueprint(zabbix_api.page_zabbix_api)
 app.register_blueprint(sql_query.page_sql_query)
 app.register_blueprint(dns_conf.page_dns_conf)
 app.register_blueprint(VerifyCode.page_VerifyCode)
-app.register_blueprint(Scheduler.page_Scheduler)
+app.register_blueprint(scheduler_list.page_scheduler_list)
