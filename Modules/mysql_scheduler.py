@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import time
 from multiprocessing.dummy import Pool as Third_pool
-import loging,Mysql
+import loging,Mysql,check
 import __init__
 app = __init__.app
 log_path = '/tmp/mysql_scheduler.log'
@@ -10,6 +10,7 @@ PASSWORD = app.config.get('MYSQL_PASSWORD')
 HOST = app.config.get('MYSQL_HOST')
 PORT = app.config.get('MYSQL_PORT')
 DB = 'op'
+@check.proce_lock
 def mysql_scheduler():
     t = time.strftime('%Y-%m-%d',time.localtime())
     MYSQL = Mysql.MYSQL(USER,PASSWORD,HOST,PORT,DB)
