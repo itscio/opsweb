@@ -7,9 +7,10 @@ from functools import wraps
 import loging
 from rediscluster import RedisCluster
 import socket
-import os
+from random import choice
 import __init__
 app = __init__.app
+PID = choice([i for i in xrange(655350)])
 HOST = socket.gethostbyname(socket.gethostname())
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -76,17 +77,34 @@ def acl_ip(func):
             return render_template_string('非法IP地址访问!')
         return func(*args, **kwargs)
     return check_ip
-#排它锁
+#分布式全局锁
+def scheduler_lock():
+    try:
+        if RC.exists('host_lock'):
+            if HOST == RC.get('host_lock') and PID == int(RC.get('pid_lock')):
+                RC.expire('host_lock',30)
+                RC.expire('pid_lock', 30)
+                loging.write('lock_info:host>>%s  pid>>%s unlock......' % (HOST,PID))
+            else:
+                raise AssertionError
+        else:
+            RC.set('host_lock',HOST)
+            RC.set('pid_lock',PID)
+            RC.expire('host_lock',30)
+            RC.expire('pid_lock', 30)
+    except:
+        pass
+#进程排它锁
 def proce_lock(func):
     @wraps(func)
     def LOCK(*args, **kwargs):
         try:
             if RC.exists('host_lock'):
-                if HOST == RC.get('host_lock'):
-                    loging.write('host:%s   task:%s run......' % (HOST, func.__name__))
+                if HOST == RC.get('host_lock') and PID == int(RC.get('pid_lock')):
+                    loging.write('host:%s  pid:%s   task:%s run......' % (HOST,PID, func.__name__))
                     return func(*args, **kwargs)
                 else:
-                    loging.write('host:%s   task:%s sleep......'%(HOST,func.__name__))
+                    loging.write('host:%s  pid:%s   task:%s sleep......' % (HOST, PID, func.__name__))
                     return None
             return None
         except Exception as e:

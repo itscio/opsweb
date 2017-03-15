@@ -9,13 +9,13 @@ import json
 import socket
 import loging
 import pytz
-import os
 from rediscluster import RedisCluster
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 import time
 import analytics_logs
 import Task
+import check
 import __init__
 app = __init__.app
 HOST = socket.gethostbyname(socket.gethostname())
@@ -55,22 +55,9 @@ def send_sms(mobile=None,content=None):
         except Exception as e:
             return e
     return json.loads(fd)
-#分布式全局锁
-def scheduler_lock():
-    try:
-        if RC.exists('host_lock'):
-            if HOST == RC.get('host_lock'):
-                RC.expire('host_lock',30)
-                loging.write('lock_info:host>>%s' % HOST)
-            else:
-                raise AssertionError
-        else:
-            RC.set('host_lock',HOST)
-            RC.expire('host_lock',30)
-    except:
-        pass
+#定时任务执行
 def scheduler_tasks():
-    scheduler.add_job(scheduler_lock, 'cron', second='*/5', id='scheduler_lock', replace_existing=True)
+    scheduler.add_job(check.scheduler_lock, 'cron', second='*/5', id='scheduler_lock', replace_existing=True)
     scheduler.add_job(analytics_logs.internet_topic,'cron',second = '0',minute = '*/5',id='internet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.intranet_topic,'cron',second = '0',minute = '*/5',id='intranet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.kafka_web,'cron',second = '0',minute = '*',id='kafka_web',replace_existing=True)
