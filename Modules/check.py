@@ -10,7 +10,7 @@ import socket
 from random import choice
 import __init__
 app = __init__.app
-PID = choice([i for i in xrange(655350)])
+PID = choice([i for i in xrange(65535)])
 HOST = socket.gethostbyname(socket.gethostname())
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
