@@ -17,4 +17,4 @@ Rthandler.setFormatter(formatter)
 logging.getLogger('').addHandler(Rthandler)
 def write(Message,Level='INFO',log_path = log_path):
      with open(log_path,'a+') as f:
-        f.write('%s\n' %str(Message))
+        f.write('%s     %s\n' %(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime()),str(Message)))

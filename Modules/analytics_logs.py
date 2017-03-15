@@ -4,12 +4,14 @@ from kafka import KafkaConsumer
 import time
 import sys
 import requests
+import check
 #import loging
 import __init__
 app = __init__.app
 nodes = app.config.get('NODES_PRODUCE')
 bootstrap_servers = app.config.get('KAFKA_CLUSTER')
 rc = RedisCluster(startup_nodes=nodes,decode_responses=True)
+@check.proce_lock
 def internet_topic():
     consumer = KafkaConsumer('haproxy_logs',
                              group_id='haproxy_logs',
@@ -97,6 +99,7 @@ def internet_topic():
         except Exception as e:
             #loging.write(e)
             continue
+@check.proce_lock
 def intranet_topic():
     consumer = KafkaConsumer('haproxy_logs',
                              group_id='haproxy_logs',
@@ -129,7 +132,7 @@ def intranet_topic():
             #loging.write()
             continue
     sys.exit()
-
+@check.proce_lock
 def kafka_web():
     tt = time.strftime('%Y%m%d', time.localtime())
     H_keys = ('haproxy_topic_%s'%tt,'haproxy2_topic_%s' %tt)

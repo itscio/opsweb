@@ -5,11 +5,17 @@ import db_op
 import redis
 from functools import wraps
 import loging
+from rediscluster import RedisCluster
+import socket
+import os
 import __init__
 app = __init__.app
+HOST = socket.gethostbyname(socket.gethostname())
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port)
+nodes = app.config.get('NODES_PRODUCE')
+RC = RedisCluster(startup_nodes=nodes, decode_responses=True)
 def timestamp(i):
     '''
     i is 0 days ago
@@ -20,6 +26,7 @@ def timestamp(i):
         t = (datetime.datetime.now() - datetime.timedelta(days=1))
     tp = int(time.mktime(t.timetuple()))
     return tp
+#登陆检查
 def login_required(grade = 0,page=None):
     def login_check(func):
         @wraps(func)
@@ -55,7 +62,7 @@ def login_required(grade = 0,page=None):
                 db_op.DB.session.remove()
         return Login
     return login_check
-
+#访问ip限制
 def acl_ip(func):
     @wraps(func)
     def check_ip(*args, **kwargs):
@@ -69,6 +76,22 @@ def acl_ip(func):
             return render_template_string('非法IP地址访问!')
         return func(*args, **kwargs)
     return check_ip
+#排它锁
+def proce_lock(func):
+    @wraps(func)
+    def LOCK(*args, **kwargs):
+        try:
+            if RC.exists('host_lock'):
+                if HOST == RC.get('host_lock'):
+                    loging.write('host:%s   task:%s run......' % (HOST, func.__name__))
+                    return func(*args, **kwargs)
+                else:
+                    loging.write('host:%s   task:%s sleep......'%(HOST,func.__name__))
+                    return None
+            return None
+        except Exception as e:
+            loging.write(e)
+    return LOCK
 
 
 

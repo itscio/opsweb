@@ -8,6 +8,7 @@ import os
 import redis
 import json
 import socket
+import check
 import __init__
 app = __init__.app
 redis_host = app.config.get('REDIS_HOST')
@@ -19,6 +20,7 @@ HOST = app.config.get('MYSQL_HOST')
 PORT = app.config.get('MYSQL_PORT')
 TWEMPROXY_HOSTS = app.config.get('TWEMPROXY_HOSTS')
 DB = 'idc'
+@check.proce_lock
 def task_tables_info():
     MYSQL_IDC = Mysql.MYSQL(USER,PASSWORD,HOST,PORT,DB)
     Table = 'tableinfo'
@@ -28,7 +30,6 @@ def task_tables_info():
     for host,port,dbs in results[1]:
         try:
             if '172.16.9.' not in host:
-                loging.write(host,log_path=log_path)
                 MYSQL = Mysql.MYSQL(USER,PASSWORD,host,port,'mysql')
                 cmd = "show variables like 'version';"
                 version = MYSQL.Run(cmd)
@@ -43,12 +44,14 @@ def task_tables_info():
                             Rows = table_info[4]  or 0
                             Charset = table_info[14]  or 'None'
                             cmd = ("insert into %s (ip,port,database_name,table_name,Engine_name,Rows,Charset,version)  VALUES ('%s',%i,'%s','%s','%s',%i,'%s','%s');" %(Table,host,int(port),db,Table_Name,Engine,Rows,Charset,version))
+                            loging.write(cmd, log_path=log_path)
                             MYSQL_IDC.Run(cmd)
                 MYSQL.Close()
         except Exception as e:
-            loging.write(e)
-        MYSQL_IDC.Close()
-
+            loging.write(e,log_path=log_path)
+            continue
+    MYSQL_IDC.Close()
+@check.proce_lock
 def clear_kestrel():
     MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
     cmd = "select kestrel_ip,kestrel_port,kestrel_key from kestrel where kestrel_num ='0';"
@@ -62,8 +65,9 @@ def clear_kestrel():
                 Kestrel.delete(str(key))
             except:
                 continue
-
+@check.proce_lock
 def check_publish():
+    loging.write('check publish......')
     def rollback_java(Project, warname, ServerList):
         information = {}
         information['warname'] = warname
@@ -129,7 +133,7 @@ def check_publish():
                 loging.write('project:{0}\n'.format(result))
                 #os.system("/bin/tomail pd.list@baihe.com 测外发布警告 {0} 项目已经保持测外状态超过4个时间,请相关开发人员尽快处理!".format(Project[0]))
     MYSQL.Close()
-
+@check.proce_lock
 def get_twemproxy_redis():
     MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
     redis_info = {}

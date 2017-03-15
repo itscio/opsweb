@@ -19,7 +19,6 @@ import Task
 import __init__
 app = __init__.app
 HOST = socket.gethostbyname(socket.gethostname())
-PID = os.getppid()
 nodes = app.config.get('NODES_PRODUCE')
 RC = RedisCluster(startup_nodes=nodes, decode_responses=True)
 jobstores = {'default': SQLAlchemyJobStore(url=app.config.get('SQLALCHEMY_BINDS')['op'])}
@@ -59,25 +58,19 @@ def send_sms(mobile=None,content=None):
 #分布式全局锁
 def scheduler_lock():
     try:
-        log_path = '/tmp/scheduler_lock.log'
-        if RC.exists('scheduler_lock') and RC.exists('%s_lock'%HOST):
-            if HOST == RC.get('scheduler_lock') and PID == RC.get('%s_lock' %HOST):
-                RC.set('scheduler_lock', HOST)
-                RC.expire('scheduler_lock', 15)
-                RC.set('%s_lock' % HOST, PID)
-                RC.expire('%s_lock' % HOST, 15)
+        if RC.exists('host_lock'):
+            if HOST == RC.get('host_lock'):
+                RC.expire('host_lock',30)
+                loging.write('lock_info:host>>%s' % HOST)
+            else:
+                raise AssertionError
         else:
-            # 随机休眠
-            RC.set('scheduler_lock',HOST)
-            RC.expire('scheduler_lock',15)
-            time.sleep(choice([i for i in xrange(15)]))
-            RC.set('%s_lock' %HOST,PID)
-            RC.expire('%s_lock' % HOST,15)
-        loging.write('lock_info:host>>%s  pid>>%s' %(HOST,PID),log_path=log_path)
-    except Exception as e:
-        loging.write(e)
+            RC.set('host_lock',HOST)
+            RC.expire('host_lock',30)
+    except:
+        pass
 def scheduler_tasks():
-    scheduler.add_job(scheduler_lock, 'cron', second='*/3', id='scheduler_lock', replace_existing=True)
+    scheduler.add_job(scheduler_lock, 'cron', second='*/5', id='scheduler_lock', replace_existing=True)
     scheduler.add_job(analytics_logs.internet_topic,'cron',second = '0',minute = '*/5',id='internet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.intranet_topic,'cron',second = '0',minute = '*/5',id='intranet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.kafka_web,'cron',second = '0',minute = '*',id='kafka_web',replace_existing=True)
