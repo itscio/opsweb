@@ -7,8 +7,15 @@
         getimagecode.src="/verifycode?sid="+Math.radom();
         }
     </script>
-    <img src="/static/images/logo.jpg">
-    <div class="content" style="margin-top: 14%;" >
+    <div style="width: 100%;position: absolute; top:0">
+        <div style="width: 10%;float: left">
+            <img src="/static/images/logo.jpg">
+        </div>
+        <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
+            <p>运维系统管理平台</p>
+        </div>
+    </div>
+    <div class="content" style="margin-top: 16%;" >
         <form action="/login" method="post" class="login-form">
             {{ form.csrf_token }}
             <p style="margin-left:25%;">用户:{{ form.name(size=15,autocomplete="on",style="width:150px") }}</p>
@@ -27,7 +34,7 @@
             {% endif %}
         {% endwith %}
     </div>
-    <div class="footer" style="margin-top: 18%">
+    <div class="footer">
         <p>北京百合在线科技有限公司|版权所有© 2005-2017 百合网|运维邮箱:alarm@baihe.com</p>
     </div>
 {% endblock login %}

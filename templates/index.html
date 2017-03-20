@@ -1,10 +1,13 @@
 {% extends "base.html" %}
 {% block index %}
-    <div style="display: inline">
-        <div style="display:inline">
+    <div style="width: 100%">
+        <div style="width: 10%;float: left">
             <img src="/static/images/logo.jpg">
         </div>
-        <div style="font-size:9pt;float:right;text-align:right;display: inline;margin-top: 2%">
+        <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
+            <p>运维综合管理平台</p>
+        </div>
+        <div style="width:60%;font-size:9pt;float:left;text-align:right;margin-top: 2%">
             <p>
                 你好:<font color="#006400" style="font-weight:bold">{{ datas[0] }}</font>
                 &nbsp;<a  href={{ url_for('pw.pw') }}>修改密码</a>
