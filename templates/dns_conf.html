@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block dns_conf %}
+{% block page %}
 <div class="div"><p>线上内部DNS操作</p></div>
 <div style="margin-top: 8%;margin-left: 42%">
     <form action="/dns_conf" method="post">
@@ -20,4 +20,4 @@
     {% endif %}
 {% endwith %}
 </div>
-{% endblock dns_conf %}
+{% endblock page %}

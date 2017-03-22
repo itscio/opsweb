@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block slow_redis_show %}
+{% block page %}
 <div>
     <form action="/slow_redis" method="post">
         {{ form.csrf_token }}
@@ -15,4 +15,4 @@
     {% endif %}
 {% endwith %}
 </div>
-{% endblock slow_redis_show %}
+{% endblock page %}

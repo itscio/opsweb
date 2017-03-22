@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block svn_admin %}
+{% block page %}
 <div class="div"><p>SVN账号管理</p></div>
 <form action="/svn_admin" method="post">
 {{ form.csrf_token }}
@@ -15,4 +15,4 @@
     </div>
 </div>
 </form>
-{% endblock svn_admin %}
+{% endblock page %}

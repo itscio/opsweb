@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block clear_redis %}
+{% block page %}
 <div class="div"><p>查询及清除REDIS缓存</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/clear_redis" method="post">
@@ -10,4 +10,4 @@
         <p>{{ form.submit(class="Button") }}</p>
     </form>
 </div>
-{% endblock clear_redis %}
+{% endblock page %}

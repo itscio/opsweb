@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block mysql_parse %}
+{% block page %}
 <div class="div"><p>SQL语句审查</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/mysql_parse" method="post">
@@ -9,4 +9,4 @@
         {{ form.submit(class="Button") }}
     </form>
 </div>
-{% endblock mysql_parse %}
+{% endblock page %}

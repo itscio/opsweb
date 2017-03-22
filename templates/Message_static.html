@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block Message_static %}
+{% block page %}
 <div style="padding-top:12%;text-align:center;font-size:15pt">
 {% with messages = get_flashed_messages() %}
     {% if messages %}
@@ -11,4 +11,4 @@
     {% endif %}
 {% endwith %}
 </div>
-{% endblock Message_static %}
+{% endblock page %}

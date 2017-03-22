@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block mysql_query %}
+{% block page %}
 <p class="div">SQL语句查询</p>
 <div align="center" style="margin-top: 8%">
     <form action="/sql_query" method="post" enctype=multipart/form-data>
@@ -10,4 +10,4 @@
         {{ form.submit(class="Button") }}
     </form>
 </div>
-{% endblock mysql_query %}
+{% endblock page %}

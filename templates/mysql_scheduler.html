@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block mysql_scheduler %}
+{% block page %}
 <p class="div">SQL语句定时执行</p>
 <div align="center" style="margin-top: 8%">
     <form action="/sql_scheduler" method="post">
@@ -29,4 +29,4 @@
         {% endif %}
     </table>
 </div>
-{% endblock mysql_scheduler %}
+{% endblock page %}

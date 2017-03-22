@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block deploy_nginx %}
+{% block page %}
 <div class="div"><p>NGINX虚拟主机部署</p></div>
 <div align="center" style="margin-top: 4%">
     <form action="/deploy_nginx" method="post">
@@ -23,4 +23,4 @@
             {% endfor %}
     {% endif %}
 {% endwith %}
-{% endblock deploy_nginx %}
+{% endblock page %}

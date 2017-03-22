@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block cdn %}
+{% block page %}
 <div class="div"><p>腾讯CDN刷新</p></div>
 <form action="/cdn" method="post">
 <div align="center" style="margin-top: 10%">
@@ -9,4 +9,4 @@
             <p>{{ form.submit(class="Button") }}</p>
 </div>
 </form>
-{% endblock cdn %}
+{% endblock page %}

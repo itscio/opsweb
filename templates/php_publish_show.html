@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block php_publish_show %}
+{% block page %}
 <script type="text/javascript">
     var id = setInterval("startRequest()",1000);
     function startRequest(){
@@ -13,4 +13,4 @@
     <p>运行结果(执行时间可能会稍长):</p>
     <p id="BUT"></p>
 </div>
-{% endblock php_publish_show %}
+{% endblock page %}

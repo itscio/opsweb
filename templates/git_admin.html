@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block git_admin %}
+{% block page %}
 <div class="div"><p>GIT账号管理</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/git_admin" method="post">
@@ -9,4 +9,4 @@
         <p>{{ form.submit(class="Button") }}</p>
     </form>
 </div>
-{% endblock git_admin %}
+{% endblock page %}

@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block java_update %}
+{% block page %}
 <div class="div"><p>Jboss项目 增量上线</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/update_java" method="post">
@@ -10,4 +10,4 @@
         <p>{{ form.submit(class="Button") }}</p>
     </form>
 </div>
-{% endblock java_update %}
+{% endblock page %}

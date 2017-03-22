@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block tables %}
+{% block page %}
 <div class="div" style="margin-top: 8%"><p>数据库表状态查询</p></div>
 <div align="center" style="margin-top: 2%">
     <form action="/tables" method="post">
@@ -9,4 +9,4 @@
     <p>{{ form.submit(class="Button") }}</p>
 </form>
 </div>
-{% endblock tables %}
+{% endblock page %}

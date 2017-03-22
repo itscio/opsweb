@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block mysql_kill %}
+{% block page %}
 <p class="div">SQL连接进程清除(<font color="red">慎用</font>)</p>
 <br>
 <div align="center" style="margin-top: 8%">
@@ -14,4 +14,4 @@
         <p>{{ form.submit(class="Button") }}</p>
     </form>
 </div>
-{% endblock mysql_kill %}
+{% endblock page %}

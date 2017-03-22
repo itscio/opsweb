@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% block deploy_php %}
+{% block page %}
 <div class="div"><p>PHP环境部署</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/deploy_php" method="post">
@@ -23,4 +23,4 @@
             {% endfor %}
     {% endif %}
 {% endwith %}
-{% endblock deploy_php %}
+{% endblock page %}

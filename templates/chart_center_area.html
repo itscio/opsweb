@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-{% block chart %}
+{% block base %}
 <div class="div"><p>用户地区分布情况</p></div>
-    <div align="center">
-        <div style="margin-top: 5%">
-            {% pie_chart AREA_DATA with id='area' height='650px' %}
-        </div>
+    <div align="center" style="margin-top: 5%">
+        {% pie_chart AREA_DATA with id='area' height='650px' %}
     </div>
-{% endblock chart %}
+{% endblock base %}
