@@ -196,10 +196,11 @@ def php_publish(publish_Key,Key):
                 Redis.lpush(Key, 'Recover:{0}'.format(e))
                 ssh.close()
                 sys.exit()
-    if Redis.exists(publish_Key):
-        INFO = Redis.rpop(publish_Key)
-        if INFO:
-            try:
+    try:
+        if Redis.exists(publish_Key):
+            INFO = Redis.rpop(publish_Key)
+            Redis.delete(publish_Key)
+            if INFO:
                 Info = eval(INFO)
                 action = Info['action']
                 path = Info['path']
@@ -221,7 +222,9 @@ def php_publish(publish_Key,Key):
                     cmd = "update php_list set Gray = '0' where project = '%s';" % App
                     MYSQL.Run(cmd)
                     MYSQL.Close()
-            except Exception as e:
-                Redis.lpush(Key,'main:{0}'.format(str(e)))
-            finally:
-                Redis.lpush(Key,'End')
+            else:
+                Redis.lpush(Key, '没有获取到上线相关信息,请重试!')
+    except Exception as e:
+        Redis.lpush(Key,'main:{0}'.format(str(e)))
+    finally:
+        Redis.lpush(Key,'End')

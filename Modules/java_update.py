@@ -156,10 +156,12 @@ def java_update(publish_key,Message_key):
         except Exception as e:
             Redis.lpush(Message_key, 'scp2:{0}'.format(e))
             sys.exit()
-    if Redis.exists(publish_key):
-        INFO = Redis.rpop(publish_key)
-        if INFO:
-            try:
+
+    try:
+        if Redis.exists(publish_key):
+            INFO = Redis.rpop(publish_key)
+            Redis.delete(publish_key)
+            if INFO:
                 INFO = eval(INFO)
                 Project = INFO['project']
                 Action = INFO['Action']
@@ -192,8 +194,9 @@ def java_update(publish_key,Message_key):
                     cmd = "update java_list set Gray = '0' where project = '%s';" % WarName
                     MYSQL.Run(cmd)
                     MYSQL.Close()
-            except Exception as e:
-                Redis.lpush(Message_key,'main:{0}'.format(e))
-                sys.exit()
-            finally:
-                Redis.lpush(Message_key,'End')
+            else:
+                Redis.lpush(Message_key, '没有获取到上线相关信息,请重试!')
+    except Exception as e:
+        Redis.lpush(Message_key,'main:{0}'.format(e))
+    finally:
+        Redis.lpush(Message_key,'End')

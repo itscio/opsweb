@@ -204,10 +204,12 @@ def java_publish(publish_key,Message_key):
         else:
             myRedis.lpush(Message_key, '         %s --->rollback success!' % warZipName)
             Restart_java(ssh, warZipName)
-    if myRedis.exists(publish_key):
-        INFO = myRedis.rpop(publish_key)
-        if INFO:
-            try:
+
+    try:
+        if myRedis.exists(publish_key):
+            INFO = myRedis.rpop(publish_key)
+            myRedis.delete(publish_key)
+            if INFO:
                 INFO = eval(INFO)
                 warZipName = INFO['warTagName']
                 warName = INFO['warname']
@@ -237,8 +239,9 @@ def java_publish(publish_key,Message_key):
                     cmd = "update java_list set Gray = '0' where project = '%s';" % warName
                     MYSQL.Run(cmd)
                     MYSQL.Close()
-            except Exception as e:
-                myRedis.lpush(Message_key,'main:{0}'.format(e))
-                sys.exit()
-            finally:
-                myRedis.lpush(Message_key,'End')
+            else:
+                myRedis.lpush(Message_key, '没有获取到上线相关信息,请重试!')
+    except Exception as e:
+        myRedis.lpush(Message_key,'main:{0}'.format(e))
+    finally:
+        myRedis.lpush(Message_key,'End')

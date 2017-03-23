@@ -116,7 +116,7 @@ def php_update(publish_key,Key):
             Redis.lpush(Key, project + ' not find')
             sys.exit(1)
         else:
-            sip = set(sip)
+            sip = set([ip[0] for ip in sip])
         MYSQL.Close()
         return (sip, project)
 
@@ -213,10 +213,11 @@ def php_update(publish_key,Key):
         sync2(Key, arg, line, sline, wline, swline, project)
         if os.path.exists(svn_path):
             shutil.rmtree(svn_path)
-    if Redis.exists(publish_key):
-        Info = Redis.rpop(publish_key)
-        if Info:
-            try:
+    try:
+        if Redis.exists(publish_key):
+            Info = Redis.rpop(publish_key)
+            Redis.delete(publish_key)
+            if Info:
                 Info = eval(Info)
                 Type = int(Info['arg'])
                 Action = Info['action']
@@ -256,8 +257,9 @@ def php_update(publish_key,Key):
                     cmd = "update php_list set Gray = '0' where project = '%s';" % project
                     MYSQL.Run(cmd)
                     MYSQL.Close()
-            except Exception as e:
-                Redis.lpush(Key,'main:{0}'.format(e))
-                sys.exit()
-            finally:
-                Redis.lpush(Key,'End')
+            else:
+                Redis.lpush(Key, '没有获取到上线相关信息,请重试!')
+    except Exception as e:
+        Redis.lpush(Key,'main:{0}'.format(e))
+    finally:
+        Redis.lpush(Key,'End')
