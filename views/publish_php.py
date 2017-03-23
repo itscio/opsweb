@@ -50,7 +50,7 @@ def publish_php():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_publish_php' %K
-    publish_key = '%s_publish_php' %g.user
+    publish_key = '%s_publish_key' %K
     form = MyForm.MyForm_php()
     qrcode_url = "https://op.baihe.com/qrcode_php/{0}/{1}".format(g.user,g.grade)
     if form.submit.data:
@@ -165,6 +165,8 @@ def publish_php():
                     if val:
                         val = set(val)
                         sip = [v[0].encode('UTF-8') for v in val if v]
+                        if Type == 1:
+                            sip.append('172.16.4.188')
                     else:
                         raise flash('%s 没有在上线列表中找到!' %App)
                 Info = {}

@@ -21,7 +21,7 @@ def update_java():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_update_java' % K
-    publish_key = '%s_update_java' % g.user
+    publish_key = '%s_update_key' % K
     form = MyForm.MyForm_updateJboss()
     if form.submit.data:
         try:

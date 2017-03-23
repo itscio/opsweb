@@ -22,7 +22,7 @@ def update_php():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_update_php' %K
-    publish_key = '%s_update_php' % g.user
+    publish_key = '%s_update_key' %K
     form = MyForm.MyForm_php()
     if form.submit.data:
         try:

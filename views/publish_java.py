@@ -49,7 +49,7 @@ def publish_java():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_publish_java' % K
-    publish_key = '%s_publish_java' % g.user
+    publish_key = '%s_publish_key' % K
     qrcode_url = "https://op.baihe.com/qrcode_java/{0}/{1}".format(g.user, g.grade)
     form = MyForm.MyForm_publishJboss()
     if form.submit.data:
@@ -112,6 +112,8 @@ def publish_java():
                                 raise flash('%s 没有在上线列表中找到!' % warname)
                     else:
                         ServerList = dbTable.query.with_entities(dbTable.ip,dbTable.user).filter(db_op.DB.and_(dbTable.project == warname,dbTable.type == Type)).all()
+                        if Type == 1:
+                            ServerList.append(('172.16.4.188','java'))
                     if ServerList:
                         information = {}
                         information['warname'] = warname
