@@ -18,7 +18,11 @@ page_publish_php = Blueprint('publish_php',__name__)
 def publish_query():
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_publish_php' %K
-    return render_template_string(Redis.rpop(Key) or "")
+    if Redis.exists(Key):
+        return render_template_string(Redis.rpop(Key) or "")
+    else:
+        Redis.lpush(Key, 'Get user information error, please login again!')
+        Redis.lpush(Key,"End")
 @page_publish_php.route('/qrcode_php/<User>/<Grade>')
 def Qrcode(User = None,Grade = None):
     try:
@@ -55,6 +59,7 @@ def publish_php():
     qrcode_url = "https://op.baihe.com/qrcode_php/{0}/{1}".format(g.user,g.grade)
     if form.submit.data:
         try:
+            Redis.delete(Key)
             Redis.lpush(Key, 'check env......')
             if form.text.data and form.changelog.data:
                 action = form.selectaction.data
@@ -134,8 +139,6 @@ def publish_php():
                         raise flash('需申请验证码!')
                     if g.grade >= 2 and int(grade) <=4 and Type == 1 and (int(publish_time) >= 17 or int(publish_time) <= 9):
                         raise flash('仅允许在10-17点时间段进行自助操作，需申请验证码!')
-                Redis.lpush(Key,'    --->check env pass!')
-                Redis.lpush(Key,'-'*80+'\n')
                 db = db_op.php_list
                 if Gray:
                     if App == 'baihePhpGlobalLibrary_publish':
@@ -177,7 +180,8 @@ def publish_php():
                 Info['gray'] = Gray
                 Info['Type'] = Type
                 Info['Way'] = Way
-                Redis.delete(Key)
+                Redis.lpush(Key,'    --->check env pass!')
+                Redis.lpush(Key,'-'*80+'\n')
                 Redis.lpush(publish_key,str(Info))
                 mysql_operation = Mysql.mysql_op(g.user,action,Type,App,version,Gray,work,grade,changelog)
                 mysql_operation.op_operation()

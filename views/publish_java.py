@@ -16,8 +16,11 @@ myRedis = redis.StrictRedis(host=redisHost,port=redisPort)
 def publish_java_query():
     K = '%s_%s' %(g.user,g.secret_key)
     messageChannelKey = '%s_publish_java' % K
-    data = myRedis.rpop(messageChannelKey)
-    return render_template_string(data or "")
+    if myRedis.exists(messageChannelKey):
+        return render_template_string(myRedis.rpop(messageChannelKey) or "")
+    else:
+        myRedis.lpush(messageChannelKey, 'Get user information error, please login again!')
+        myRedis.lpush(messageChannelKey,"End")
 @page_publish_java.route('/qrcode_java/<User>/<Grade>')
 def Qrcode(User = None,Grade = None):
     try:
@@ -53,6 +56,8 @@ def publish_java():
     qrcode_url = "https://op.baihe.com/qrcode_java/{0}/{1}".format(g.user, g.grade)
     form = MyForm.MyForm_publishJboss()
     if form.submit.data:
+        myRedis.delete(messageKey)
+        myRedis.lpush(messageKey, 'check env......')
         Action = form.selectAction.data
         Type = int(form.selectType.data)
         Gray = form.Gray.data
@@ -62,7 +67,6 @@ def publish_java():
         grade = form.selectgrade.data
         changelog = form.changelog.data
         tags = form.text.data.strip().splitlines()
-        myRedis.lpush(messageKey, 'check env......')
         if tags and changelog:
             try:
                 assert len(tags) == 1, '错误:只能同时上线一个项目!'
@@ -96,8 +100,6 @@ def publish_java():
                             raise flash('需申请验证码!')
                         if g.grade >= 2 and int(grade) <= 4 and Type == 1 and (int(publish_time) >= 17 or int(publish_time) <= 9):
                             raise flash('仅允许在10-17点时间段进行自助操作，需申请验证码!')
-                    myRedis.lpush(messageKey, '    --->check env pass!')
-                    myRedis.lpush(messageKey, '-' * 80 + '\n')
                     dbTable = db_op.java_list
                     #灰度发布
                     if Gray:
@@ -115,6 +117,8 @@ def publish_java():
                         if Type == 1:
                             ServerList.append(('172.16.4.188','java'))
                     if ServerList:
+                        myRedis.lpush(messageKey, '    --->check env pass!')
+                        myRedis.lpush(messageKey, '-' * 80 + '\n')
                         information = {}
                         information['warname'] = warname
                         information['warTagName'] = warTagName
@@ -123,7 +127,6 @@ def publish_java():
                         information['Gray'] = Gray
                         information['Type'] = Type
                         information['Way']  = Way
-                        myRedis.delete(messageKey)
                         myRedis.lpush(publish_key,information)
                         mysql_operation = Mysql.mysql_op(g.user,Action,Type,warname,version,Gray,work,grade,changelog)
                         mysql_operation.op_operation()

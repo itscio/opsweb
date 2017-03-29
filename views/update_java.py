@@ -13,8 +13,11 @@ myRedis = redis.StrictRedis(host=redisHost,port=redisPort)
 def update_java_query():
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_update_java' % K
-    data = myRedis.rpop(messageKey)
-    return render_template_string(data or "")
+    if myRedis.exists(messageKey):
+        return render_template_string(myRedis.rpop(messageKey) or "")
+    else:
+        myRedis.lpush(messageKey, 'Get user information error, please login again!')
+        myRedis.lpush(messageKey,"End")
 @page_update_java.route('/update_java',methods = ['GET','POST'])
 @check.login_required(grade=0)
 def update_java():
@@ -26,6 +29,8 @@ def update_java():
     if form.submit.data:
         try:
             if form.text.data:
+                myRedis.delete(messageKey)
+                myRedis.lpush(messageKey, 'check env......')
                 tags = form.text.data.strip().splitlines()
                 assert len(tags)==1,'Can only execute a project at a time!'
                 project = form.text.data.strip()
@@ -49,13 +54,14 @@ def update_java():
                 else:
                     ServerList = dbTable.query.with_entities(dbTable.ip,dbTable.user).filter(db_op.DB.and_(dbTable.project == warname,dbTable.type == Type)).all()
                 if ServerList:
+                    myRedis.lpush(messageKey, '    --->check env pass!')
+                    myRedis.lpush(messageKey, '-' * 80 + '\n')
                     information = {}
                     information['warname'] = warname
                     information['project'] = project
                     information['ServerList'] = ServerList
                     information['Action'] = Action
                     information['Gray'] = Gray
-                    myRedis.delete(messageKey)
                     myRedis.lpush(publish_key,information)
                     mysql_operation = Mysql.mysql_op(g.user,Action,Type,project,Gray)
                     mysql_operation.op_operation()

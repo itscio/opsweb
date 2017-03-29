@@ -14,7 +14,11 @@ page_update_php = Blueprint('update_php',__name__)
 def update_query():
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_update_php' %K
-    return render_template_string(Redis.rpop(Key) or "")
+    if Redis.exists(Key):
+        return render_template_string(Redis.rpop(Key) or "")
+    else:
+        Redis.lpush(Key, 'Get user information error, please login again!')
+        Redis.lpush(Key,"End")
 
 @page_update_php.route('/update_php',methods = ['GET', 'POST'])
 @check.login_required(grade=0)
@@ -26,6 +30,8 @@ def update_php():
     form = MyForm.MyForm_php()
     if form.submit.data:
         try:
+            Redis.delete(Key)
+            Redis.lpush(Key, 'check env......')
             tm = time.strftime('%Y%m%d%H%M%S',time.localtime())
             Key_file_list ='file_list_%s' %tm
             if form.text.data:
@@ -44,8 +50,9 @@ def update_php():
             Info['action'] = Action
             Info['Key_file_lis'] = Key_file_list
             Info['gray'] = Gray
-            Redis.delete(Key)
             Redis.rpush(publish_key,str(Info))
+            Redis.lpush(Key, '    --->check env pass!')
+            Redis.lpush(Key, '-' * 80 + '\n')
             mysql_operation = Mysql.mysql_op(g.user,Action,Type,lines,Gray)
             mysql_operation.op_operation()
             Scheduler = produce.Scheduler_publish()
