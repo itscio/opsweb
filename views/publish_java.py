@@ -15,12 +15,8 @@ myRedis = redis.StrictRedis(host=redisHost,port=redisPort)
 @check.login_required(grade=10)
 def publish_java_query():
     K = '%s_%s' %(g.user,g.secret_key)
-    messageChannelKey = '%s_publish_java' % K
-    if myRedis.exists(messageChannelKey):
-        return render_template_string(myRedis.rpop(messageChannelKey) or "")
-    else:
-        myRedis.lpush(messageChannelKey, 'Get user information error, please login again!')
-        myRedis.lpush(messageChannelKey,"End")
+    messageKey = '%s_publish_java' % K
+    return render_template_string(myRedis.rpop(messageKey) or "")
 @page_publish_java.route('/qrcode_java/<User>/<Grade>')
 def Qrcode(User = None,Grade = None):
     try:
@@ -56,8 +52,6 @@ def publish_java():
     qrcode_url = "https://op.baihe.com/qrcode_java/{0}/{1}".format(g.user, g.grade)
     form = MyForm.MyForm_publishJboss()
     if form.submit.data:
-        myRedis.delete(messageKey)
-        myRedis.lpush(messageKey, 'check env......')
         Action = form.selectAction.data
         Type = int(form.selectType.data)
         Gray = form.Gray.data
@@ -69,6 +63,9 @@ def publish_java():
         tags = form.text.data.strip().splitlines()
         if tags and changelog:
             try:
+                if myRedis.exists(messageKey):
+                    raise flash('项目上线操作正在执行,不能并行上线操作.请稍候......')
+                myRedis.lpush(messageKey, 'check env......')
                 assert len(tags) == 1, '错误:只能同时上线一个项目!'
                 warTagName = tags[0]
                 version = '0.0.0'

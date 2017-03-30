@@ -18,11 +18,8 @@ page_publish_php = Blueprint('publish_php',__name__)
 def publish_query():
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_publish_php' %K
-    if Redis.exists(Key):
-        return render_template_string(Redis.rpop(Key) or "")
-    else:
-        Redis.lpush(Key, 'Get user information error, please login again!')
-        Redis.lpush(Key,"End")
+    return render_template_string( Redis.rpop(Key) or "")
+
 @page_publish_php.route('/qrcode_php/<User>/<Grade>')
 def Qrcode(User = None,Grade = None):
     try:
@@ -59,7 +56,8 @@ def publish_php():
     qrcode_url = "https://op.baihe.com/qrcode_php/{0}/{1}".format(g.user,g.grade)
     if form.submit.data:
         try:
-            Redis.delete(Key)
+            if Redis.exists(Key):
+                raise flash('项目上线操作正在执行,不能并行上线操作.请稍候......')
             Redis.lpush(Key, 'check env......')
             if form.text.data and form.changelog.data:
                 action = form.selectaction.data

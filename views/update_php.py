@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import redis
 import time
-from flask import Blueprint,redirect,url_for,render_template,render_template_string,g,request
+from flask import Blueprint,redirect,url_for,render_template,render_template_string,g,request,flash
 from Modules import check,MyForm,Mysql,produce,php_update
 import __init__
 app = __init__.app
@@ -14,11 +14,7 @@ page_update_php = Blueprint('update_php',__name__)
 def update_query():
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_update_php' %K
-    if Redis.exists(Key):
-        return render_template_string(Redis.rpop(Key) or "")
-    else:
-        Redis.lpush(Key, 'Get user information error, please login again!')
-        Redis.lpush(Key,"End")
+    return render_template_string(Redis.rpop(Key) or "")
 
 @page_update_php.route('/update_php',methods = ['GET', 'POST'])
 @check.login_required(grade=0)
@@ -30,7 +26,8 @@ def update_php():
     form = MyForm.MyForm_php()
     if form.submit.data:
         try:
-            Redis.delete(Key)
+            if Redis.exists(Key):
+                raise flash('项目上线操作正在执行,不能并行上线操作.请稍候......')
             Redis.lpush(Key, 'check env......')
             tm = time.strftime('%Y%m%d%H%M%S',time.localtime())
             Key_file_list ='file_list_%s' %tm

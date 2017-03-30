@@ -13,11 +13,7 @@ myRedis = redis.StrictRedis(host=redisHost,port=redisPort)
 def update_java_query():
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_update_java' % K
-    if myRedis.exists(messageKey):
-        return render_template_string(myRedis.rpop(messageKey) or "")
-    else:
-        myRedis.lpush(messageKey, 'Get user information error, please login again!')
-        myRedis.lpush(messageKey,"End")
+    return render_template_string(myRedis.rpop(messageKey) or "")
 @page_update_java.route('/update_java',methods = ['GET','POST'])
 @check.login_required(grade=0)
 def update_java():
@@ -29,7 +25,8 @@ def update_java():
     if form.submit.data:
         try:
             if form.text.data:
-                myRedis.delete(messageKey)
+                if myRedis.exists(messageKey):
+                    raise flash('项目上线操作正在执行,不能并行上线操作.请稍候......')
                 myRedis.lpush(messageKey, 'check env......')
                 tags = form.text.data.strip().splitlines()
                 assert len(tags)==1,'Can only execute a project at a time!'
