@@ -12,7 +12,7 @@ import pytz
 from rediscluster import RedisCluster
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-import time
+import time,datetime
 import analytics_logs
 import Task
 import check
@@ -61,18 +61,22 @@ def scheduler_tasks():
     scheduler.add_job(analytics_logs.internet_topic,'cron',second = '0',minute = '*/5',id='internet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.intranet_topic,'cron',second = '0',minute = '*/5',id='intranet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.kafka_web,'cron',second = '0',minute = '*',id='kafka_web',replace_existing=True)
-    scheduler.add_job(Task.task_tables_info, 'cron', second='0', minute='0',hour='*',id='task_tables_info', replace_existing=True)
-    scheduler.add_job(mysql_scheduler.mysql_scheduler,'cron', second='0', minute='0',hour='2', id='mysql_scheduler', replace_existing=True)
+    scheduler.add_job(Task.task_tables_info, 'cron', second='0', minute='0',hour='*/4',id='task_tables_info', replace_existing=True)
+    scheduler.add_job(mysql_scheduler.mysql_scheduler,'cron', second='0', minute='0',hour='1', id='mysql_scheduler', replace_existing=True)
     scheduler.add_job(Task.check_publish, 'cron', second='0', minute='*/5',hour='10-18',id='check_publish',replace_existing=True)
     scheduler.add_job(Task.clear_kestrel, 'cron', second='0', minute='0', hour='2', id='clear_kestrel',replace_existing=True)
     scheduler.add_job(Task.get_twemproxy_redis, 'cron', second='0', minute='*/30',hour='10-18', id='get_twemproxy_redis',replace_existing=True)
+    scheduler.add_job(Task.zabbix_api, 'cron', second='0', minute='*',id='zabbix_api', replace_existing=True)
+    scheduler.add_job(Task.kestel_info, 'cron', second='0', minute='*', id='kestrel_info', replace_existing=True)
     scheduler.start()
 #线上任务执行
 class Scheduler_publish(object):
     def __init__(self):
+        self.run_date = datetime.datetime.now() + datetime.timedelta(seconds=3)
         self.tm = time.strftime('%M',time.localtime())
+        self.run_date = self.run_date.strftime('%Y-%m-%d %H:%M:%S')
         self.scheduler = BackgroundScheduler({'apscheduler.job_defaults.max_instances': '5'})
         self.scheduler.configure(timezone=pytz.timezone('Asia/Shanghai'))
-    def Scheduler_mem(self,func,publish_key = 'None',taskKey = 'None',):
-        self.scheduler.add_job(func,'cron', second='*/2',minute = self.tm,args=[publish_key,taskKey],id='%s_%s'%(taskKey,self.tm))
+    def Scheduler_mem(self,func,publish_key = 'None',taskKey = 'None'):
+        self.scheduler.add_job(func,'date', run_date=self.run_date,args=[publish_key,taskKey],id='%s_%s'%(taskKey,self.tm),replace_existing=False)
         return self.scheduler

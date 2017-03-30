@@ -38,7 +38,7 @@ def php_update(publish_key,Key):
                 if '/home/work/svn' not in s_l:
                     Redis.lpush(Key, s_l)
         except Exception as e:
-            Redis.lpush(Key, 'svn_co:{0}'.format(e))
+            Redis.lpush(Key, 'svn_co:{0} fail'.format(e))
             sys.exit()
 
     def md5sum(path):
@@ -68,10 +68,10 @@ def php_update(publish_key,Key):
             try:
                 if ver and p:
                     if not p:
-                        Redis.lpush(Key, 'error ' + line + '  begin with "/"!\n')
+                        Redis.lpush(Key, 'fail ' + line + '  begin with "/"!\n')
                         sys.exit(1)
             except:
-                Redis.lpush(Key, 'not svn version number!\n')
+                Redis.lpush(Key, 'fail :not svn version number!\n')
                 sys.exit(1)
             line = line.replace('\\', '/')
             line = line.replace('$', '\$')
@@ -96,7 +96,7 @@ def php_update(publish_key,Key):
                 if os.path.exists(svn_path):
                     shutil.rmtree(svn_path)
         if len(set(pp)) != 1:
-            Redis.lpush(Key, "error the %s is not same project!" % pp[:])
+            Redis.lpush(Key, "fail the %s is not same project!" % pp[:])
             sys.exit(1)
         Redis.lpush(Key, '    --->serverlist,filepath,svnpath pass!\n')
         Redis.lpush(Key, '-' * 80 + '\n')
@@ -113,7 +113,7 @@ def php_update(publish_key,Key):
             cmd = 'select ip from php_list where project = "%s" and type = "%i" ;' % (project, Type)
             sip = MYSQL.Run(cmd)
         if not sip:
-            Redis.lpush(Key, project + ' not find')
+            Redis.lpush(Key,'fail :%s not find' %project)
             sys.exit(1)
         else:
             sip = set([ip[0] for ip in sip])
@@ -142,7 +142,7 @@ def php_update(publish_key,Key):
                 Redis.lpush(Key, '   --->verify %s \n' % path)
                 if rmd5 != smd5:
                     Redis.lpush(Key, '-' * 30 + '\n')
-                    Redis.lpush(Key, ' verify ' + path + ' on ' + ip + ' fail!!!\n')
+                    Redis.lpush(Key, ' verify ' + path + ' on ' + ip + ' fail \n')
                     Redis.lpush(Key, '-' * 30 + '\n' * 3)
                     Redis.lpush(Key, 'verify %s on %s fail' % (path, ip))
                     time.sleep(5)
@@ -150,7 +150,7 @@ def php_update(publish_key,Key):
                     Redis.lpush(Key, '         --->PASS!\n')
                 ssh.close()
             except Exception as e:
-                Redis.lpush(Key, 'Verify:{0}'.format(e))
+                Redis.lpush(Key, 'Verify:{0} fail'.format(e))
                 ssh.close()
 
         def scp2(Key, arg, wline, swline):
@@ -178,7 +178,7 @@ def php_update(publish_key,Key):
                         else:
                             Verify(Key, ip, swline)
             except Exception as e:
-                Redis.lpush(Key, 'scp2:{0}'.format(e))
+                Redis.lpush(Key, 'scp2:{0} fail'.format(e))
                 ssh.close()
 
         if arg == 'publish':
@@ -201,8 +201,8 @@ def php_update(publish_key,Key):
             scp2(Key, arg, wline, swline)
         if arg == 'recover':
             if os.path.isdir(swline):
-                Redis.lpush(Key, swline + ' is Directory not recover')
-                sys.exit(1)
+                Redis.lpush(Key,'fail :%s is Directory not recover' %swline)
+                sys.exit()
             else:
                 Redis.lpush(Key, 'recover ' + line + '\n')
                 shutil.copy(swline + '.bak', swline)
@@ -260,6 +260,7 @@ def php_update(publish_key,Key):
             else:
                 Redis.lpush(Key, '没有获取到上线相关信息,请重试!')
     except Exception as e:
-        Redis.lpush(Key,'main:{0}'.format(e))
+        Redis.lpush(Key,'main:{0} fail'.format(e))
     finally:
         Redis.lpush(Key,'End')
+        Redis.expire(Key, 30)

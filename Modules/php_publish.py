@@ -58,7 +58,7 @@ def php_publish(publish_Key,Key):
                     "/usr/bin/svn export --no-auth-cache --non-interactive --force --username {0} --password {1} http://svn.ibaihe.com:1722/svn/{2}  {3}".format(
                         svn_user, svn_password, path, tag_path))
                 if not os.listdir(tag_path):
-                    Redis.lpush(Key, 'svn up fail,check the svn path!')
+                    Redis.lpush(Key, 'svn up fail  check the svn path!')
                     sys.exit(0)
             if path.endswith('.zip'):
                 zip_file = path.split('/')[-1]
@@ -73,7 +73,7 @@ def php_publish(publish_Key,Key):
             if os.path.exists('%s%s.zip' % (web_path, App)):
                 S_md5 = md5sum('%s%s.zip' % (web_path, App))
             else:
-                raise "zip %s.zip fail!" % App
+                raise "zip %s.zip fail !" % App
         except Exception as e:
             Redis.lpush(Key, 'svn_co:{0}'.format(e))
             sys.exit()
@@ -94,7 +94,7 @@ def php_publish(publish_Key,Key):
                                                                                               git_password, path)
             os.system(gitCoCmd)
             if not os.path.exists('{0}{1}'.format(web_path, App)):
-                Redis.lpush(Key, 'git clone fail!')
+                Redis.lpush(Key, 'git clone fail !')
                 sys.exit(0)
             else:
                 gitCoCmd = 'cd {0}{1} && /usr/bin/git checkout {2}'.format(web_path, App, tag_name)
@@ -145,7 +145,7 @@ def php_publish(publish_Key,Key):
                             result_backup = stderr.read()
                         if result_backup:
                             Redis.lpush(Key, result_backup)
-                            Redis.lpush(Key, '%s         --->backup fail!' % App)
+                            Redis.lpush(Key, '%s         --->backup fail !' % App)
                         else:
                             Redis.lpush(Key, '%s         --->backup success!' % App)
                             Redis.lpush(Key, 'publish start ......')
@@ -154,17 +154,17 @@ def php_publish(publish_Key,Key):
                             result_rsync = stderr.read()
                             if result_rsync:
                                 Redis.lpush(Key, result_rsync)
-                                Redis.lpush(Key, '%s         --->publish fail!' % App)
+                                Redis.lpush(Key, '%s         --->publish fail !' % App)
                             else:
                                 Redis.lpush(Key, '%s         --->publish success!' % App)
                                 ssh.close()
                             Redis.lpush(Key, '-' * 60)
                     else:
-                        Redis.lpush(Key, '%s         --->unzip fail!' % App)
+                        Redis.lpush(Key, '%s         --->unzip fail !' % App)
                 else:
                     Redis.lpush(Key, 'S_MD5:%r' % S_md5)
                     Redis.lpush(Key, 'R_MD5:%r' % R_md5)
-                    Redis.lpush(Key, ' verify %s on %s fail!!!' % (App, ip))
+                    Redis.lpush(Key, ' verify %s on %s fail !!!' % (App, ip))
             except Exception as e:
                 Redis.lpush(Key, 'Update:{0}'.format(e))
                 ssh.close()
@@ -191,7 +191,7 @@ def php_publish(publish_Key,Key):
                     Redis.lpush(Key, '         --->recover success!\n')
                     ssh.close()
                 else:
-                    Redis.lpush(Key, 'Recover %s on %s fail!!!\n' % (App, ip))
+                    Redis.lpush(Key, 'Recover %s on %s fail !!!\n' % (App, ip))
             except Exception as e:
                 Redis.lpush(Key, 'Recover:{0}'.format(e))
                 ssh.close()
@@ -228,3 +228,4 @@ def php_publish(publish_Key,Key):
         Redis.lpush(Key,'main:{0}'.format(str(e)))
     finally:
         Redis.lpush(Key,'End')
+        Redis.expire(Key,30)

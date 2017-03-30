@@ -56,10 +56,10 @@ def java_update(publish_key,Message_key):
                 Redis.lpush(Message_key, '=>%s svn up success!' % Project)
                 return '%s%s' % (svnDir, WarName)
             else:
-                Redis.lpush(Message_key, '%s svn up fail!' % Project)
+                Redis.lpush(Message_key, '%s svn up fail !' % Project)
                 sys.exit(1)
         except Exception as e:
-            Redis.lpush(Message_key, 'svn:{0}'.format(e))
+            Redis.lpush(Message_key, 'svn:{0} fail'.format(e))
 
     def check_path(ServerList):
         try:
@@ -85,14 +85,14 @@ def java_update(publish_key,Message_key):
                     paths[K] = path
                 else:
                     if Action == 'update':
-                        Redis.lpush(Message_key, WarName + ' is not exist or not writable on ' + ip)
+                        Redis.lpush(Message_key, 'fail :%s is not exist or not writable on ' %(WarName,ip))
                     if Action == 'rollback':
-                        Redis.lpush(Message_key, '%s not exist on %s ' % (WarName, ip))
+                        Redis.lpush(Message_key, 'fail :%s not exist on %s' % (WarName, ip))
                     sys.exit(1)
                 Redis.lpush(Message_key, '=>check ' + ip + ' ' + username + ' pass\n')
             return (paths)
         except Exception as e:
-            Redis.lpush(Message_key, 'check_path:{0}'.format(e))
+            Redis.lpush(Message_key, 'check_path:{0} fail'.format(e))
             sys.exit()
 
     def ssh2(ip, username, key_file, cmd):
@@ -106,7 +106,7 @@ def java_update(publish_key,Message_key):
             return (stdout.read())
             ssh.close()
         except Exception as e:
-            Redis.lpush(Message_key, 'ssh2:{0}'.format(e))
+            Redis.lpush(Message_key, 'ssh2:{0} fail'.format(e))
             sys.exit(1)
 
     def scp2(path):
@@ -147,14 +147,14 @@ def java_update(publish_key,Message_key):
                 else:
                     cmd = ['/usr/bin/rsync -av --delete /tmp/' + username + '/' + WarName + '/   ' + path, ]
                     ssh2(ip, username, key_file, cmd)
-                    Redis.lpush(Message_key, '{0}进行MD5验证失败,{1}下文件已自动回滚!'.format(p, username))
+                    Redis.lpush(Message_key, 'fail :{0}进行MD5验证失败,{1}下文件已自动回滚!'.format(p, username))
                     sys.exit(1)
             Redis.lpush(Message_key, "=====>restart jboss on " + ip)
             cmd = ['source ~/.bash_profile && /usr/bin/killall -9 java']
             ssh2(ip, username, key_file, cmd)
             ssh.close()
         except Exception as e:
-            Redis.lpush(Message_key, 'scp2:{0}'.format(e))
+            Redis.lpush(Message_key, 'scp2:{0} fail'.format(e))
             sys.exit()
 
     try:
@@ -177,7 +177,7 @@ def java_update(publish_key,Message_key):
                     path = paths.get(K)
                     path_home=path.split('server')
                     path_jboss=path_home[0]
-                    time.sleep(5)
+                    time.sleep(3)
                     if Action == 'update':
                         scp2(path)
                         Redis.lpush(Message_key,'==>{0} {1} {2} 增量上线完成'.format(ip,username,WarName))
@@ -197,6 +197,7 @@ def java_update(publish_key,Message_key):
             else:
                 Redis.lpush(Message_key, '没有获取到上线相关信息,请重试!')
     except Exception as e:
-        Redis.lpush(Message_key,'main:{0}'.format(e))
+        Redis.lpush(Message_key,'main:{0} fail'.format(e))
     finally:
         Redis.lpush(Message_key,'End')
+        Redis.expire(Message_key,30)

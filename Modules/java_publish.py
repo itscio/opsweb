@@ -48,7 +48,7 @@ def java_publish(publish_key,Message_key):
             myRedis.lpush(Message_key, '*' * 60)
         else:
             myRedis.lpush(Message_key, '*' * 60)
-            myRedis.lpush(Message_key, '%s svn export fail!' % warZipName)
+            myRedis.lpush(Message_key, '%s svn export fail !' % warZipName)
             myRedis.lpush(Message_key, '*' * 60)
             sys.exit()
         return svnDir
@@ -69,7 +69,7 @@ def java_publish(publish_key,Message_key):
             myRedis.lpush(Message_key, '*' * 60)
         else:
             myRedis.lpush(Message_key, '*' * 60)
-            myRedis.lpush(Message_key, '%s git clone fail!' % warZipName)
+            myRedis.lpush(Message_key, '%s git clone fail !' % warZipName)
             myRedis.lpush(Message_key, '*' * 60)
             sys.exit()
         return war_path
@@ -84,7 +84,7 @@ def java_publish(publish_key,Message_key):
             ssh.connect(ip, 22, username, pkey=key, timeout=15)
         except Exception as e:
             myRedis.lpush(Message_key, '*' * 60)
-            myRedis.lpush(Message_key, '%s %s login fail!' % (ip, username))
+            myRedis.lpush(Message_key, '%s %s login fail !' % (ip, username))
             myRedis.lpush(Message_key, '*' * 60)
             sys.exit()
         return ssh
@@ -114,7 +114,7 @@ def java_publish(publish_key,Message_key):
             ssh.close()
         except Exception as e:
             myRedis.lpush(Message_key, 'Restart_java:{0}'.format(e))
-            myRedis.lpush(Message_key, '      %s --->restart Fail' % warZipName)
+            myRedis.lpush(Message_key, '      %s --->restart fail ' % warZipName)
         else:
             myRedis.lpush(Message_key, '      %s --->restart Success' % warZipName)
         myRedis.lpush(Message_key, '*' * 60)
@@ -132,7 +132,7 @@ def java_publish(publish_key,Message_key):
                     stdin, stdout, stderr = ssh.exec_command(cmd)
                     if stderr.read():
                         myRedis.lpush(Message_key, cmd)
-                        myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                        myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
                 except Exception as e:
                     myRedis.lpush(Message_key, str(e))
                     sys.exit()
@@ -145,11 +145,11 @@ def java_publish(publish_key,Message_key):
                 cmd = "cd %s  &&  /usr/bin/unzip -qo %s" % (basePath, warZipName)
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 if stderr.read():
-                    myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                    myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
                 cmd = "[ -d {0}{1} ]  && echo True ".format(basePath, warTagName)
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 if stderr.read():
-                    myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                    myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
                 Msg_zip = stdout.read().strip()
                 if Msg_zip == 'True':
                     myRedis.lpush(Message_key, '      %s --->unzip Success' % warZipName)
@@ -161,30 +161,30 @@ def java_publish(publish_key,Message_key):
                         stdin, stdout, stderr = ssh.exec_command(cmd)
                         if stderr.read():
                             myRedis.lpush(Message_key, cmd)
-                            myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                            myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
                     cmd = "[ -d {0}{1} ]  && echo True ".format(basePath, warName)
                     stdin, stdout, stderr = ssh.exec_command(cmd)
                     if stderr.read():
-                        myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                        myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
                     Msg_sync = stdout.read().strip()
                     if Msg_sync == 'True':
                         myRedis.lpush(Message_key, '      %s --->Publish Success' % warZipName)
                         Restart_java(ssh, warZipName)
                     else:
-                        myRedis.lpush(Message_key, '      %s --->rsync Fail' % warName)
+                        myRedis.lpush(Message_key, '      %s --->rsync fail' % warName)
                         cmd = '/usr/bin/rsync -av --delete %s%s/ %s%s/' % (bakPath, warName, basePath, warName)
                         stdin, stdout, stderr = ssh.exec_command(cmd)
                         if stderr.read():
-                            myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
-                        myRedis.lpush(Message_key, '      %s --->Publish Fail' % warZipName)
+                            myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
+                        myRedis.lpush(Message_key, '      %s --->Publish fail' % warZipName)
                         myRedis.lpush(Message_key, '*' * 60)
                 else:
-                    myRedis.lpush(Message_key, '      %s --->unzip Fail' % warZipName)
+                    myRedis.lpush(Message_key, '      %s --->unzip fail' % warZipName)
             except Exception as e:
                 cmd = '/usr/bin/rsync -av --delete %s%s/ %s%s/' % (bakPath, warName, basePath, warName)
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 if stderr.read():
-                    myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                    myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
                 myRedis.lpush(Message_key, '*' * 60)
                 myRedis.lpush(Message_key, str(e))
                 myRedis.lpush(Message_key, '*' * 60)
@@ -197,10 +197,10 @@ def java_publish(publish_key,Message_key):
         try:
             stdin, stdout, stderr = ssh.exec_command(cmd)
             if stderr.read():
-                myRedis.lpush(Message_key, 'ERROR:{0}'.format(stderr.read()))
+                myRedis.lpush(Message_key, 'fail :{0}'.format(stderr.read()))
         except Exception as e:
             myRedis.lpush(Message_key, str(e))
-            myRedis.lpush(Message_key, '         %s  --->rollback fail!' % warZipName)
+            myRedis.lpush(Message_key, '         %s  --->rollback fail !' % warZipName)
         else:
             myRedis.lpush(Message_key, '         %s --->rollback success!' % warZipName)
             Restart_java(ssh, warZipName)
@@ -226,7 +226,7 @@ def java_publish(publish_key,Message_key):
                     bakPath = '/home/%s/bak/'%username
                     ssh  = _init_ssh(ip,username)
                     basePath = check_path(ssh,ip,username)
-                    time.sleep(5)
+                    time.sleep(3)
                     if Action == 'restart':
                         Restart_java(ssh,warZipName)
                     if Action == 'publish':
@@ -245,3 +245,4 @@ def java_publish(publish_key,Message_key):
         myRedis.lpush(Message_key,'main:{0}'.format(e))
     finally:
         myRedis.lpush(Message_key,'End')
+        myRedis.expire(Message_key,30)
