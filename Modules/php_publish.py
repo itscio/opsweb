@@ -227,5 +227,4 @@ def php_publish(publish_Key,Key):
     except Exception as e:
         Redis.lpush(Key,'main:{0}'.format(str(e)))
     finally:
-        Redis.lpush(Key,'End')
-        Redis.expire(Key,30)
+        Redis.lpush(Key,'_End_')

@@ -61,7 +61,7 @@ def scheduler_tasks():
     scheduler.add_job(analytics_logs.internet_topic,'cron',second = '0',minute = '*/5',id='internet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.intranet_topic,'cron',second = '0',minute = '*/5',id='intranet_topic',replace_existing=True)
     scheduler.add_job(analytics_logs.kafka_web,'cron',second = '0',minute = '*',id='kafka_web',replace_existing=True)
-    scheduler.add_job(Task.task_tables_info, 'cron', second='0', minute='0',hour='*/4',id='task_tables_info', replace_existing=True)
+    scheduler.add_job(Task.task_tables_info, 'cron', second='0', minute='0',hour='6',id='task_tables_info', replace_existing=True)
     scheduler.add_job(mysql_scheduler.mysql_scheduler,'cron', second='0', minute='0',hour='1', id='mysql_scheduler', replace_existing=True)
     scheduler.add_job(Task.check_publish, 'cron', second='0', minute='*/5',hour='10-18',id='check_publish',replace_existing=True)
     scheduler.add_job(Task.clear_kestrel, 'cron', second='0', minute='0', hour='2', id='clear_kestrel',replace_existing=True)

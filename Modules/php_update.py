@@ -262,5 +262,4 @@ def php_update(publish_key,Key):
     except Exception as e:
         Redis.lpush(Key,'main:{0} fail'.format(e))
     finally:
-        Redis.lpush(Key,'End')
-        Redis.expire(Key, 30)
+        Redis.lpush(Key,'_End_')

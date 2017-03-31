@@ -199,5 +199,4 @@ def java_update(publish_key,Message_key):
     except Exception as e:
         Redis.lpush(Message_key,'main:{0} fail'.format(e))
     finally:
-        Redis.lpush(Message_key,'End')
-        Redis.expire(Message_key,30)
+        Redis.lpush(Message_key,'_End_')

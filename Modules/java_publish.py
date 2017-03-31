@@ -244,5 +244,4 @@ def java_publish(publish_key,Message_key):
     except Exception as e:
         myRedis.lpush(Message_key,'main:{0}'.format(e))
     finally:
-        myRedis.lpush(Message_key,'End')
-        myRedis.expire(Message_key,30)
+        myRedis.lpush(Message_key,'_End_')
