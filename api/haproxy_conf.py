@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,jsonify,request
-from Modules import db_op,loging
+from Modules import db_op,loging,check
 import shutil
 import os
 import paramiko
@@ -9,10 +9,12 @@ from sqlalchemy import and_
 import __init__
 app = __init__.app
 limiter = __init__.limiter
+logging = loging.Error()
 Path  = app.config.get('HAPROXY_PATH_TMP')
 page_haproxy_conf = Blueprint('haproxy_conf', __name__)
 @page_haproxy_conf.route('/haproxy_conf')
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
+@check.acl_ip
 def haproxy_conf():
     def _init_ssh():
         if Value == '0' and Type == 'cw':
@@ -33,7 +35,7 @@ def haproxy_conf():
     def ssh_scp(path):
         ssh = _init_ssh()
         ha_path = app.config.get('HAPROXY_PATH')
-        ha_cmd = "service haproxy restart"
+        ha_cmd = "/usr/sbin/service haproxy restart"
         scp = SCPClient(ssh.get_transport())
         scp.put(path,ha_path)
         stdin, stdout, stderr = ssh.exec_command(ha_cmd)
@@ -63,7 +65,7 @@ def haproxy_conf():
             ACL = []
             CONF = {}
             #分离域名
-            for i in xrange(len(data)):
+            for i in range(len(data)):
                 v = [str(x).encode('utf-8') for x in data[i] ]
                 domain = v[0]
                 ACL.append(domain)
@@ -101,7 +103,7 @@ def haproxy_conf():
                         line =line.replace('check','check  backup')
                     Write_file(path,line)
         except Exception as e:
-            loging.write(e)
+            logging.error(e)
             return jsonify({'Error':'Failed to generate configuration file!'})
 
     def create_conf(terms,Type):
@@ -121,7 +123,7 @@ def haproxy_conf():
                     else:
                         return 'Get data error!'
             except Exception as e:
-                loging.write(e)
+                logging.error(e)
             finally:
                 db_op.DB.session.remove()
         #判断配置文件'
@@ -140,7 +142,7 @@ def haproxy_conf():
                     re = output_conf()
                 return re or v
             except Exception as e:
-                loging.write(e)
+                logging.error(e)
         else:
             return jsonify({'Error':'Can not find template file!'})
     def Create_terms(arg=None,Type=None):
@@ -153,7 +155,7 @@ def haproxy_conf():
             re = {'terms_backend':terms_backend}
             return re
         except Exception as e:
-            loging.write(e)
+            logging.error(e)
 
     #解析http参数
     try:
@@ -185,7 +187,7 @@ def haproxy_conf():
             return jsonify({'Error':'parameter error!'})
         return jsonify({'result':result})
     except Exception as e:
-        loging.write(e)
+        logging.error(e)
 
 @page_haproxy_conf.teardown_request
 def db_remove(error=None):
