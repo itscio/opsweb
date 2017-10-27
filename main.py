@@ -6,7 +6,6 @@ from flask_qrcode import QRcode
 from flask_moment import Moment
 import __init__
 app = __init__.app
-app.debug = True
 CsrfProtect(app)
 moment = Moment(app)
 qrcode = QRcode(app)
