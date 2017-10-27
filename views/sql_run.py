@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,render_template,g,flash,request
-from Modules import produce,check,MyForm,db_op,db_idc,Mysql
+from Modules import produce,check,MyForm,db_op,db_idc,Mysql,main_info
 from sqlalchemy import and_
 import os
 import chardet
@@ -9,6 +9,7 @@ app = __init__.app
 UPLOAD_FOLDER = '/tmp/'
 page_sql_run=Blueprint('sql_run',__name__)
 @page_sql_run.route('/sql_run',methods = ['GET', 'POST'])
+@main_info.main_info
 def sql_run():
     form = MyForm.MyForm_sql_run()
     if form.submit.data:
@@ -82,8 +83,8 @@ def sql_run():
         except Exception as e:
             if 'old-style'not in str(e):
                 flash(e)
-        return render_template('Message_static.html')
-    return render_template('mysql_run.html',form=form)
+        return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('mysql_run.html',Main_Infos=g.main_infos,form=form)
 
 @page_sql_run.before_request
 @check.login_required(grade=0)

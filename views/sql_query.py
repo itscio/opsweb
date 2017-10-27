@@ -1,11 +1,13 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,render_template,g,flash,request
-from Modules import produce,check,MyForm,db_idc,Mysql,loging
+from Modules import produce,check,MyForm,db_idc,Mysql,loging,main_info
 from sqlalchemy import and_
 import __init__
 app = __init__.app
+logging = loging.Error()
 page_sql_query=Blueprint('sql_query',__name__)
 @page_sql_query.route('/sql_query',methods = ['GET', 'POST'])
+@main_info.main_info
 def sql_query():
     form = MyForm.MyForm_sql_run()
     if form.submit.data:
@@ -65,9 +67,9 @@ def sql_query():
                 else:
                     raise flash("每条sql语句需要以分号结尾!")
         except Exception as e:
-                loging.write(e)
-        return render_template('Message_static.html')
-    return render_template('mysql_query.html',form=form)
+            logging.error(e)
+        return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('mysql_query.html',Main_Infos=g.main_infos,form=form)
 @page_sql_query.before_request
 @check.login_required(grade=10)
 def check_login(error=None):

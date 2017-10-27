@@ -2,7 +2,7 @@
 import redis
 import time
 from flask import Blueprint,redirect,url_for,render_template,render_template_string,g,request,flash
-from Modules import check,MyForm,Mysql,produce,php_update
+from Modules import check,MyForm,Mysql,produce,php_update,main_info
 import __init__
 app = __init__.app
 redis_host = app.config.get('REDIS_HOST')
@@ -14,10 +14,23 @@ page_update_php = Blueprint('update_php',__name__)
 def update_query():
     K = '%s_%s' %(g.user,g.secret_key)
     Key = '%s_update_php' %K
-    return render_template_string(Redis.rpop(Key) or "")
+    Key_incr = '%s_incr' % Key
+    Redis.expire(Key,30)
+    if Redis.lrange(Key,0,-1):
+        data = Redis.rpop(Key)
+        if '_End_' in data:
+            Redis.expire(Key,3)
+        return render_template_string(data)
+    else:
+        Redis.incr(Key_incr, 1)
+        if int(Redis.get(Key_incr)) > 10000:
+            Redis.delete(Key_incr)
+            return render_template_string("_End_")
+        return render_template_string("")
 
 @page_update_php.route('/update_php',methods = ['GET', 'POST'])
 @check.login_required(grade=0)
+@main_info.main_info
 def update_php():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
@@ -27,7 +40,7 @@ def update_php():
     if form.submit.data:
         try:
             if Redis.exists(Key):
-                raise flash('项目上线操作正在执行,不能并行上线操作.请稍候......')
+                raise flash('上线操作过于频繁,请稍等%s秒......' %Redis.ttl(Key))
             Redis.lpush(Key, 'check env......')
             tm = time.strftime('%Y%m%d%H%M%S',time.localtime())
             Key_file_list ='file_list_%s' %tm
@@ -57,5 +70,5 @@ def update_php():
             Scheduler.start()
         except Exception as e:
             Redis.lpush(Key,e)
-        return render_template('php_update_show.html')
-    return render_template('php_update.html',form=form)
+        return render_template('php_update_show.html',Main_Infos=g.main_infos)
+    return render_template('php_update.html',Main_Infos=g.main_infos,form=form)

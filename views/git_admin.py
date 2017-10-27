@@ -1,17 +1,19 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,render_template,g,flash,request
-from Modules import check,MyForm,produce
+from Modules import check,MyForm,produce,main_info
 from flask_mail import Mail
 from flask_mail import Message
 import requests
 import __init__
 app = __init__.app
+git_url = app.config.get('GIT_URL')
 mail = Mail(app)
 page_git_admin = Blueprint('git_admin',__name__)
 @page_git_admin.route('/git_admin',methods = ['GET', 'POST'])
+@main_info.main_info
 def git_admin():
-    params = {'private_token':'g-1h1deDz-ghC_xU4DjM'}
-    URL = "http://git.baihe.com/api/v3/users?"
+    params = {'private_token':app.config.get('GIT_TOKEN')}
+    URL = "http://%s/api/v3/users?" %git_url
     def Get_user(user):
         username = user.split('@')[0]
         params['search'] = username
@@ -31,15 +33,15 @@ def git_admin():
         return r.json()
 
     def Del_user(id):
-        URL = "http://git.baihe.com/api/v3/users/%s/block" %id
+        URL = "http://%s/api/v3/users/%s/block" %(git_url,id)
         requests.request('put', URL, timeout=3, params=params)
-        URL = "http://git.baihe.com/api/v3/users/%s" % id
+        URL = "http://%s/api/v3/users/%s" % (git_url,id)
         r = requests.request('delete',URL,timeout=3,params=params)
         return r.json()
 
     form = MyForm.MyForm_git_admin()
     if form.submit.data:
-        sender = "alarm@baihe.com"
+        sender = app.config.get('MAIL_DEFAULT_SENDER')
         names = form.text.data.strip().splitlines()
         action = form.select_action.data
         for name in names:
@@ -64,7 +66,7 @@ def git_admin():
                         if Add_user(name,pw):
                                 #开通成功后再发送邮件
                                 msg = Message("GIT账号信息",sender=sender,recipients=[name])
-                                msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>GIT访问地址:http://git.baihe.com/</p><p><font color="red">勿邮件回复!</font></p>' %(name,pw)
+                                msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>GIT访问地址:http://%s/</p><p><font color="red">勿邮件回复!</font></p>' %(name,pw,git_url)
                                 with app.app_context():
                                     try:
                                         mail.send(msg)
@@ -85,8 +87,8 @@ def git_admin():
                         flash('%s 账号不存在!' %name)
             else:
                 flash('%s 账号格式错误,应该为邮箱地址!' %name)
-        return render_template('Message_static.html')
-    return render_template('git_admin.html',form=form)
+        return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('git_admin.html',Main_Infos=g.main_infos,form=form)
 @page_git_admin.before_request
 @check.login_required(grade=0)
 def check_login(error=None):

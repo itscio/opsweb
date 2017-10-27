@@ -1,12 +1,13 @@
 #-*- coding: utf-8 -*-
 from sqlalchemy import and_
 from flask import Blueprint,render_template,g,flash,request
-from Modules import MyForm,db_op,produce,check
+from Modules import MyForm,db_op,produce,check ,main_info
 import re
 import __init__
 app = __init__.app
 page_dns_conf = Blueprint('dns_conf',__name__)
 @page_dns_conf.route('/dns_conf',methods = ['GET', 'POST'])
+@main_info.main_info
 def dns_conf():
     form = MyForm.MyForm_dns_conf()
     if form.submit.data:
@@ -19,7 +20,7 @@ def dns_conf():
             ip = form.ip.data.strip()
             db = db_op.dns_innr
             if field:
-                if '.baihe.com' in field or '.ibaihe.com' in field or '.service.baihe' in field:
+                if  field.endswith('.baihe.com') or field.endswith('.ibaihe.com') or field.endswith('.service.baihe') or field.endswith('.sql.baihe'):
                     raise flash("二级域名格式错误!")
                 value = db.query.with_entities(db.ip).filter(and_(db.domain == domain, db.Type == Type, db.field == field,db.system == system)).all()
                 if action == 'add':
@@ -66,7 +67,7 @@ def dns_conf():
         except Exception as e:
             if 'old-style' not in str(e):
                 flash(e)
-    return render_template('dns_conf.html',form=form)
+    return render_template('dns_conf.html',Main_Infos=g.main_infos,form=form)
 @page_dns_conf.before_request
 @check.login_required(grade=0)
 def check_login(error=None):

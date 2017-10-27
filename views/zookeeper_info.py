@@ -1,15 +1,17 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template_string,render_template,g,request
-from Modules import produce,check,loging
+from flask import Blueprint,render_template,g,request,flash
+from Modules import produce,check,loging,main_info
 from kazoo.client import KazooClient
 import __init__
 app = __init__.app
+logging = loging.Error()
 page_zk_info=Blueprint('zookeeper_info',__name__)
 host = app.config.get('ZOOKEEPER_HOST')
 port = app.config.get('ZOOKEEPER_PORT')
 zk = KazooClient('%s:%s' %(host,port))
 @page_zk_info.route('/zk')
 @page_zk_info.route( '/zk/info')
+@main_info.main_info
 def Zookeeper_Info():
     def Get_arg(arg):
         #解析请求参数
@@ -39,10 +41,11 @@ def Zookeeper_Info():
         INFOS = None
         if not DATAS:
             INFOS = zk.get('/%s'%PATH)
-        return render_template('zk_show.html',DATAS = DATAS,URLS=URLS,URL=URL,INFOS=INFOS)
+        return render_template('zk_show.html',Main_Infos=g.main_infos,DATAS = DATAS,URLS=URLS,URL=URL,INFOS=INFOS)
     except Exception as e:
-        loging.write(e)
-        return  render_template_string(str(e))
+        logging.error(e)
+        flash(str(e))
+        return  render_template('Message_static.html',Main_Infos=g.main_infos)
 
 @page_zk_info.before_request
 @check.login_required(grade=10)

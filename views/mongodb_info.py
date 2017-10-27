@@ -1,13 +1,15 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template_string,render_template,g,request
-from Modules import loging,check,produce
+from flask import Blueprint,flash,render_template,g,request
+from Modules import loging,check,produce,main_info
 import pymongo
 import __init__
 app = __init__.app
+logging = loging.Error()
 page_mongodb_info=Blueprint('mongodb_info',__name__)
 Host = app.config.get('MONGODB_HOST')
 Port = app.config.get('MONGODB_PORT')
 @page_mongodb_info.route('/mongodb')
+@main_info.main_info
 def mongodb_info():
     try:
         def Mongo_cli(ip,port):
@@ -32,9 +34,10 @@ def mongodb_info():
                 New_shard.append(host_info)
             shards[info['_id']] = New_shard
     except Exception as e:
-        loging.write(e)
-        return  render_template_string('数据获取错误!')
-    return render_template('mongodb_show.html', shards=shards)
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
+    return render_template('mongodb_show.html',Main_Infos=g.main_infos, shards=shards)
 @page_mongodb_info.before_request
 @check.login_required(grade=10)
 def check_login(error=None):

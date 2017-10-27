@@ -1,12 +1,15 @@
 #-*- coding: utf-8 -*-
+from imp import reload
 import re
 from sqlalchemy import and_
 from flask import Blueprint,render_template,g,flash,request
-from Modules import MyForm,check,db_op,produce
+from Modules import MyForm,check,db_op,produce,loging,main_info
 import __init__
 app = __init__.app
+logging = loging.Error()
 page_java_list = Blueprint('java_list',__name__)
 @page_java_list.route('/java_list',methods = ['GET', 'POST'])
+@main_info.main_info
 def List():
     reload(MyForm)
     form = MyForm.MyFrom_java_list()
@@ -17,16 +20,21 @@ def List():
             Type = int(form.select.data)
             Project = form.Project.data
             val = db.query.with_entities(db.user, db.ip).filter(and_(db.project == Project, db.type == Type)).all()
+            db_project = db_op.project_level
+            project_val = db_project.query.with_entities(db_project.level).filter(db_project.project == Project).all()
             if val:
                 val = set(val)
                 v = [(v[0].encode('UTF-8'), v[1].encode('UTF-8')) for v in val if v]
                 values = '%s = %s' % (Project, str(v))
-                flash('查询结果:')
+                if project_val and Type == 1:
+                    flash('项目等级为%s级,查询结果:' %project_val[0][0])
+                else:
+                    flash('查询结果:')
                 flash(values)
             else:
                 flash('%s 没有找到!' % Project)
         except Exception as e:
-            flash(e)
+            logging.error(e)
             flash('查询数据失败!')
     if form.submit_modify.data:
         try:
@@ -39,7 +47,7 @@ def List():
                 Ma = re.match('.*\.war',line)
                 if not Ma:
                     flash("the project must be *.war with begin!")
-                    return render_template('Message.html')
+                    return render_template('Message_static.html')
                 line = line.split('=')
                 Project = line[0]
                 ips = eval(line[1])
@@ -83,7 +91,7 @@ def List():
         except Exception as e:
             flash(e)
             flash('修改数据失败!')
-    return render_template('java_list.html',form=form)
+    return render_template('java_list.html',Main_Infos=g.main_infos,form=form)
 @page_java_list.before_request
 @check.login_required(grade=10)
 def check_login(error=None):

@@ -1,10 +1,11 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,redirect,render_template,g,flash,url_for,request
-from Modules import produce,check,MyForm,db_op,db_idc,loging
+from flask import Blueprint,render_template,g,flash,request,redirect,url_for
+from Modules import produce,check,MyForm,db_op,db_idc,loging,main_info
 from sqlalchemy import and_,desc
 import datetime
 page_sql_scheduler=Blueprint('sql_scheduler',__name__)
 @page_sql_scheduler.route('/sql_scheduler',methods = ['GET', 'POST'])
+@main_info.main_info
 def sql_scheduler():
     form = MyForm.MyForm_sql_scheduler()
     #查询前20个计划任务
@@ -20,7 +21,7 @@ def sql_scheduler():
             if cmds:
                 try:
                     if cmds.endswith(';'):
-                        cmds = cmds.split(';')
+                        cmds = cmds.replace('\r\n',' ').split(';')
                         #获取库表对应的主库服务器信息
                         db = db_idc.idc_mysqldb
                         db_table = db_idc.idc_tableinfo
@@ -52,13 +53,13 @@ def sql_scheduler():
                                         raise flash('没有找到%s数据库的相关服务器信息!'%db_name)
                                 else:
                                     raise flash("%s 不符合执行规则!" %sql_cmd)
+                        return redirect(url_for('sql_scheduler.sql_scheduler'))
                     else:
                         raise flash("每条sql语句需要以分号结尾!")
                 except Exception as e:
-                    #loging.write(e)
-                    return render_template('Message_static.html')
-                return redirect(url_for("sql_scheduler.sql_scheduler"))
-    return render_template('mysql_scheduler.html',form=form,val_scheduler=val_scheduler,tables=tables)
+                    flash(e)
+                    return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('mysql_scheduler.html',Main_Infos=g.main_infos,form=form,val_scheduler=val_scheduler,tables=tables)
 
 @page_sql_scheduler.before_request
 @check.login_required(grade=0)

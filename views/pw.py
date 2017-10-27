@@ -1,10 +1,11 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,redirect,url_for,render_template,flash,make_response,g,request
 from sqlalchemy import and_
-from Modules import db_op,produce, MyForm, Md5,check
+from Modules import db_op,produce, MyForm, Md5,check,main_info
 page_pw = Blueprint('pw',__name__)
 timestamp = check.timestamp(7)
 @page_pw.route('/pw',methods = ['GET', 'POST'])
+@main_info.main_info
 def pw():
     form = MyForm.MyForm_pw()
     if form.submit.data:
@@ -28,7 +29,7 @@ def pw():
                 flash('新密码不一致!')
         except Exception as e:
             flash(e)
-    return render_template('password.html',form=form)
+    return render_template('password.html',Main_Infos=g.main_infos,form=form)
 
 @page_pw.before_request
 @check.login_required(grade=10)

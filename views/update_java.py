@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 import redis
 from flask import Blueprint,render_template,render_template_string,g,flash,request
-from Modules import check,MyForm,db_op,loging,Mysql,produce,java_update
+from Modules import check,MyForm,db_op,loging,Mysql,produce,java_update,main_info
 import __init__
 app = __init__.app
 page_update_java = Blueprint('update_java',__name__)
@@ -13,9 +13,22 @@ myRedis = redis.StrictRedis(host=redisHost,port=redisPort)
 def update_java_query():
     K = '%s_%s' %(g.user,g.secret_key)
     messageKey = '%s_update_java' % K
-    return render_template_string(myRedis.rpop(messageKey) or "")
+    Key_incr = '%s_incr' % messageKey
+    myRedis.expire(messageKey,30)
+    if myRedis.lrange(messageKey,0,-1):
+        data = myRedis.rpop(messageKey)
+        if '_End_' in data:
+            myRedis.expire(messageKey,3)
+        return render_template_string(data)
+    else:
+        myRedis.incr(Key_incr, 1)
+        if int(myRedis.get(Key_incr)) > 10000:
+            myRedis.delete(Key_incr)
+            return render_template_string("_End_")
+        return render_template_string("")
 @page_update_java.route('/update_java',methods = ['GET','POST'])
 @check.login_required(grade=0)
+@main_info.main_info
 def update_java():
     produce.Async_log(g.user, request.url)
     K = '%s_%s' %(g.user,g.secret_key)
@@ -26,7 +39,7 @@ def update_java():
         try:
             if form.text.data:
                 if myRedis.exists(messageKey):
-                    raise flash('项目上线操作正在执行,不能并行上线操作.请稍候......')
+                    raise flash('上线操作过于频繁,请稍等%s秒......' %myRedis.ttl(messageKey))
                 myRedis.lpush(messageKey, 'check env......')
                 tags = form.text.data.strip().splitlines()
                 assert len(tags)==1,'Can only execute a project at a time!'
@@ -41,13 +54,12 @@ def update_java():
                     ServerList = dbTable.query.with_entities(dbTable.ip, dbTable.user).filter(db_op.DB.and_(dbTable.project == warname, dbTable.type == Type,dbTable.Gray == '1')).limit(1).all()
                     if not ServerList:
                         ServerList = dbTable.query.with_entities(dbTable.ip, dbTable.user).filter(db_op.DB.and_(dbTable.project == warname, dbTable.type == Type)).limit(1).all()
-                        loging.write(ServerList[:])
                         if ServerList:
                             for ip, username in ServerList:
                                 dbTable.query.filter(db_op.DB.and_(dbTable.ip == ip, dbTable.user == username)).update({dbTable.Gray:'1'})
                         else:
                             flash('%s Not found' % warname)
-                            return render_template('Message.html')
+                            return render_template('Message_static.html',Main_Infos=g.main_infos)
                 else:
                     ServerList = dbTable.query.with_entities(dbTable.ip,dbTable.user).filter(db_op.DB.and_(dbTable.project == warname,dbTable.type == Type)).all()
                 if ServerList:
@@ -67,12 +79,12 @@ def update_java():
                     Scheduler.start()
                 else:
                     flash('%s Not found' % warname)
-                    return render_template('Message.html')
+                    return render_template('Message_static.html',Main_Infos=g.main_infos)
         except Exception as e:
                 flash(e)
-                return render_template('Message.html')
-        return render_template('java_update_show.html')
-    return render_template('java_update.html',form=form)
+                return render_template('Message_static.html',Main_Infos=g.main_infos)
+        return render_template('java_update_show.html',Main_Infos=g.main_infos)
+    return render_template('java_update.html',Main_Infos=g.main_infos,form=form)
 
 @page_update_java.teardown_request
 def db_remove(error=None):

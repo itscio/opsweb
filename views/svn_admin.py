@@ -1,20 +1,24 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,render_template_string,g,flash,request
-from Modules import check,loging,MyForm,db_op,produce
+from imp import reload
+from flask import Blueprint,render_template,g,flash,request
+from Modules import check,loging,MyForm,db_op,produce,main_info
 from flask_mail import Mail
 from flask_mail import Message
 from sqlalchemy import and_,distinct
 import re
 import __init__
 app = __init__.app
+svn_url = app.config.get('SVN_URL')
 mail = Mail(app)
+logging = loging.Error()
 page_svn_admin = Blueprint('svn_admin',__name__)
 @page_svn_admin.route('/svn_admin',methods = ['GET', 'POST'])
+@main_info.main_info
 def svn_admin():
     reload(MyForm)
     form = MyForm.MyForm_svn_admin()
     if form.submit.data:
-        sender = "alarm@baihe.com"
+        sender = app.config.get('MAIL_DEFAULT_SENDER')
         db  = db_op.svn_users
         db_groups = db_op.svn_groups
         ts = form.text.data.strip().splitlines()
@@ -24,7 +28,7 @@ def svn_admin():
                 flash('%s格式错误,用户名应为个人邮箱账号!'%name)
                 i=-1
         if i < 0:
-            return render_template('Message.html')
+            return render_template('Message_static.html',Main_Infos=g.main_infos)
         Action = form.select_action.data
         def Query(db,*ts):
             #生成用户列表
@@ -39,13 +43,14 @@ def svn_admin():
                                 val.append(group)
                         user_list.append(val)
                 except Exception as e:
-                    loging.write(e)
-                    return render_template_string('获取数据错误!')
+                    logging.error(e)
+                    flash('获取数据错误!')
+                    return render_template('Message_static.html', Main_Infos=g.main_infos)
             return user_list
         if Action == 'query':
             user_list = Query(db,ts)
             if user_list :
-                return render_template('svn_admin_show.html',user_list = user_list)
+                return render_template('svn_admin_show.html',Main_Infos=g.main_infos,user_list = user_list)
             else:
                 flash('账号不存在!')
         elif Action == 'add':
@@ -71,7 +76,7 @@ def svn_admin():
                         else:
                             #开通成功后再发送邮件
                             msg = Message("SVN账号信息",sender=sender,recipients=[name])
-                            msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>SVN根路径http://svn.ibaihe.com:1722/svn/,具体项目路径请咨询各自组内同事.</p><p><font color="red">账号5分钟后开通,请妥善保管此封邮件,勿邮件回复!</font></p>' %(name,pw)
+                            msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>SVN根路径%s/svn/,具体项目路径请咨询各自组内同事.</p><p><font color="red">账号5分钟后开通,请妥善保管此封邮件,勿邮件回复!</font></p>' %(name,pw,svn_url)
                             with app.app_context():
                                 try:
                                     mail.send(msg)
@@ -105,8 +110,9 @@ def svn_admin():
                             svn_users.update({db.status:4})
                             db_op.DB.session.commit()
                         except Exception as e:
-                            loging.write(e)
-                            return render_template_string('获取数据错误!')
+                            logging.error(e)
+                            flash('获取数据错误!')
+                            return render_template('Message_static.html', Main_Infos=g.main_infos)
                     else:
                         flash('%s 账号不存在!' %name)
             else:
@@ -133,14 +139,15 @@ def svn_admin():
                             svn_users.update({db.status:4})
                         db_op.DB.session.commit()
                     except Exception as e:
-                        loging.write(e)
-                        return render_template_string('获取数据错误!')
+                        logging.error(e)
+                        flash('获取数据错误!')
+                        return render_template('Message_static.html', Main_Infos=g.main_infos)
                     else:
                         flash('%s 账号%s成功!'%(name,Str))
             else:
                 flash('账号不存在!')
-        return render_template('Message.html')
-    return render_template('svn_admin.html',form=form)
+        return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('svn_admin.html',Main_Infos=g.main_infos,form=form)
 @page_svn_admin.before_request
 @check.login_required(grade=0)
 def check_login(error=None):

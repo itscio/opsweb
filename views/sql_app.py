@@ -1,16 +1,18 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,redirect,url_for,render_template,render_template_string,g,request
+from flask import Blueprint,redirect,url_for,render_template,g,request,flash
 from sqlalchemy import func,desc ,and_
 import redis
-from Modules import check,db_idc,loging,MyForm,produce,Mysql
+from Modules import check,db_idc,loging,MyForm,produce,Mysql,main_info
 import __init__
 app = __init__.app
+logging = loging.Error()
 page_mysql = Blueprint('sql_app',__name__)
 page_mysql_op = Blueprint('sql_app_op',__name__)
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port)
 @page_mysql.route('/mysql',methods = ['GET', 'POST'])
+@main_info.main_info
 def mysqldb():
     try:
         t=('主库','端口','数据库','从库')
@@ -21,9 +23,9 @@ def mysqldb():
         slave_val = db.query.with_entities(db.ip,db.port,db.Master_Host,db.Master_Port).filter(db.slave == '是').all()
         slave_val = [list(v) for v in slave_val]
         val = []
-        for i in xrange(len(master_val)):
+        for i in range(len(master_val)):
             slave=[]
-            for l in xrange(len(slave_val)):
+            for l in range(len(slave_val)):
                 M_ip_port=master_val[i][0:2]
                 S_ip_port=slave_val[l][2:]
                 if M_ip_port == S_ip_port:
@@ -32,12 +34,14 @@ def mysqldb():
             info=master_val[i]
             info.append(slave)
             val.append(info)
-        return render_template('mysqldb.html',values=val,tables=t)
+        return render_template('mysqldb.html',Main_Infos=g.main_infos,values=val,tables=t)
     except Exception as e:
-            loging.write(e)
-            return render_template_string('获取数据错误!')
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
 
 @page_mysql.route('/servers',methods = ['GET', 'POST'])
+@main_info.main_info
 def servers():
     form = MyForm.MyForm_server()
     if form.submit.data:
@@ -62,13 +66,15 @@ def servers():
                     return redirect(url_for('mysql.servers'))
                 v = [str(i).encode('UTF-8').split(',') for i in val if i]
                 va.append(v)
-            return render_template('server_show.html',values=va,tables=t)
+            return render_template('server_show.html',Main_Infos=g.main_infos,values=va,tables=t)
         except Exception as e:
-            loging.write(e)
-            return render_template_string('获取数据错误!')
-    return render_template('server.html',form=form)
+            logging.error(e)
+            flash('获取数据错误!')
+            return render_template('Message_static.html', Main_Infos=g.main_infos)
+    return render_template('server.html',Main_Infos=g.main_infos,form=form)
 
 @page_mysql.route('/app',methods = ['GET', 'POST'])
+@main_info.main_info
 def app():
     form = MyForm.MyForm_app()
     if form.submit.data:
@@ -89,36 +95,42 @@ def app():
                 v = [str(v).encode('UTF-8').split(',') for v in val if v]
                 if v:
                     va.append(v)
-            return render_template('user_show.html',values=va,tables=t)
+            return render_template('user_show.html',Main_Infos=g.main_infos,values=va,tables=t)
         except Exception as e:
-            loging.write(e)
-            return render_template_string('获取数据错误!')
-    return render_template('app.html',form=form)
+            logging.error(e)
+            flash('获取数据错误!')
+            return render_template('Message_static.html', Main_Infos=g.main_infos)
+    return render_template('app.html',Main_Infos=g.main_infos,form=form)
 
 @page_mysql.route('/twemproxy')
+@main_info.main_info
 def twemproxy():
     try:
         t=('代理TYPE','代理GROUP','后端IP','后端PORT','DB','KEYS','备注')
         val = db_idc.idc_twemproxy.query.order_by(db_idc.idc_twemproxy.serviceGroup).all()
         v = [str(v).encode('UTF-8').split(',') for v in val if v]
-        return render_template('twemproxy.html',values=v,tables=t)
+        return render_template('twemproxy.html',Main_Infos=g.main_infos,values=v,tables=t)
     except Exception as e:
-        loging.write(e)
-        return render_template_string('获取数据错误!')
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
 
 @page_mysql.route('/kestrel')
+@main_info.main_info
 def kestrel():
     try:
         db = db_idc.idc_kestrel
         t=('IP','PORT','KEY','ITEMS')
         val = db.query.order_by(desc(db.kestrel_num)).all()
         v = [str(v).encode('UTF-8').split(',') for v in val]
-        return render_template('kestrel.html',values=v,tables=t)
+        return render_template('kestrel.html',Main_Infos=g.main_infos,values=v,tables=t)
     except Exception as e:
-        loging.write(e)
-        return render_template_string('获取数据错误!')
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
         
 @page_mysql.route('/tables',methods = ['GET', 'POST'])
+@main_info.main_info
 def tables():
     form = MyForm.MyForm_input()
     if form.submit.data:
@@ -142,18 +154,20 @@ def tables():
                         for cmd in cmds:
                             Indexs.append(Mysql.Query_sql(v[0],v[1],v[2],cmd))
                     else:
-                        return render_template_string('没有找到库{0}或者表{1}!'.format(db_name,t_name))
+                        flash('没有找到库{0}或者表{1}!'.format(db_name,t_name))
+                        return render_template('Message_static.html', Main_Infos=g.main_infos)
                 for index in Indexs:
                     INDEX = []
                     for info in index:
                         info = [str(i).encode('UTF-8') for i in info]
                         INDEX.append(info)
                     INDEXS.append(INDEX)
-                return render_template('tables_show.html',values=vv,tables=tt,INDEXS=INDEXS)
+                return render_template('tables_show.html',Main_Infos=g.main_infos,values=vv,tables=tt,INDEXS=INDEXS)
         except Exception as e:
-            loging.write(e)
-            return render_template_string('获取数据错误!')
-    return render_template('tables.html',form=form)
+            logging.error(e)
+            flash('获取数据错误!')
+            return render_template('Message_static.html', Main_Infos=g.main_infos)
+    return render_template('tables.html',Main_Infos=g.main_infos,form=form)
 
 @page_mysql.before_request
 @check.login_required(grade=10)
@@ -165,37 +179,43 @@ def db_remove(error=None):
     db_idc.DB.session.remove()
 
 @page_mysql_op.route('/network')
+@main_info.main_info
 def network():
     try:
         t=('机柜号','设备型号','ip','使用状态','备注')
         val = db_idc.idc_networks.query.all()
         v = [str(v).encode('UTF-8').split(',') for v in val if v]
-        return render_template('mysql.html',values=v,tables=t)
+        return render_template('mysql.html',Main_Infos=g.main_infos,values=v,tables=t)
     except Exception as e:
-        loging.write(e)
-        return render_template_string('获取数据错误!')
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
 
 @page_mysql_op.route('/rack')
+@main_info.main_info
 def rack():
     try:
         t=('机柜','服务器数量')
         db = db_idc.idc_servers
         val = db.query.with_entities(db.cid,func.count(db.cid)).group_by(db.cid).order_by(func.count(db.cid)).all()
-        return render_template('mysql.html',values=val,tables=t)
+        return render_template('mysql.html',Main_Infos=g.main_infos,values=val,tables=t)
     except Exception as e:
-        loging.write(e)
-        return render_template_string('获取数据错误!')
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
 
 @page_mysql_op.route('/store')
+@main_info.main_info
 def store():
     try:
         t=('机柜','型号','IP','公司部门','使用状态','备注')
         val = db_idc.idc_store.query.all()
         v = [str(v).encode('UTF-8').split(',') for v in val if v]
-        return render_template('mysql.html',values=v,tables=t)
+        return render_template('mysql.html',Main_Infos=g.main_infos,values=v,tables=t)
     except Exception as e:
-        loging.write(e)
-        return render_template_string('获取数据错误!')
+        logging.error(e)
+        flash('获取数据错误!')
+        return render_template('Message_static.html', Main_Infos=g.main_infos)
 
 @page_mysql_op.before_request
 @check.login_required(grade=0)

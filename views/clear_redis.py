@@ -2,7 +2,7 @@
 from flask import Flask
 import redis
 from flask import Blueprint,request,render_template,g,flash
-from Modules import produce,check ,MyForm,loging
+from Modules import produce,check ,MyForm,loging,main_info
 from rediscluster import RedisCluster
 def _RC_Run(key, port, action):
     Tpyes = dict(hash="RC.hgetall(key)", list="RC.lrange(key,0,-1)", string="RC.get(key)",
@@ -24,6 +24,7 @@ def _RC_Run(key, port, action):
         return eval(Tpyes.get(T))
 page_clear_redis=Blueprint('clear_redis',__name__)
 @page_clear_redis.route('/clear_redis',methods = ['GET', 'POST'])
+@main_info.main_info
 def clear_redis():
     form = MyForm.MyForm_clear_redis()
     if form.submit.data:
@@ -36,8 +37,8 @@ def clear_redis():
                 flash('获取Key:%s信息......'%key)
                 vv = _RC_Run(key,port,action)
                 flash('存储数据:{0}'.format(vv))
-            return render_template('Message.html')
-    return render_template('clear_redis.html',form = form)
+            return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('clear_redis.html',Main_Infos=g.main_infos,form = form)
 @page_clear_redis.before_request
 @check.login_required(grade=0)
 def check_login(error=None):
