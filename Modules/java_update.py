@@ -20,6 +20,7 @@ mysql_host = app.config.get('MYSQL_HOST')
 mysql_port = app.config.get('MYSQL_PORT')
 mysql_db = 'op'
 MYSQL = Mysql.MYSQL(mysql_user,mysql_password,mysql_host,mysql_port,mysql_db)
+svnUrl = app.config.get('SVN_URL')
 svnUser = app.config.get('SVN_USER')
 svnPassword = app.config.get('SVN_PASSWORD')
 svnDir = app.config.get('SVN_FILE_DIR')
@@ -48,8 +49,7 @@ def java_update(publish_key,Message_key):
             os.system('export LC_CTYPE="zh_CN.UTF-8"')
             os.system('mkdir -p %s' % svnDir)
             os.system(
-                "/usr/bin/svn export --no-auth-cache --non-interactive --username " + svnUser + " --password " + svnPassword + " http://svn.ibaihe.com:1722/svn/publish/%s" % Project + ' ' + '%s%s' % (
-                svnDir, Project))
+                "/usr/bin/svn export --no-auth-cache --non-interactive --username %s --password %s %s/svn/publish/%s   %s%s" %(svnUser,svnPassword ,svnUrl,Project,svnDir,Project))
             if os.path.exists('%s%s' % (svnDir, Project)):
                 f_zip = zipfile.ZipFile('%s%s' % (svnDir, Project), 'r')
                 f_zip.extractall(svnDir)
@@ -200,3 +200,4 @@ def java_update(publish_key,Message_key):
         Redis.lpush(Message_key,'main:{0} fail'.format(e))
     finally:
         Redis.lpush(Message_key,'_End_')
+        Redis.expire(Message_key, 3600)

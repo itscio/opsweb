@@ -6,31 +6,36 @@ from flask import request
 from sqlalchemy import and_,distinct
 import __init__
 app = __init__.app
+logging = loging.Error()
 user = app.config.get('MYSQL_USER')
 password = app.config.get('MYSQL_PASSWORD')
 class MYSQL(object):
-    def __init__(self,user,password,host,port,db='mysql'):
-        self.__user = user
-        self.__password = password
-        self.__host = host
-        self.__port = port
-        self.__db = db
+    def __init__(self,user=user,password=password,host=None,port=None,db='mysql'):
         try:
+            assert host,'host not null'
+            assert port,'host not null'
+            self.__user = user
+            self.__password = password
+            self.__host = host
+            self.__port = port
+            self.__db = db
             self.cnx = mysql.connect(user=self.__user,password=self.__password,host=self.__host,port=self.__port,db=self.__db)
-        except:
-            pass
-        else:
             self.cur = self.cnx.cursor(buffered=True)
+        except Exception as e:
+            logging.error(e)
     def Run(self,cmd):
         try:
             self.cur.execute(cmd)
             self.cnx.commit()
-            return [cu for cu in self.cur if self.cur if self.cur]
+            vue = [cu for cu in self.cur if cu]
+            if vue:
+                return vue
+            return None
         except Exception as e:
-            return e
-            loging.write(e)
+            logging.error(e)
     def Close(self):
-        self.cur.close()
+        if self.cur:
+            self.cur.close()
         self.cnx.close()
 def Query_sql(ip,port,db,cmd):
     MYsql = MYSQL(user = user,password = password,host = ip,port = port,db = db)
@@ -38,13 +43,13 @@ def Query_sql(ip,port,db,cmd):
         MYsql.Run("SET NAMES UTF8")
         return MYsql.Run(cmd)
     except Exception as e:
-        loging.write(e)
+        logging.error(e)
         return e
     finally:
         MYsql.Close()
 
 class mysql_op(object):
-    def __init__(self,user,action,Type=2,project='None',version='None',Gray = False,work = 'None',grade = 0,changelog='None'):
+    def __init__(self,user,action,Type=2,project='None',version='None',Gray = False,work = 'None',project_level = 0,changelog='None'):
         self.date = time.strftime('%Y-%m-%d',time.localtime())
         self.time = time.strftime('%H:%M:%S',time.localtime())
         self.List = {1: '线上', 2: "测外"}
@@ -54,14 +59,17 @@ class mysql_op(object):
         self.project = project
         self.version = version
         self.work = work
-        self.grade = grade
+        self.grade = project_level
         self.changelog = changelog
         if Gray:
             self.Type = '灰度'
         else:
             self.Type = self.List[self.Type]
         self.ip = request.headers.get('X-Forwarded-For')
-        if not self.ip:
+        if self.ip:
+            if len(self.ip.split(',')) >=2:
+                self.ip = self.ip.split(',')[0]
+        else:
             self.ip = request.remote_addr
     def op_operation(self):
         db = db_op.op_operation
@@ -72,7 +80,7 @@ class mysql_op(object):
                 db.query.filter(and_(db.project == self.project,db.Type != '测外')).update({db.Type:self.Type})
             db_op.DB.session.commit()
         except Exception as e:
-            loging.write(e)
+            logging.error(e)
         finally:
             db_op.DB.session.remove()
     def op_log(self):
@@ -82,7 +90,7 @@ class mysql_op(object):
             db_op.DB.session.add(c)
             db_op.DB.session.commit()
         except Exception as e:
-            loging.write(e)
+            logging.error(e)
         finally:
             db_op.DB.session.remove()
 def db_produce(Type):

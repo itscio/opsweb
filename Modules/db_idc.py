@@ -10,8 +10,8 @@ class idc_mysqldb(DB.Model):
     ip = DB.Column(DB.String(20))
     port = DB.Column(DB.String(8))
     db = DB.Column(DB.String(200))
-    master = DB.Column(DB.Enum('是','否'))
-    slave = DB.Column(DB.Enum('否','是'))
+    master = DB.Column(DB.String(8))
+    slave = DB.Column(DB.String(8))
     Master_Host = DB.Column(DB.String(20))
     Master_User = DB.Column(DB.String(20))
     Master_Port = DB.Column(DB.String(8))
@@ -40,8 +40,8 @@ class idc_servers(DB.Model):
     mem = DB.Column(DB.String(30))
     disk_size = DB.Column(DB.Integer)
     ip = DB.Column(DB.String(30))
-    department = DB.Column(DB.Enum('线上业务中心','线下业务支撑部','婚恋教育事业部','数据中心组','总裁办','架构组','用户关系组','百合婚恋组','机动创新组','相亲组'))
-    status = DB.Column(DB.Enum('未使用','使用中','维护中'))
+    department = DB.Column(DB.String(30))
+    status = DB.Column(DB.String(30))
     application = DB.Column(DB.String(20))
     comment = DB.Column(DB.String(30))
     def __init__(self,cid,sn,type,system,cpu_core,mem,disk_size,ip,department,status,application,comment):
@@ -182,3 +182,30 @@ class idc_tableinfo(DB.Model):
     def __repr__(self):
         values=(self.ip,self.port,self.database_name,self.table_name,self.Engine_name,self.Rows,self.Charset,self.version)
         return '%s,%i,%s,%s,%s,%i,%s,%s'%values
+
+class idc_redis_cluster_info(DB.Model):
+    __tablename__ = 'redis_cluster_info'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    getdate = DB.Column(DB.String(20))
+    gettime = DB.Column(DB.String(20))
+    master = DB.Column(DB.String(20))
+    add_keys = DB.Column(DB.Integer)
+    connected_clients = DB.Column(DB.Integer)
+    HitRate = DB.Column(DB.Integer)
+    commands = DB.Column(DB.Integer)
+    net_input = DB.Column(DB.Integer)
+    net_output = DB.Column(DB.Integer)
+    def __init__(self,getdate,gettime,master,add_keys,connected_clients,HitRate,commands,net_input,net_output):
+        self.getdate = getdate
+        self.gettime = gettime
+        self.master = master
+        self.add_keys = add_keys
+        self.connected_clients = connected_clients
+        self.HitRate = HitRate
+        self.commands = commands
+        self.net_input = net_input
+        self.net_output = net_output
+    def __repr__(self):
+        values=(self.getdate,self.gettime,self.master,self.add_keys,self.connected_clients,self.HitRate,self.commands,self.net_input,self.net_output)
+        return '%s,%s,%s,%i,%i,%i,%i,%i,%i'%values

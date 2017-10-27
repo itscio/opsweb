@@ -25,6 +25,7 @@ mysql_host = app.config.get('MYSQL_HOST')
 mysql_port = app.config.get('MYSQL_PORT')
 mysql_db = 'op'
 MYSQL = Mysql.MYSQL(mysql_user,mysql_password,mysql_host,mysql_port,mysql_db)
+svnUrl = app.config.get('SVN_URL')
 svn_user = app.config.get('SVN_USER')
 svn_password = app.config.get('SVN_PASSWORD')
 def php_update(publish_key,Key):
@@ -33,8 +34,7 @@ def php_update(publish_key,Key):
             Redis.lpush(Key, 'check out ' + line + '\n')
             os.system('export LC_CTYPE="zh_CN.UTF-8"')
             os.system('/bin/mkdir -p  ' + ssline)
-            for s_l in os.popen(
-                                                                                            "/usr/bin/svn co --no-auth-cache --non-interactive --username " +svn_user+ " --password " + svn_password + " http://svn.ibaihe.com:1722/svn" + sdline + ' ' + ssline + ' -r ' + ver):
+            for s_l in os.popen("/usr/bin/svn co --no-auth-cache --non-interactive --username {0} --password {1} {2}/svn{3}  {4} -r {5}".format(svn_user,svn_password,svnUrl,sdline,ssline,ver)):
                 if '/home/work/svn' not in s_l:
                     Redis.lpush(Key, s_l)
         except Exception as e:
@@ -263,3 +263,4 @@ def php_update(publish_key,Key):
         Redis.lpush(Key,'main:{0} fail'.format(e))
     finally:
         Redis.lpush(Key,'_End_')
+        Redis.expire(Key, 3600)

@@ -35,7 +35,6 @@ class MyForm_input(Form):
 class MyForm_login(Form):
     name = StringField('Name', validators=[DataRequired(),Length(4,16)])
     password = PasswordField('Password', validators=[DataRequired(),Length(4,16)])
-    code = StringField('code', validators=[DataRequired()])
     remember_me =BooleanField('Remember_me',default = True)
     submit = SubmitField('登陆',id='btn1')
 
@@ -59,11 +58,10 @@ class MyForm_php(Form):
     code = IntegerField('code', validators=[DataRequired()])
     text = TextAreaField(validators=[DataRequired()])
     changelog = TextAreaField(validators=[DataRequired()])
-    selectaction = SelectField(choices=[('publish', '上线'), ('recover', '回滚')])
+    selectaction = SelectField(choices=[('publish', '上线'), ('rollback', '回滚')])
     selecttype = SelectField(choices=[('2', '测外'),('1', '生产')])
     selectWay = SelectField(choices=[('SVN', 'SVN'), ('GIT', 'GIT')])
     selectwork = SelectField(choices=[('BUG', 'Bug修复'), ('NEW', '新增需求')])
-    selectgrade = SelectField(choices=[('7', '7'), ('6', '6'), ('5', '5'), ('4', '4'), ('3', '3'), ('2', '2'), ('1', '1')])
     Gray = BooleanField('Gray', default=False)
     submit = SubmitField('提交',id='btn1')
     
@@ -75,7 +73,6 @@ class MyForm_publishJboss(Form):
     selectType = SelectField(choices=[('2', '测外'),('1', '生产')])
     selectWay = SelectField(choices=[('SVN', 'SVN'), ('GIT', 'GIT')])
     selectwork = SelectField(choices=[('BUG', 'Bug修复'), ('NEW', '新增需求')])
-    selectgrade = SelectField(choices=[('7', '7'), ('6', '6'), ('5', '5'), ('4', '4'), ('3', '3'), ('2', '2'), ('1', '1')])
     Gray = BooleanField('Gray',default = False)
     submit = SubmitField('提交',id='btn1',)
 
@@ -111,7 +108,8 @@ class MyForm_clear_redis(Form):
 
 class MyForm_vpn(Form):
     text = TextAreaField(validators=[DataRequired()])
-    select_action = SelectField(choices=[('query','查询'),('add','开通'),('del','关闭')])
+    select_action = SelectField(choices=[('query','查询'),('add','开通'),('del','关闭'),('change','变更')])
+    select_type = SelectField(choices=[('intranet', '内部'), ('internet', '外部')])
     submit = SubmitField('提交',id='btn1')
 
 class MyForm_svn_admin(Form):
@@ -154,16 +152,17 @@ class MyForm_deploy_jboss(Form):
     input_domain = StringField(validators=[DataRequired(), Length(4, 64)])
     input_produce = StringField()
     val_produce, val_test = Mysql.db_produce('java')
-    select_produce = SelectField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_produce])
-    select_test = SelectField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_test])
+    select_produce = SelectMultipleField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_produce],default=None)
+    select_test = SelectMultipleField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_test],default=None)
+    select_level = SelectField(choices=[('7', '7'), ('6', '6'), ('5', '5'), ('4', '4'), ('3', '3'), ('2', '2'), ('1', '1')])
     input_test = StringField()
     submit_produce = SubmitField('提交',id='btn1')
     submit_test = SubmitField('提交',id='btn2')
 
 class MyForm_deploy_php(Form):
     val_produce, val_test = Mysql.db_produce('php')
-    select_produce = SelectField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_produce])
-    select_test = SelectField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_test])
+    select_produce = SelectMultipleField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_produce],default=None)
+    select_test = SelectMultipleField(choices = [('{0}:{1}'.format(va[1],va[0]),'{0}:{1}'.format(va[1],va[0])) for va in val_test],default=None)
     ver_produce = SelectField(choices=[('5.4','5.4'), ('5.6','5.6')])
     ver_test = SelectField(choices=[('5.4','5.4'), ('5.6','5.6')])
     submit_produce= SubmitField('提交',id='btn1')
@@ -176,6 +175,8 @@ class MyForm_deploy_nginx(Form):
     input_root = StringField(validators=[DataRequired(),Length(4, 64)])
     ip = TextAreaField(validators=[DataRequired()])
     select = SelectField(choices=[('2', '测外'),('1', '线上')])
+    select_project = SelectField(choices=[('baihe', '婚恋'), ('hunli', '婚礼')])
+    select_level = SelectField(choices=[('7', '7'), ('6', '6'), ('5', '5'), ('4', '4'), ('3', '3'), ('2', '2'), ('1', '1')])
     submit = SubmitField('提交',id='btn1')
 
 class MyForm_chart_center(Form):
@@ -185,7 +186,7 @@ class MyForm_chart_center(Form):
     submit = SubmitField('生成',id='btn1')
 
 class MyForm_dns_conf(Form):
-    select_domain = SelectField(choices=[('baihe.com','baihe.com'),('ibaihe.com','ibaihe.com'),('service.baihe','service.baihe')])
+    select_domain = SelectField(choices=[('baihe.com','baihe.com'),('ibaihe.com','ibaihe.com'),('service.baihe','service.baihe'),('sql.baihe','sql.baihe')])
     select_type = SelectField(choices=[('A','A'),('CNAME','CNAME'),('MX','MX'),('TEXT','TEXT'),('NS','NS')])
     select_action = SelectField(choices=[ ('query', '查询'),('add', '新增'), ('modify', '修改'), ('del', '删除')])
     select_sys = SelectField(choices=[('cw', '测外'), ('xs', '线上')])
@@ -198,4 +199,18 @@ class MyForm_Scheduler(Form):
     cron = StringField('cron', validators=[DataRequired(),Length(1,50)])
     host = StringField('host', validators=[DataRequired(),Length(1,50)])
     user = SelectField(choices=[ ('work', 'work'),('java', 'java'), ('java2', 'java2'), ('java3', 'java3'), ('java4', 'java4')])
+    submit = SubmitField('提交',id='btn1')
+
+class MyForm_sql_create(Form):
+    sql_master = StringField('master', validators=[DataRequired(),Length(1,50)])
+    db_name = StringField('db_name', validators=[DataRequired(),Length(1,50)])
+    submit = SubmitField('提交',id='btn1')
+
+class MyForm_publish_apply(Form):
+    Project_types = SelectField(choices=[ ('new', '新增项目'),('bug', 'BUG修复')])
+    Project_describe = TextAreaField(validators=[DataRequired()])
+    Project_content = TextAreaField(validators=[DataRequired()])
+    Front = SelectField(choices=[('no', '否'), ('yes', '是')])
+    Rollback_version = TextAreaField(validators=[DataRequired()])
+    Project_config = SelectField(choices=[('no', '否'), ('yes', '是')])
     submit = SubmitField('提交',id='btn1')

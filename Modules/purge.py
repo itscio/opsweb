@@ -12,6 +12,7 @@ import sys
 import time
 import __init__
 app = __init__.app
+logging = loging.Error()
 class Purged(object):
     def __init__(self):
         self.servers = app.config.get('ATS_SERVERS')
@@ -29,7 +30,7 @@ class Purged(object):
                 if self.response.status not in (200,404):
                     self.ips.append(self.ip)
             except Exception as self.e:
-                loging.write(self.e)
+                logging.error(self.e)
         if self.ips:
             return self.ips
         else:
@@ -75,9 +76,9 @@ class Purged(object):
                 params['Signature'] = sign.make(requestHost, requestUri, params, method)
                 url = 'https://%s%s' % (requestHost, requestUri)
                 if (method.upper() == 'GET'):
-                    req = requests.get(url, params=params, timeout=Request.timeout)
+                    req = requests.get(url, params=params, timeout=Request.timeout,verify=False)
                 else:
-                    req = requests.post(url, data=params, files=files, timeout=Request.timeout)
+                    req = requests.post(url, data=params, files=files, timeout=Request.timeout,verify=False)
                 if req.status_code != requests.codes.ok:
                     req.raise_for_status()
                 return req.text
@@ -117,12 +118,7 @@ class Purged(object):
                 request = Request(self.secretId, self.secretKey)
                 return request.send(self.requestHost, self.requestUri, self._params, files, self.method)
         #config配置
-        self.config = {
-            'Region': 'gz',
-            'secretId': 'AKIDOwvPN48Pblh0M2lqFsAZDAwxPA6Sp9XU',
-            'secretKey': 'Utt22g4kdbBSoDNqu7tAQbVE65VItdR1',
-            'method': 'post'
-        }
+        self.config = app.config.get('CDN_CONFIG')
         #params 请求参数
         self.params = {
             'urls.0':self.url,
@@ -140,7 +136,7 @@ class Purged(object):
             else:
                 return self.results['message']
         except Exception as e:
-            loging.write(e)
+            logging.error(e)
             return 'fail'
 
 

@@ -7,7 +7,7 @@ import shutil
 import Mysql,loging
 import paramiko
 from scp import SCPClient
-import redis
+from rediscluster import RedisCluster
 import __init__
 app = __init__.app
 web_path = '/home/work/baihe/'
@@ -15,17 +15,18 @@ tag_path = '{0}/tags'.format(web_path)
 bak_path = '{0}/bak'.format(web_path)
 username = 'work'
 key_file = '/home/work/.ssh/id_rsa'
-redis_host = app.config.get('REDIS_HOST')
-redis_port = app.config.get('REDIS_PORT')
-Redis = redis.Redis(redis_host, redis_port)
+nodes = app.config.get('NODES_PRODUCE')
+Redis = RedisCluster(startup_nodes=nodes,decode_responses=True)
 mysql_user = app.config.get('MYSQL_USER')
 mysql_password = app.config.get('MYSQL_PASSWORD')
 mysql_host = app.config.get('MYSQL_HOST')
 mysql_port = app.config.get('MYSQL_PORT')
 mysql_db = 'op'
 MYSQL = Mysql.MYSQL(mysql_user,mysql_password,mysql_host,mysql_port,mysql_db)
+svnUrl = app.config.get('SVN_URL')
 svn_user = app.config.get('SVN_USER')
 svn_password = app.config.get('SVN_PASSWORD')
+gitUrl = app.config.get('GIT_URL')
 git_user = app.config.get('GIT_USER')
 git_password = app.config.get('GIT_PASSWORD')
 def php_publish(publish_Key,Key):
@@ -51,12 +52,10 @@ def php_publish(publish_Key,Key):
                 os.remove('%s%s.zip' % (web_path, App))
             if path.endswith('.zip'):
                 os.system(
-                    "/usr/bin/svn export --no-auth-cache --non-interactive --force --username {0} --password {1} http://svn.ibaihe.com:1722/svn/{2}  {3}/tags.zip".format(
-                        svn_user, svn_password, path, web_path))
+                    "/usr/bin/svn export --no-auth-cache --non-interactive --force --username {0} --password {1} {4}/svn/{2}  {3}/tags.zip".format(svn_user, svn_password, path, web_path,svnUrl))
             else:
                 os.system(
-                    "/usr/bin/svn export --no-auth-cache --non-interactive --force --username {0} --password {1} http://svn.ibaihe.com:1722/svn/{2}  {3}".format(
-                        svn_user, svn_password, path, tag_path))
+                    "/usr/bin/svn export --no-auth-cache --non-interactive --force --username {0} --password {1} {4}/svn/{2}  {3}".format(svn_user, svn_password, path, tag_path,svnUrl))
                 if not os.listdir(tag_path):
                     Redis.lpush(Key, 'svn up fail  check the svn path!')
                     sys.exit(0)
@@ -82,7 +81,7 @@ def php_publish(publish_Key,Key):
     def git_co(path, tag_path, App):
         try:
             Redis.lpush(Key, '-' * 30 + '\n')
-            Redis.lpush(Key, 'git clone http://git.baihe.com%s' % path)
+            Redis.lpush(Key, 'git clone http://%s%s' % (gitUrl,path))
             if not os.path.exists(web_path):
                 os.system("/bin/mkdir -p %s" % tag_path)
             if os.path.exists('%s%s.zip' % (web_path, App)):
@@ -90,8 +89,7 @@ def php_publish(publish_Key,Key):
             paths = path.split(';')
             path = paths[0]
             tag_name = paths[1]
-            gitCoCmd = 'cd {0} && /usr/bin/git clone http://{1}:{2}@git.baihe.com{3} '.format(web_path, git_user,
-                                                                                              git_password, path)
+            gitCoCmd = 'cd {0} && /usr/bin/git clone http://{1}:{2}@{4}{3} '.format(web_path, git_user,git_password, path,gitUrl)
             os.system(gitCoCmd)
             if not os.path.exists('{0}{1}'.format(web_path, App)):
                 Redis.lpush(Key, 'git clone fail !')
@@ -214,7 +212,7 @@ def php_publish(publish_Key,Key):
                     if Way == 'GIT':
                         S_md5 = git_co(path,tag_path,App)
                     Update(sip,S_md5,App,path)
-                elif action == 'recover':
+                elif action == 'rollback':
                     Recover(App,sip)
                 if Gray and action == 'publish':
                     Redis.lpush(Key, '灰度发布信息:{0}    {1}'.format(sip[0], username))
@@ -228,3 +226,4 @@ def php_publish(publish_Key,Key):
         Redis.lpush(Key,'main:{0}'.format(str(e)))
     finally:
         Redis.lpush(Key,'_End_')
+        Redis.expire(Key,3600)
