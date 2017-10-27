@@ -1,12 +1,12 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div"><p>GIT账号管理</p></div>
 <div align="center" style="margin-top: 8%">
     <form action="/git_admin" method="post">
         {{ form.csrf_token }}
         <p>选择操作:{{ form.select_action }}&nbsp（支持批量操作）:</p>
-        <p>{{ form.text(cols = 80, rows = 12) }}</p>
-        <p>{{ form.submit(class="Button") }}</p>
+        <p>{{ form.text(cols = 40, rows = 8,style="width:auto") }}</p>
+        <p>{{ form.submit(class="btn btn-info") }}</p>
     </form>
 </div>
 {% endblock page %}

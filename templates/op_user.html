@@ -1,4 +1,4 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div"><p>OP系统账号管理</p></div>
 <br>
@@ -6,8 +6,8 @@
     <form action="/op_user" method="post">
         {{ form.csrf_token }}
         <p> 请选择操作:{{ form.select }}(支持批量操作)</p>
-        <p>{{ form.text(cols = 80, rows = 12) }}</p>
-        <p>{{ form.submit(class="Button")}}</p>
+        <p>{{ form.text(cols = 40, rows = 8,style="width:auto") }}</p>
+        <p>{{ form.submit(class="btn btn-info")}}</p>
     </form>
 </div>
 {% endblock page %}

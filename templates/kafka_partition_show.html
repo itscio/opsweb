@@ -1,18 +1,18 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<div class="div"><p>{{ topic_info }}主题信息</p></div>
-<div class="left_txt">
-    <p>{{ topic_info }}主题有<font color="red">{{ partition_info|length }}</font>个分区,详细信息如下:</p>
+<div class="div"><p>{{ Topic }}主题信息</p></div>
+<div>
+    <p>{{ Topic }}主题有<font color="red"><strong>{{ LEADER|length }}</strong></font>个分区,详细信息如下:</p>
     <ul>
-        {% for i in  range(partition_info|length) %}
-            {% set info = partition_info[i|string] %}
-            <li>
-                分区:{{ info[1] }}
-                &nbsp;&nbsp;主节点:<font color="red" >{{ info[2] }}</font>
-                &nbsp;&nbsp;节点集群:{{ info[3] }}
-                &nbsp;&nbsp;可用节点:{{ info[4] }}
-            </li>
-            <br>
+        {% for i in LEADER %}
+            <div style="width: 48%;float:left;margin-left: 1%;border:1px solid #e5e5e5;margin-top: 1%">
+            <strong>分区:</strong>{{ i }}<br>
+        &nbsp;&nbsp;主节点:<font color="red" >{{ LEADER[i] }}</font><br>
+        &nbsp;&nbsp;节点集群:{{ replicas[i]|join(',') }}<br>
+        &nbsp;&nbsp;可用节点:{{ ISR[i]|join(',') }}<br>
+                &nbsp;&nbsp;起始offset:{{ earliest_offset[i] }}<br>
+                &nbsp;&nbsp;最新offset:{{ latest_offset[i] }}
+            </div>
         {% endfor %}
     </ul>
 </div>

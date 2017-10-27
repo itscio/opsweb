@@ -7,10 +7,14 @@
     }
     setTimeout('myrefresh()',60000); //指定60秒刷新一次
     </script>
-    <div class="div"><p>IDC网关实时流量</p></div>
+    <div class="div"><p>网关实时域名并发</p></div>
+    <div>
+        <strong>网关出口实时连接数</strong>
+        {% line_chart TOP_URL_DATA %}
+    </div>
     <div style="margin-top: 4%;width: 100%">
         {% for key in values %}
-            <div style="width: 45%;float:left;margin-left: 3%">
+            <div style="width: 30%;float:left;margin-left: 1%">
                 <p style="text-align: center">抓取时间点:{{ key }}</p>
                 <table class="datalist" border="1" align="center">
                     <tr>

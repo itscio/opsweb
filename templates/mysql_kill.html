@@ -1,17 +1,17 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <p class="div">SQL连接进程清除(<font color="red">慎用</font>)</p>
 <br>
 <div align="center" style="margin-top: 8%">
     <form action="/sql_kill" method="post">
         {{ form.csrf_token }}
-        <p>数据库IP:{{ form.ip(cols = 2, rows = 1,size = 20) }}</p>
+        <p>数据库IP:{{ form.ip(cols = 2, rows = 1,size = 21,style="width:auto") }}</p>
         <br>
-        <p>数据库PORT:{{ form.port(cols = 2, rows = 1,size = 18) }}</p>
+        <p>数据库PORT:{{ form.port(cols = 2, rows = 1,size = 18,style="width:auto") }}</p>
         <br>
         <p>选择连接状态(进行筛查）:{{ form.select_action }}</p>
         <br>
-        <p>{{ form.submit(class="Button") }}</p>
+        <p>{{ form.submit(class="btn btn-info") }}</p>
     </form>
 </div>
 {% endblock page %}

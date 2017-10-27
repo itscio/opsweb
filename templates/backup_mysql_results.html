@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>每日线上数据库备份结果</p></div>
+    <div align="center" >
+     <table class="datalist" border="1">
+        <tr class="altrow">
+                {% for table in tables %}
+                    <td>{{ table }}</td>
+                {% endfor %}
+        </tr>
+        {% for Info in Infos %}
+        <tr class="altrow">
+            <td>{{ tt }}</td>
+            {% for info in Info %}
+                <td>{{ info }}</td>
+            {% endfor %}
+            <td>成功</td>
+        </tr>
+        {% endfor %}
+     </table>
+    </div>
+{% endblock page %}

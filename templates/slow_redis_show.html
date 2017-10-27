@@ -1,18 +1,18 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<div>
-    <form action="/slow_redis" method="post">
-        {{ form.csrf_token }}
-        <p class="font1">{{ form.submit_redis(class="Button") }} 说明:redis慢查询时间目前设置为200毫秒,有慢查询日志才会进行展示</p>
-    </form>
-</div>
-<div>
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-            {% for message in messages %}
-                <p align="left" style="font-size:10pt;color:black">{{ message }}</p>
-            {% endfor %}
-    {% endif %}
-{% endwith %}
-</div>
+    <div>
+        <form action="/slow_redis" method="post">
+            {{ form.csrf_token }}
+            <p align="left" class="font1">{{ form.submit_redis(class="btn btn-info") }} 说明:redis慢查询时间目前设置为200毫秒,有慢查询日志才会进行展示</p>
+        </form>
+    </div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div style="text-align: left">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 {% endblock page %}

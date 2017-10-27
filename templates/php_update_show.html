@@ -1,22 +1,22 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<script type="text/javascript">
-    var id = setInterval("startRequest()",500);
-    function startRequest(){
-        $.get("/update_query",function(data){
-        if (data !=""){
-            if (data != "_End_"){
-                if(data.indexOf("fail") > 0 ){
-                    $("#BUT").before('<p style="color: red">'+data+'</p>');}
-                else{
-                    $("#BUT").before("<p>"+data+"</p>");}}
-            else {
-                $("#BUT").before('<p style="font-weight:bold">本次操作执行完毕!</p>');clearInterval(id);}}
-        window.scrollTo(0,document.body.scrollHeight);});
-    }
-</script>
-<div>
-    <p style="font-weight:bold"> 执行输出(等待时间可能会稍长):</p>
-    <p id="BUT"></p>
-</div>
+    <script type="text/javascript">
+        var id = setInterval("startRequest()",1000);
+        function startRequest(){
+            $.get("/update_query",function(data){
+            if (data !=""){
+                if (data != "_End_"){
+                    if(data.indexOf("fail") > 0 ){
+                        $("#BUT").before('<p style="color: red">'+data+'</p>');}
+                    else{
+                        $("#BUT").before("<p>"+data+"</p>");}}
+                else {
+                    $("#BUT").before('<p style="font-weight:bold">本次操作执行完毕!</p>');clearInterval(id);}}
+            window.scrollTo(0,document.body.scrollHeight);});
+        }
+    </script>
+    <div align="left">
+        <p style="font-weight:bold"> 执行输出(等待时间可能会稍长):</p>
+        <p id="BUT"></p>
+    </div>
 {% endblock page %}

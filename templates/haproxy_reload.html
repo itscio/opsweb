@@ -1,20 +1,20 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div"><p>HAPROXY配置重载</p></div>
 <p align="center" class="font1" style="margin-top:6%">手动修改数据库内配置后，需点击按钮或者扫描下方二维码</p>
-<div style="width: 100%;margin-left: 20%">
-    <form action="/haproxy_reload/internet" method="get">
+<div style="width: 100%">
+    <form action="{{ internet }}" method="get">
         <div style="float:left;width: 50%">
-            <p class="font1" style="margin-left:5%">测外外部HAPROXY</p>
-            <p><img src="{{ qrcode('https://op.baihe.com/haproxy_reload/internet') }}" height="150" width="150"></p>
-            <p style="margin-left:6%">{{ form.submit1(class="Button") }}</p>
+            <p class="font1">测外外部HAPROXY</p>
+            <p><img src="{{ qrcode("https://op.baihe.com%s" %internet) }}" height="150" width="150"></p>
+            <p>{{ form.submit1(class="btn btn-info") }}</p>
         </div>
     </form>
-    <form action="/haproxy_reload/intranet" method="get">
+    <form action="{{ intranet }}" method="get">
         <div style="float:left;width: 50%">
-            <p class="font1" style="margin-left:5%">测外内部HAPROXY</p>
-            <p><img src="{{ qrcode('https://op.baihe.com/haproxy_reload/intranet') }}" height="150" width="150"></p>
-            <p style="margin-left:6%">{{ form.submit2(class="Button") }}</p>
+            <p class="font1">测外内部HAPROXY</p>
+            <p><img src="{{ qrcode("https://op.baihe.com%s" %intranet) }}" height="150" width="150"></p>
+            <p>{{ form.submit2(class="btn btn-info") }}</p>
         </div>
     </form>
 </div>

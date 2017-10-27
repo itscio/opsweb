@@ -1,74 +1,65 @@
 {% extends "base.html" %}
-{% block base %}
-    <div style="width: 100%">
-        <div style="width: 10%;float: left">
-            <img src="/static/images/logo.jpg">
-        </div>
-        <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
-            <p>运维综合管理平台</p>
-        </div>
-        <div style="width:60%;font-size:9pt;float:left;text-align:right;margin-top: 2%">
-            <p>
-                你好:<font color="#006400" style="font-weight:bold">{{ datas[0] }}</font>
-                &nbsp;<a  href={{ url_for('pw.pw') }}>修改密码</a>
-                &nbsp;<a  href={{ url_for('logout.logout',_external=True,_scheme='https') }}>退出</a>
-            </p>
-        </div>
-    </div>
-    <div align="right" style="font-size:9pt;text-align:right">
-        <p>
-            {{ moment().format('YYYY-MM-DD') }}
-            &nbsp;今日报警值班:<font color=#ff4500 style="font-weight:bold">{{ datas[1] }}</font>
-            &nbsp;明日报警值班:<font color=#006400 style="font-weight:bold">{{ datas[2] }}</font>
-            &nbsp;来源IP:<font color="#006400">{{ ip }} </font>
-        </p>
-    </div>
-    <div id="navMenu">
-        <ul>
-            <li><a href="/index" target="_self">首页</a></li>
-            {% for Menu in navMenu %}
-            <li><a rel= {{ Menu }} target="page">{{ nav_val[Menu][0][0] }}</a></li>
-            {% endfor %}
-        </ul>
-    </div>
-    <script type='text/javascript' src='/static/js/dropdown.js'></script>
-        {% for Menu in navMenu %}
-            <ul id={{ Menu }} class="dropMenu">
-                {% for val in nav_val[Menu] %}
-                    {% if 'http' in val[1] %}
-                        <li><a href={{ val[1] }} target="_blank">{{ val[2] }}</a></li>
-                    {% else %}
-                        <li><a target="page" href={{ url_for(val[1]) }} >{{ val[2] }}</a></li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        {% endfor %}
-    <script type="text/javascript">cssdropdown.startchrome("navMenu")</script>
-    <br>
-    <div style="display: inline">
-        <div class="fl">
-            <ul id="accordion" class="accordion">
-                {% for Menu in submenu %}
-                    <li>
-                        <div class="link"><i class="fa fa-paint-brush"></i>{{ Menu }}<i class="fa fa-chevron-down"></i></div>
-                        <ul class="submenu">
-                            {% for val in sub_val[Menu] %}
-                                {% if 'http' in val[0] %}
-                                    <li><a href={{ val[0] }} target="_blank">{{ val[1] }}</a></li>
-                                {% else %}
-                                    <li><a target="page" href={{ url_for(val[0]) }} > {{ val[1] }}</a></li>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-        <div class="Page">
-            <iframe  name="page"  id="iframepage" frameBorder=0 scrolling=no width=100% onLoad="javascript:iFrameHeight()" src="/chart"></iframe>
+{% block page %}
+    <script language="JavaScript">
+    function myrefresh()
+    {
+       window.location.reload();
+    }
+    setTimeout('myrefresh()',60000); //指定60秒刷新一次
+    </script>
+    <div class="left_div">
+        <div id="myCarousel" class="carousel slide">
+            <!-- 轮播（Carousel）指标 -->
+            <ol class="carousel-indicators">
+                <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+                <li data-target="#myCarousel" data-slide-to="1"></li>
+            </ol>
+            <!-- 轮播（Carousel）项目 -->
+            <div class="carousel-inner">
+                <div class="item active">
+                    <strong>实时请求流量(Mbps/分钟)</strong>
+                    {% pie_chart val_cli with id='val_cli' height='300px'%}
+                </div>
+                <div class="item">
+                    <strong>实时响应流量(Mbps/分钟)</strong>
+                    {% pie_chart val_ser with id='val_ser' height='300px'%}
+                </div>
+            </div>
+                    <!-- 轮播（Carousel）导航 -->
+            <span class="center-vertical">
+                <a class="carousel-control left carousel-other" href="#myCarousel" data-slide="prev">&rsaquo;</a>
+                <a class="carousel-control right carousel-other" href="#myCarousel" data-slide="next">&lsaquo;</a>
+            </span>
         </div>
     </div>
-    <div class="footer">
-        <p>北京百合在线科技有限公司|版权所有© 2005-2017 百合网|运维邮箱:alarm@baihe.com</p>
+    <div class="right_div">
+        <div id="myCarousel2" class="carousel slide">
+            <!-- 轮播（Carousel）指标 -->
+            <ol class="carousel-indicators">
+                <li data-target="#myCarousel2" data-slide-to="0" class="active"  ></li>
+                <li data-target="#myCarousel2" data-slide-to="1"></li>
+            </ol>
+            <!-- 轮播（Carousel）项目 -->
+            <div class="carousel-inner">
+                <div class="item active">
+                <strong>{{ tm }}分钟内IP访问TOP</strong>
+                {% pie_chart IP_DATA_HOUR with id='ip_data_hour' height='300px' %}
+                </div>
+                <div class="item">
+                <strong>全天IP访问TOP</strong>
+                {% pie_chart IP_DATA with id='ip_data' height='300px' %}
+                </div>
+            </div>
+                    <!-- 轮播（Carousel）导航 -->
+            <span class="center-vertical">
+                <a class="carousel-control left carousel-other" href="#myCarousel2" data-slide="prev">&rsaquo;</a>
+                <a class="carousel-control right carousel-other" href="#myCarousel2" data-slide="next">&lsaquo;</a>
+            </span>
+        </div>
     </div>
-{% endblock base %}
+    <br><br>
+    <div class="left1_div">
+        <strong class="left">网站并发访问量（每秒）</strong>
+        {% line_chart WEB_ACCESS %}
+    </div>
+{% endblock page %}

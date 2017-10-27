@@ -1,4 +1,4 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div"><p>VPN账号查询结果:</p></div>
 <div style="padding-top: 12%;padding-left:43%">
@@ -6,9 +6,11 @@
     <tr>
         <td>账号</td><td>密码</td>
     </tr>
-    {% for user in user_list %}
+    {% for val in user_list %}
         <tr class="altrow">
-            <td>{{ user[0] }}</td><td>{{ user[1] }}</td>
+            {% for va in val %}
+                <td>{{ va }}</td>
+            {% endfor %}
         </tr>
     {% endfor %}
  </table>

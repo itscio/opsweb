@@ -7,8 +7,8 @@
     {{ form.csrf_token }}
     <br>
     <p>任选其一并输入相关条件进行查询:{{ form.select }}</p>
-    <p>{{ form.text(cols = 80, rows = 10) }}</p>
-    {{ form.submit(class="Button") }}
+    <p>{{ form.text(cols = 80, rows = 10,style="width:auto") }}</p>
+    {{ form.submit(class="btn btn-info") }}
 </form>
 </div>
 {% endblock page %}

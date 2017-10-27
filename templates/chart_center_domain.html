@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block base %}
+{% block page %}
 <div class="div"><p>线上域名访问占比统计</p></div>
 <div style="width: 100%;margin-top: 7%">
     <div style="width: 49%;float: left;display: inline;border:1px solid #e5e5e5">
@@ -11,4 +11,4 @@
         {% pie_chart INTRANET_DOMAIN with id='INTRANET' height='350px' %}
     </div>
 </div>
-{% endblock base %}
+{% endblock page %}

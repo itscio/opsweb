@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block base %}
+{% block page %}
 <script language="JavaScript">
 function myrefresh()
 {
@@ -14,7 +14,7 @@ setTimeout('myrefresh()',600000); //指定60秒刷新一次
         <div align="center">
             {{ form.csrf_token }}
             <p>请选择域名:{{ form.select_internet }}</p>
-            <p>{{ form.submit(class="Button") }}</p>
+            <p>{{ form.submit(class="btn btn-info") }}</p>
         </div>
     </form>
     <div class="left1_div">
@@ -26,19 +26,19 @@ setTimeout('myrefresh()',600000); //指定60秒刷新一次
             {% line_chart RT_DATA %}
             <br>
         {% else%}
-            <p>实时PV:<font color="#006400">{{ PV }}</font>&nbsp; 实时UV:<font color="#006400">{{ UV }} </font></p>
-            <strong class="left">LVS负载活动连接数（1天）</strong>
+            <p style="position: absolute">实时PV:<font color="#006400">{{ PV }}</font>&nbsp; 实时UV:<font color="#006400">{{ UV }} </font></p>
+            <strong>LVS负载活动连接数（1天）</strong>
             {% line_chart LVS_DATA %}
         {% endif %}
     </div>
 </div>
-<div style="text-align:center;color: red">
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-        {% endif %}
-    {% endwith %}
-</div>
-{% endblock base %}
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-success alert-dismissable" style="display:inline-block;*display:inline;*zoom:1;">
+            {% for message in messages %}
+                <p>{{ message }}<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button></p>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+{% endblock page %}

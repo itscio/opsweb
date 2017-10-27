@@ -1,27 +1,23 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<div class="div"><p>JAVA配置列表修改</p></div>
-<div align="center" style="margin-top: 8%">
-    <form action="/java_list" method="post">
-        {{ form.csrf_token }}
-        <p>{{ form.select }} 请选择项目名称:{{ form.Project}}  {{ form.submit_query(class="Button") }}</p>
-        <p>请复制整行查询结果,粘贴到下面文本框并进行相应修改:</p>
-        <p class="font1">说明:新项目按照此格式输入:xxx = [('user','ip'),('user','ip')],xxx为项目名称,user为项目部署所用系统用户,ip为服务器完整ip地址.</p>
-        <p class="font1">删除项目按照此格式输入:xxx = [],xxx为项目名称.</p>
-        <p>{{ form.text(cols = 120, rows = 4) }}</p>
-        <p>{{ form.submit_modify(class="Button") }}</p>
-    </form>
-</div>
-{% for i in range(4) %}
+    <div class="div"><p>JAVA配置列表修改</p></div>
+    <div align="center" style="margin-top: 8%">
+        <form action="/java_list" method="post" class="form-horizontal">
+            {{ form.csrf_token }}
+            <p>{{ form.select }} 请选择项目名称:{{ form.Project(class="form-control")}}{{ form.submit_query(class="btn btn-info") }}</p>
+            <p>请复制整行查询结果,粘贴到下面文本框并进行相应修改:</p>
+            <p>{{ form.text(cols = 120, rows = 4,style="width:auto",placeholder="说明:新项目按照此格式输入:xxx = [('user','ip'),('user','ip')],xxx为项目名称,user为项目部署所用系统用户,ip为服务器完整ip地址.删除项目按照此格式输入:xxx = [],xxx为项目名称.") }}</p>
+            <p>{{ form.submit_modify(class="btn btn-info") }}</p>
+        </form>
+    </div>
     <br>
-{% endfor %}
-<div align="center">
     {% with messages = get_flashed_messages() %}
-    {% if messages %}
-            {% for message in messages %}
-                <p style="font-size:10pt;color:red">{{ message }}</p>
-            {% endfor %}
-    {% endif %}
-{% endwith %}
-</div>
+        {% if messages %}
+            <div class="alert alert-success" style="display:inline-block;*display:inline;*zoom:1;">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 {% endblock page %}

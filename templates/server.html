@@ -1,4 +1,4 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div" style="margin-top: 8%"><p>服务器资源查询</p></div>
 <div align="center" style="margin-top: 2%">
@@ -6,8 +6,8 @@
             {{ form.csrf_token }}
             <br>
             <p>任选其一并输入相关条件进行查询:{{ form.select }}</p>
-            <p>{{ form.text(cols = 80, rows = 10) }}</p>
-            {{ form.submit(class="Button") }}
+            <p>{{ form.text(cols = 80, rows = 10,style="width:auto") }}</p>
+            {{ form.submit(class="btn btn-info") }}
 
 </form>
 </div>

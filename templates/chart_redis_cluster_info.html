@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block page %}
+    <script language="JavaScript">
+    function myrefresh()
+    {
+       window.location.reload();
+    }
+    setTimeout('myrefresh()',60000); //指定60秒刷新一次
+    </script>
+    <div class="div"><p>Redis Cluster 实时监控</p></div>
+    <div align="center" style="margin-top: 3%;width: 100%">
+        {% if charts_data %}
+            <p style="text-align: left;color: red"><a href="/chart_redis_cluster_info">&lt;&lt;&lt;返回</a> &nbsp;&nbsp;&nbsp;Master:{{ redis_host }}</p>
+            {% for name in charts_data %}
+                <div class="left1_div">
+                    {% line_chart charts_data[name] %}
+                </div>
+            {% endfor %}
+        {% else %}
+            {% for host in Infos %}
+                <div style="width: 30%;float:left;margin-left: 1%">
+                    <p style="text-align: center">Master:<a style="color: blue" href="/chart_redis_cluster_info/{{ host }}">{{ host }}</a></p>
+                    <table class="datalist" border="1" align="center">
+                        {% for Info in Infos[host] %}
+                            <tr class="altrow">
+                                <td>{{Info}}</td>
+                                <td>{{Infos[host][Info]}}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <br>
+{% endblock page %}

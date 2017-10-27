@@ -1,12 +1,12 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div"><p>腾讯CDN刷新</p></div>
 <form action="/cdn" method="post">
 <div align="center" style="margin-top: 10%">
             {{ form.csrf_token }}
             <p>请输入完整URL地址(<font class="font1">刷新目录需以/结尾</font>):</p>
-            <p>{{ form.text(cols = 120, rows = 15) }}</p>
-            <p>{{ form.submit(class="Button") }}</p>
+            <p>{{ form.text(cols = 100, rows = 15 ,style="width:auto") }}</p>
+            <p>{{ form.submit(class="btn btn-info") }}</p>
 </div>
 </form>
 {% endblock page %}

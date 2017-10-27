@@ -1,14 +1,12 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<div style="padding-top:12%;text-align:center;font-size:15pt">
 {% with messages = get_flashed_messages() %}
     {% if messages %}
-        <div style="color:red">
+        <div class="alert alert-info alert-dismissable" style="margin-top: 13%;display:inline-block;*display:inline;*zoom:1;">
             {% for message in messages %}
-                <p>{{ message }}</p>
+                <p>{{ message }}<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button></p>
             {% endfor %}
         </div>
     {% endif %}
 {% endwith %}
-</div>
 {% endblock page %}

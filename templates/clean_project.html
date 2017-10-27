@@ -1,33 +1,33 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<div class="div"><p>项目下线(<font color="red">谨慎操作</font>)</p></div>
-<br>
-<div align="center" style="margin-top: 8%">
-    <p>PHP项目下线</p>
-    <form action="/clean_project" method="post">
-        {{ form_php.csrf_token }}
-        <p>{{ form_php.select }} 请选择项目名称:{{ form_php.Project}}</p>
-        <br>
-        {{ form_php.submit_modify(class="Button") }}
-    </form>
-</div>
-<hr width="25%" color=#987cb9 SIZE=1>
-<div align="center">
-    <p>JAVA项目下线</p>
-    <form action="/clean_project" method="post">
-        {{ form_java.csrf_token }}
-        <p>{{ form_java.select }} 请选择项目:{{ form_java.Project}}</p>
-        <br>
-        {{ form_java.submit_modify(class="Button") }}
-    </form>
-</div>
-<div align="center">
+    <div class="div"><p>项目下线(<font color="red">谨慎操作</font>)</p></div>
+    <br>
+    <div align="center" style="margin-top: 8%">
+        <p>PHP项目下线</p>
+        <form action="/clean_project" method="post">
+            {{ form_php.csrf_token }}
+            <p>{{ form_php.select }} 请选择项目名称:{{ form_php.Project}}</p>
+            <br>
+            {{ form_php.submit_modify(class="btn btn-info") }}
+        </form>
+    </div>
+    <hr width="25%" color=#987cb9 SIZE=1>
+    <div align="center">
+        <p>JAVA项目下线</p>
+        <form action="/clean_project" method="post">
+            {{ form_java.csrf_token }}
+            <p>{{ form_java.select }} 请选择项目:{{ form_java.Project}}</p>
+            <br>
+            {{ form_java.submit_modify(class="btn btn-info") }}
+        </form>
+    </div>
     {% with messages = get_flashed_messages() %}
-    {% if messages %}
-            {% for message in messages %}
-                <p style="font-size:10pt;color:red">{{ message }}</p>
-            {% endfor %}
-    {% endif %}
-{% endwith %}
-</div>
+        {% if messages %}
+            <div class="alert alert-success alert-dismissable" style="display:inline-block;*display:inline;*zoom:1;">
+                {% for message in messages %}
+                    <p>{{ message }}<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button></p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 {% endblock page %}

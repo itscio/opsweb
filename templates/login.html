@@ -1,40 +1,44 @@
-{% extends "base.html" %}
-{% block base %}
-    <script type="text/javascript">
-    function getImgCode()
-        {
-        var getimagecode = document.getElementById("getCode");
-        getimagecode.src="/verifycode?sid="+Math.radom();
-        }
-    </script>
-    <div style="width: 100%;position: absolute; top:0">
-        <div style="width: 10%;float: left">
-            <img src="/static/images/logo.jpg">
+<!DOCTYPE html>
+<html>
+    <head>
+        <div class=".header">
+            <title>百合网运维平台</title>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <link rel="stylesheet" type="text/css" href="/static/css/style.css" />
+            <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
+            <link rel="stylesheet" type="text/css" href="/static/css/font-awesome.min.css" />
+            <script src="/static/js/jquery.min.js"></script>
+            <script src="/static/js/bootstrap.min.js"></script>
         </div>
-        <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
-            <p>运维系统管理平台</p>
+    </head>
+    <body style="background:url(/static/images/background.png) 0 0 no-repeat scroll transparent;background-size:80%;background-position:center">
+        <div style="width: 100%;position: absolute; top:0">
+                <div style="width: 10%;float: left">
+                    <img src="/static/images/logo.gif">
+                </div>
+                <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
+                    <p>运维综合管理平台</p>
+                </div>
+            </div>
+        <div class="content" style="margin-top: 16%;" >
+            <form action="/login" method="post" class="login-form">
+                {{ form.csrf_token }}
+                <p style="margin-left:25%;">用户:{{ form.name(size=15,autocomplete="on",style="width:150px") }}</p>
+                <p style="margin-left:25%;">密码:{{ form.password(size=15,style="width:150px") }}</p>
+                <p align="center">{{ form.remember_me }}免密码登录</p>
+                <p align="center">{{ form.submit(class="btn btn-info")}}</p>
+            </form>
+            <br>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert alert-success alert-dismissable" style="display:inline-block;*display:inline;*zoom:1;">
+                        <p>{{ messages[-1] }}<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button></p>
+                    </div>
+                {% endif %}
+            {% endwith %}
         </div>
-    </div>
-    <div class="content" style="margin-top: 16%;" >
-        <form action="/login" method="post" class="login-form">
-            {{ form.csrf_token }}
-            <p style="margin-left:25%;">用户:{{ form.name(size=15,autocomplete="on",style="width:150px") }}</p>
-            <p style="margin-left:25%;">密码:{{ form.password(size=15,style="width:150px") }}</p>
-            {% if verify_incr >= 5 %}
-                <a href=""><img id="getCode" style="margin-left: 40%" onclick="getImgCode()" src="/verifycode"/></a>
-                <p style="margin-left:22%;">验证码:{{ form.code(style="width:150px") }}</p>
-            {% endif %}
-            <p align="center">{{ form.remember_me }}免密码登录</p>
-            <p align="center">{{ form.submit(class="Button")}}</p>
-        </form>
-        <br>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <p style="font-size:10pt;color:red;text-align: center">{{ messages[-1] }}</p>
-            {% endif %}
-        {% endwith %}
-    </div>
-    <div class="footer">
-        <p>北京百合在线科技有限公司|版权所有© 2005-2017 百合网|运维邮箱:alarm@baihe.com</p>
-    </div>
-{% endblock base %}
+        <div class="footer" style="margin-top: 5%">
+                <p>百合网股份有限公司|版权所有© 2005-{{ ym }} 百合网|运维邮箱:alarm@baihe.com</p>
+            </div>
+    </body>
+</html>

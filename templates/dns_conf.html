@@ -1,23 +1,23 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
-<div class="div"><p>线上内部DNS操作</p></div>
-<div style="margin-top: 8%;margin-left: 42%">
+    <div class="div"><p>线上内部DNS操作</p></div>
     <form action="/dns_conf" method="post">
         {{ form.csrf_token }}
-        <p>{{ form.select_sys }}&nbsp;顶级域名:{{ form.select_domain}}</p>
-        <p>二级域名:{{ form.field(style="width:170px") }} </p>
-        <p>类型:{{ form.select_type }}&nbsp&nbsp;操作:{{ form.select_action }}</p>
-        <p>IP地址/主机名:{{ form.ip(style="width:130px") }}</p>
-        <a style="margin-left: 10%">{{ form.submit(class="Button") }}</a>
+        <div style="margin-top: 8%">
+            <p>{{ form.select_sys }}&nbsp;顶级域名:{{ form.select_domain}}</p>
+            <p>二级域名:{{ form.field(style="width:170px") }} </p>
+            <p>解析类型:{{ form.select_type }}&nbsp;操作:{{ form.select_action }}</p>
+            <p>IP地址/主机名:{{ form.ip(style="width:135px",placeholder="测外HA:172.16.9.108") }}</p>
+        </div>
+        <p align="center">{{ form.submit(class="btn btn-info") }}</p>
     </form>
-</div>
-<div>
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-            {% for message in messages %}
-                <p align="center" style="font-size:10pt;color:red">{{ message }}</p>
-            {% endfor %}
-    {% endif %}
-{% endwith %}
-</div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-success" style="display:inline-block;*display:inline;*zoom:1;">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 {% endblock page %}

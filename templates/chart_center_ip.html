@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block page %}
+    <script language="JavaScript">
+        function myrefresh()
+        {
+           window.location.reload();
+        }
+        setTimeout('myrefresh()',30000); //指定30秒刷新一次
+    </script>
+    <div class="div"><p>访问IP实时统计TOP</p></div>
+    <div style="width: 100%;margin-top: 3%">
+        <div style="width: 49%;float: left;display: inline;border:1px solid #e5e5e5">
+            {% if domain %}
+                <p align="center"><strong>今日{{ ip }}访问接口TOP</strong></p>
+                <table class="datalist" border="1" align="center">
+                    <tr>
+                        <td>访问域名</td>
+                        <td>访问次数</td>
+                    </tr>
+                    {% for val in DOMAIN_DATA%}
+                        <tr class="altrow">
+                            {% for va in val %}
+                                <td>{{va}}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+        </div>
+        <div style="width: 49%;float: left;display: inline;margin-left:1%;border:1px solid #e5e5e5">
+            {% if domain %}
+                <p align="center"><strong>{{ tm }}分钟内{{ ip }}访问接口TOP</strong></p>
+                <table class="datalist" border="1" align="center">
+                    <tr>
+                        <td>访问域名</td>
+                        <td>访问次数</td>
+                    </tr>
+                    {% for val in DOMAIN_DATA_HOUR%}
+                        <tr class="altrow">
+                            {% for va in val %}
+                                <td>{{va}}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+        </div>
+        {% if not domain %}
+            <div style="width: 49%;float: left;display: inline;border:1px solid #e5e5e5">
+                <p align="center"><strong>全天IP访问TOP</strong></p>
+                <table class="datalist" border="1" align="center">
+                    {% for val in IP_AREA%}
+                        <tr class="altrow">
+                            <td><a href="/chart_center_ip/{{val[0]}}">{{ val[0] }}</a></td>
+                            <td>{{val[1]}}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <div style="width: 49%;float: left;display: inline;margin-left:1%;border:1px solid #e5e5e5">
+                <p align="center"><strong>{{ tm }}分钟内IP访问TOP</strong></p>
+                <table class="datalist" border="1" align="center">
+                    {% for val in IP_AREA_HOUR%}
+                        <tr class="altrow">
+                            <td><a href="/chart_center_ip/{{val[0]}}">{{ val[0] }}</a></td>
+                            <td>{{val[1]}}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% endblock page %}

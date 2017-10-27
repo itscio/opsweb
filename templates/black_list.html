@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>解封IP黑名单</p></div>
+    <div align="center"  style="margin-top: 5%">
+     <table class="datalist" border="1">
+        <tr>
+            {% for t in tables %}
+                <td class="tdcenter">{{ t }}</td>
+            {% endfor %}
+        </tr>
+         {% for value in values %}
+            <tr class="altrow">
+                {% for va in value[1:] %}
+                    <td class="tdcenter">{{ va }}</td>
+                {% endfor %}
+                <td class="tdcenter"><a href="/admin/black_list/{{ value[0] }}">解封</a> </td>
+            </tr>
+         {% endfor %}
+     </table>
+    </div>
+{% endblock page %}

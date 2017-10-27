@@ -1,8 +1,8 @@
-{% extends "page.html" %}
+{% extends "base.html" %}
 {% block page %}
 <div class="div"><p>Zookeeper信息汇总</p></div>
-<div class="left_txt">
-    <p>{{ URLS[:]|join('>') }}信息:</p>
+<div align="left">
+    <p>{{ URLS[:]|join('>') }}主题信息:</p>
     <ul>
         {% if DATAS %}
             {% for data in DATAS %}
