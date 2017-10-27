@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,flash,g,request,Flask
+from flask import Blueprint,render_template,flash,g,request
 from sqlalchemy import and_
-from Modules import db_op,MyForm, Md5,check,produce
+from Modules import db_op,MyForm, Md5,check,produce,main_info
 from flask_mail import Mail
 from flask_mail import Message
 import redis
@@ -13,10 +13,11 @@ redis_port = app.config.get('REDIS_PORT')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port)
 page_op_user = Blueprint('op_user',__name__)
 @page_op_user.route('/op_user',methods = ['GET', 'POST'])
+@main_info.main_info
 def op_user():
     form = MyForm.Myform_op_user()
     db = db_op.idc_users
-    sender = "xxx@baihe.com"
+    sender = app.config.get('MAIL_DEFAULT_SENDER')
     if form.submit.data:
         users = form.text.data.splitlines()
         action  = form.select.data
@@ -25,7 +26,7 @@ def op_user():
                 if action == 'unlock':
                     Redis.delete('%s_lock' %user)
                     flash('{0}账号已解锁!'.format(user))
-                val = db.query.with_entities(db.name).filter(and_(db.name == user, db.grade == 2)).all()
+                val = db.query.with_entities(db.name).filter(and_(db.name == user)).all()
                 if action == 'query':
                     if val:
                         flash('{0}账号已存在!'.format(user))
@@ -39,7 +40,7 @@ def op_user():
                         pw = Md5.Md5_make(PW)
                         # 开通成功后再发送邮件
                         msg = Message("OP账号信息", sender=sender, recipients=[user])
-                        msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>访问地址:http://xxx.baihe.com/</p><p><font color="red">勿邮件回复!</font></p>' % (
+                        msg.html = '<p>用户名:%s</p><p> 密码:%s</p><p>访问地址:https://op.baihe.com/</p><p><font color="red">勿邮件回复!</font></p>' % (
                         user, PW)
                         with app.app_context():
                             try:
@@ -48,12 +49,12 @@ def op_user():
                                 flash(e)
                                 flash('%s 邮件发送失败!' % user)
                             else:
-                                db_op.DB.session.add(db(name=user, passwd=pw, grade=2))
+                                db_op.DB.session.add(db(name=user, passwd=pw, grade=10))
                                 db_op.DB.session.commit()
                                 flash('%s 账号开通成功,通知邮件已发送.' % user)
                 if action == 'del':
                     try:
-                        val = db.query.filter(and_(db.name == user, db.grade == 2)).all()
+                        val = db.query.filter(and_(db.name == user)).all()
                         if val:
                             for c in val:
                                 db_op.DB.session.delete(c)
@@ -65,16 +66,17 @@ def op_user():
                         flash(e)
                 if action == 'init':
                     if val:
-                        pw = Md5.Md5_make('123456')
-                        db.query.filter(and_(db.name == user, db.grade == 2)).update({db.passwd:pw})
+                        init_pw = app.config.get('INIT_OP_PASSWORD')
+                        pw = Md5.Md5_make(init_pw)
+                        db.query.filter(and_(db.name == user)).update({db.passwd:pw})
                         db_op.DB.session.commit()
-                        flash('{0}账号初始化成功,初始化密码:123456'.format(user))
+                        flash('{0}账号初始化成功,初始化密码:{1}'.format(user,init_pw))
                     else:
                         flash('{0}账号不存在!'.format(user))
             else:
                 flash('{0}账号格式不正确,账号应为个人邮箱!'.format(user))
-        return render_template('Message_static.html')
-    return render_template('op_user.html',form=form)
+        return render_template('Message_static.html',Main_Infos=g.main_infos)
+    return render_template('op_user.html',form=form,Main_Infos=g.main_infos)
 
 @page_op_user.before_request
 @check.login_required(grade=0)
