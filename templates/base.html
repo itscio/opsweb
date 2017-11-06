@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html>
-<head>
+<html xmlns="http://www.w3.org/1999/html">
+    <head>
     <div class=".header">
         <title>百合网运维平台</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -15,76 +15,80 @@
         <script src="/ck/static/chartkick.js"></script>
     </div>
 </head>
-    <div style="width: 100%">
-        <div style="width: 10%;float: left">
-            <img src="/static/images/logo.gif">
+    <body>
+        <div style="width: 100%">
+            <div style="width: 10%;float: left">
+                <img src="/static/images/logo.gif">
+            </div>
+            <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
+                <p>运维综合管理平台</p>
+            </div>
+            <div style="width:60%;font-size:9pt;float:left;text-align:right;margin-top: 2%">
+                <p>
+                    你好:<font color="#006400" style="font-weight:bold">{{ Main_Infos['datas'][0] }}</font>
+                    &nbsp;<a  href={{ url_for('pw.pw') }}>修改密码</a>
+                    &nbsp;<a  href={{ url_for('logout.logout',_external=True,_scheme='https') }}>退出</a>
+                </p>
+            </div>
         </div>
-        <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
-            <p>运维综合管理平台</p>
-        </div>
-        <div style="width:60%;font-size:9pt;float:left;text-align:right;margin-top: 2%">
+        <div align="right" style="font-size:9pt;text-align:right">
             <p>
-                你好:<font color="#006400" style="font-weight:bold">{{ Main_Infos['datas'][0] }}</font>
-                &nbsp;<a  href={{ url_for('pw.pw') }}>修改密码</a>
-                &nbsp;<a  href={{ url_for('logout.logout',_external=True,_scheme='https') }}>退出</a>
+                {{ moment().format('YYYY-MM-DD') }}
+                &nbsp;今日运维值班:<font color=#ff4500 style="font-weight:bold">{{ Main_Infos['datas'][1] }}</font>
+                &nbsp;明日运维值班:<font color=#006400 style="font-weight:bold">{{ Main_Infos['datas'][2] }}</font>
+                &nbsp;来源IP:<font color="#006400">{{ Main_Infos['ip'] }} </font>
             </p>
         </div>
-    </div>
-    <div align="right" style="font-size:9pt;text-align:right">
-        <p>
-            {{ moment().format('YYYY-MM-DD') }}
-            &nbsp;今日运维值班:<font color=#ff4500 style="font-weight:bold">{{ Main_Infos['datas'][1] }}</font>
-            &nbsp;明日运维值班:<font color=#006400 style="font-weight:bold">{{ Main_Infos['datas'][2] }}</font>
-            &nbsp;来源IP:<font color="#006400">{{ Main_Infos['ip'] }} </font>
-        </p>
-    </div>
-    <div id="navMenu">
-        <ul>
-            <li><a href="/index" target="_self">首页</a></li>
+        <div id="navMenu">
+            <ul>
+                <li><a href="/index" target="_self">首页</a></li>
+                {% for Menu in Main_Infos['navMenu'] %}
+                <li><a rel= {{ Menu }} target="_self">{{ Main_Infos['nav_val'][Menu][0][0] }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div style="background-color: #ebeef0;">
+            <script type='text/javascript' src='/static/js/dropdown.js'></script>
             {% for Menu in Main_Infos['navMenu'] %}
-            <li><a rel= {{ Menu }} target="_self">{{ Main_Infos['nav_val'][Menu][0][0] }}</a></li>
+                <ul id={{ Menu }} class="dropMenu">
+                    {% for val in Main_Infos['nav_val'][Menu] %}
+                        {% if 'http' in val[1] %}
+                            <li><a href={{ val[1] }} target="_blank">{{ val[2] }}</a></li>
+                        {% else %}
+                            <li><a target="_self" href={{ url_for(val[1]) }} >{{ val[2] }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
             {% endfor %}
-        </ul>
-    </div>
-    <script type='text/javascript' src='/static/js/dropdown.js'></script>
-        {% for Menu in Main_Infos['navMenu'] %}
-            <ul id={{ Menu }} class="dropMenu">
-                {% for val in Main_Infos['nav_val'][Menu] %}
-                    {% if 'http' in val[1] %}
-                        <li><a href={{ val[1] }} target="_blank">{{ val[2] }}</a></li>
-                    {% else %}
-                        <li><a target="_self" href={{ url_for(val[1]) }} >{{ val[2] }}</a></li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        {% endfor %}
-    <script type="text/javascript">cssdropdown.startchrome("navMenu")</script>
-    <div style="display: inline">
-        <div class="fl">
-            <ul id="accordion" class="accordion">
-                {% for Menu in Main_Infos['submenu'] %}
-                    <li>
-                        <div class="link"><i class="fa fa-paint-brush"></i>{{ Menu }}<i class="fa fa-chevron-down"></i></div>
-                        <ul class="submenu">
-                            {% for val in Main_Infos['sub_val'][Menu] %}
-                                {% if 'http' in val[0] %}
-                                    <li><a href={{ val[0] }} target="_blank">{{ val[1] }}</a></li>
-                                {% else %}
-                                    <li><a target="_self" href={{ url_for(val[0]) }} > {{ val[1] }}</a></li>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </li>
-                {% endfor %}
-            </ul>
+            <script type="text/javascript">cssdropdown.startchrome("navMenu")</script>
+            <div style="display: inline;background-color: #ebeef0;">
+                <div class="fl">
+                    <ul id="accordion" class="accordion">
+                        {% for Menu in Main_Infos['submenu'] %}
+                            <li>
+                                <div class="link"><i class="fa fa-paint-brush"></i>{{ Menu }}<i class="fa fa-chevron-down"></i></div>
+                                <ul class="submenu">
+                                    {% for val in Main_Infos['sub_val'][Menu] %}
+                                        {% if 'http' in val[0] %}
+                                            <li><a href={{ val[0] }} target="_blank">{{ val[1] }}</a></li>
+                                        {% else %}
+                                            <li><a target="_self" href={{ url_for(val[0]) }} > {{ val[1] }}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="Page">
+                    <br>
+                    {% block page %} {% endblock page %}
+                </div>
+            </div>
+            <div class="footer" style="margin-top: 5%">
+                <br><br><br>
+                <p>百合网股份有限公司|版权所有© 2005-{{ Main_Infos['ym'] }} 百合网|运维邮箱:alarm@baihe.com</p>
+            </div>
         </div>
-        <div class="Page">
-            <br>
-            {% block page %} {% endblock page %}
-        </div>
-    </div>
-    <div class="footer" style="margin-top: 5%">
-        <br><br><br>
-        <p>百合网股份有限公司|版权所有© 2005-{{ Main_Infos['ym'] }} 百合网|运维邮箱:alarm@baihe.com</p>
-    </div>
+    </body>
 </html>
