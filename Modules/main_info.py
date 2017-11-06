@@ -71,4 +71,6 @@ def main_info(func):
         except Exception as e:
             loging.write(e)
             return func(*args, **kwargs)
+        finally:
+            db_op.DB.session.remove()
     return info

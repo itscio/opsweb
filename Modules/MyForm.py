@@ -3,7 +3,7 @@ from flask_wtf import Form
 from wtforms import StringField,BooleanField, PasswordField,TextAreaField,SelectField,SelectMultipleField,SubmitField,FileField ,IntegerField
 from wtforms.validators import DataRequired,Length
 import time
-import db_op,Mysql
+import db_op,Mysql,db_idc,loging
 from sqlalchemy import distinct
 from rediscluster import RedisCluster
 import __init__
@@ -214,3 +214,15 @@ class MyForm_publish_apply(Form):
     Rollback_version = TextAreaField(validators=[DataRequired()])
     Project_config = SelectField(choices=[('no', '否'), ('yes', '是')])
     submit = SubmitField('提交',id='btn1')
+
+class MyForm_asset(Form):
+    db = db_idc.idc_servers
+    text = TextAreaField(validators=[DataRequired()])
+    try:
+        db_values = db.query.with_entities(distinct(db.department)).filter().all()
+        rack = StringField('rack', validators=[DataRequired(), Length(1, 50)])
+        select_department = SelectField(choices=[(i,value[0]) for i,value in enumerate(db_values,1)])
+        select_action = SelectField(choices=[('add','新增'),('used','使用'),('down','下架')])
+        submit = SubmitField('提交',id='btn1')
+    finally:
+        db_idc.DB.session.remove()
