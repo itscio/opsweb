@@ -64,27 +64,6 @@ def code():
         flash(e)
         return render_template('Message_static.html',Main_Infos=g.main_infos)
 
-@page_examine.route('/admin/diff')
-@check.login_required(grade=10)
-@main_info.main_info
-def diff_file():
-    produce.Async_log(g.user, request.url)
-    try:
-        Infos = None
-        if Redis.exists('diff_file'):
-            Infos = Redis.hgetall('diff_file')
-            if Infos:
-                for host in Infos:
-                    files = eval(Infos[host])
-                    Infos[host] = files
-            else:
-                flash('检查结果:线上项目均正常!')
-        else:
-            flash('检查结果:线上项目均正常!')
-    except Exception as e:
-        flash(e)
-    return render_template('diff_file.html',Main_Infos=g.main_infos,Infos=Infos)
-
 @page_examine.route('/admin/black_list')
 @page_examine.route('/admin/black_list/<int:del_id>')
 @check.login_required(grade=0)
