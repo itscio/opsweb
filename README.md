@@ -23,19 +23,19 @@
 
 # 页面展示: #
 **1、登录页**
-![](https://i.imgur.com/DMcysen.jpg)
+![](https://i.imgur.com/FI74wAb.jpg)
 
 **2、主页**
-![](https://i.imgur.com/56dUdCJ.jpg)
+![](https://i.imgur.com/GZF3wLo.jpg)
 
-**3、代码发布**
-![](https://i.imgur.com/qOWOyaw.jpg)
+**3、菜单**
+![](https://i.imgur.com/16oPq3B.jpg)
 
-**4、项目部署**
-![](https://i.imgur.com/Pjxin52.jpg)
+**4、部署**
+![](https://i.imgur.com/RhWeHJU.jpg)
 
-**5、账号管理**
-![](https://i.imgur.com/s206EIE.jpg)
+**5、管理**
+![](https://i.imgur.com/SCFxy44.jpg)
 
 **6、运维大数据**
 ![](https://i.imgur.com/kjrRv81.jpg)
