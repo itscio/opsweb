@@ -45,8 +45,9 @@
 
 **8、安全相关**
 ![](https://i.imgur.com/K7foz13.jpg)
-**9、项目进度**
-![](https://i.imgur.com/Y0L17jj.jpg)
+
+**9、规范上线**
+![](https://i.imgur.com/RddsaIu.jpg)
 
 # 安装文档: #
 后续补上，业余时间有限，抱歉。
