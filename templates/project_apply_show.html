@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>提测项目列表</p></div>
+    <div class="table table-hover table-striped table-condensed" align="center" style="margin-top: 3%">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        {% for table in tables %}
+                            <th>{{ table }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                        <tr>
+                            {% for info in project[1:] %}
+                                <td>{{ info }}</td>
+                            {% endfor %}
+                            <td><a href="/project_apply_show/{{ project[0][0] }}">申请上线</a>&nbsp;|<a href="/project_apply_show/{{ project[0][1] }}&" style="color:red">&nbsp;退回</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock page %}

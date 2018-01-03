@@ -7,10 +7,10 @@
             {% if qrcode_url %}
                 <p><img src="{{ qrcode(qrcode_url) }}" height="70" width="70" align="absmiddle">&nbsp;上线码:{{ form.code(style="width:100px") }}<a class="font1">(提示需要上线码,请手机扫描左侧二维码申请)</a></p>
             {% endif %}
-            <p>代码库:{{ form.selectWay }}&nbsp;环境:{{ form.selecttype }}&nbsp;操作:{{ form.selectaction }}&nbsp;类别:{{ form.selectwork }}&nbsp;{{ form.Gray }}灰度发布</p>
+            <p>环境:{{ form.env }}项目操作:{{ form.selectaction }}&nbsp;项目类别:{{ form.selectwork }}&nbsp;灰度发布:{{ form.Gray }}</p>
             <p>上线项目变更描述:</p>
             <p>{{ form.changelog(cols = 80, rows = 5,style="width:auto") }}</p>
-            <p>请输入SVN或者GIT路径:</p>
+            <p>请输入GIT路径:</p>
             <p>{{ form.text(cols = 80, rows = 5,style="width:auto") }}</p>
             <p>{{ form.submit(class="btn btn-info") }}</p>
         </form>
