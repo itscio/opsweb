@@ -29,24 +29,21 @@
 ![](https://i.imgur.com/GZF3wLo.jpg)
 
 **3、菜单**
-![](https://i.imgur.com/16oPq3B.jpg)
+![](https://i.imgur.com/sQPcBwa.jpg)
 
 **4、部署**
-![](https://i.imgur.com/RhWeHJU.jpg)
+![](https://i.imgur.com/17KBuV8.jpg)
 
 **5、管理**
 ![](https://i.imgur.com/SCFxy44.jpg)
 
-**6、运维大数据**
-![](https://i.imgur.com/kjrRv81.jpg)
+**6、大数据**
+![](https://i.imgur.com/RzWlRWn.jpg)
 
-**7、日常管理**
-![](https://i.imgur.com/ghNJMP4.jpg)
+**7、安全**
+![](https://i.imgur.com/Mj3ueRE.jpg)
 
-**8、安全相关**
-![](https://i.imgur.com/K7foz13.jpg)
-
-**9、规范上线**
+**8、流程**
 ![](https://i.imgur.com/RddsaIu.jpg)
 
 # 安装文档: #
