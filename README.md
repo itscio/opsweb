@@ -47,7 +47,7 @@
 ![](https://i.imgur.com/RddsaIu.jpg)
 
 # 安装文档: #
-后续补上，业余时间有限，抱歉。
+近期准备搞一个通用版的运维管理平台，一键部署，启动全搞定。
 
 # 打赏 #
 ![](https://i.imgur.com/od6QMUH.jpg)
