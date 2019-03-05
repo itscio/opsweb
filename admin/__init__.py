@@ -1,7 +1,6 @@
 #-*- coding: utf-8 -*-
 import platform
-import importlib
+from Modules import loging
+logging = loging.Error()
 if platform.python_version().startswith('2.7.'):
-    import sys
-    importlib.reload(sys)
-    sys.setdefaultencoding('utf8')
+    logging.error("Python %s is not supported!" %platform.python_version())
