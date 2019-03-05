@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>墨迹科技运维综合管理平台</title>
+        <title>运维综合管理平台</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/static/css/style.css" />
@@ -33,9 +33,9 @@
                     </div>
                 </div>
                 {% if ENV == 'dev' %}
-                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/sns_authorize?appid=dingoa7wymhx6dbeffjels&response_type=code&scope=snsapi_login&state=STATE&redirect_uri=http://172.16.68.13/login">钉钉账户密码登陆>></a>
+                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/">钉钉账户密码登陆>></a>
                 {% else %}
-                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/sns_authorize?appid=dingoadq3qon8zb34vzdff&response_type=code&scope=snsapi_login&state=STATE&redirect_uri=http://op.moji.com/login">钉钉账户密码登陆>></a>
+                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/">钉钉账户密码登陆>></a>
                 {% endif %}
             </div>
             {% if ENV %}
@@ -47,7 +47,7 @@
     </body>
     <div style="clear:both"></div>
     <footer>
-            <p>北京墨迹风云科技股份有限公司|版权所有© 2009-{{ ym }} 墨迹科技|运维邮箱:yw@moji.com</p>
+            <p>xxxxxxxxxxxxxxxx|版权所有© 2009-{{ ym }} xxxx|运维邮箱:yw@xxxx.com</p>
     </footer>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
