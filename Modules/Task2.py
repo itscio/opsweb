@@ -371,7 +371,7 @@ def get_redis_info():
                                     try:
                                         result = results['stdout'][0].split()[-1]
                                         if '/' in result:
-                                            conf_file = "/usr/local/moji/redis/etc/{}".format(result.split('/')[-1])
+                                            conf_file = "/usr/local/redis/etc/{}".format(result.split('/')[-1])
                                         if not conf_file.endswith('.conf'):
                                             cmd = "lsof -p {}|grep 'cwd'".format(pid)
                                             cwd = Ssh.Run(cmd)
