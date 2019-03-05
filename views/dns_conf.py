@@ -23,11 +23,11 @@ def dns_conf():
             ip = form.ip.data.strip()
             db = db_op.dns_innr
             if field:
-                if  field.endswith('.moji.com') or field.endswith('.service.moji') or field.endswith('.sql.moji'):
+                if  field.endswith('.xxxx.com') or field.endswith('.service.xxxx') or field.endswith('.sql.xxxx'):
                     raise flash("二级域名格式错误!")
                 value = db.query.with_entities(db.ip).filter(and_(db.domain == domain, db.Type == Type, db.field == field,db.system == system)).all()
                 if action == 'add':
-                    if system == 'cw' and domain != 'moji.com':
+                    if system == 'cw' and domain != 'xxxx.com':
                         raise flash('测外只可以操作moji.com域名!')
                     if value:
                             raise flash('%s  IN  %s  %s 该DNS记录已存在' % (field, Type,str(value[0][0])))
