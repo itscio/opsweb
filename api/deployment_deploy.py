@@ -37,7 +37,7 @@ def deployment_update():
                     Scheduler = produce.Scheduler_publish()
                     Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [new_image, new_replicas,version,redis_key])
                     Scheduler.start()
-                    msg = "http://op.moji.com/deploy_query/%s" %redis_key
+                    msg = "http://xxx.xxxx.com/deploy_query/%s" %redis_key
                 else:
                     msg = 'token deny!'
             else:
