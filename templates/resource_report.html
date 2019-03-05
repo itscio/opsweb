@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>应用服务资源增长统计</p></div>
+    <div style="float: left;margin-left:2%">选择时间段:{{ form.select (onchange="select_date()") }}</div>
+    <div id="button" style="float: right;margin-right:2%;display: inline-block">
+        {% for val in Bars.keys() %}
+            <span class="fas fa-hand-point-right" style="color:lightsteelblue"></span>
+            <button id ="btn_{{ val }}"  type="button" class="btn btn-link" onclick="bar_show('{{ val|safe }}')">
+                <i class="fas fa-chart-bar"></i>&nbsp;{{ val }}
+            </button>
+        {% endfor %}
+    </div>
+    <div style="clear:both"><div class="style_hr"></div></div>
+    {% for bar in Bars %}
+        {%  if days > 30 %}
+            <div id="{{ bar }}" style="width: 97.2%;margin-top: 1%;border:1px solid gainsboro;overflow: hidden;margin-left: 1%">
+                <div style="margin-left: -9%;height: 200px">
+                    {{ echarts_js_dependencies(Bars[bar]) }}
+                    {{ echarts_container(Bars[bar]) }}
+                    {{ echarts_js_content(Bars[bar]) }}
+                </div>
+            </div>
+        {% else %}
+            <div id="{{ bar }}" style="float:left;width: 48%;margin-top: 1%;border:1px solid gainsboro;overflow: hidden;margin-left: 1%">
+                <div style="margin-left: -6%;height: 250px;">
+                    {{ echarts_js_dependencies(Bars[bar]) }}
+                    {{ echarts_container(Bars[bar]) }}
+                    {{ echarts_js_content(Bars[bar]) }}
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+    <div style="clear:both;"></div>
+    <div class="style_border" style="width:97.2%;float:left;overflow: hidden;margin-left: 1%;margin-top: 1%;">
+        <div style="margin-left: -8%;">
+            {{ echarts_js_dependencies(server_bar) }}
+            {{ echarts_container(server_bar) }}
+            {{ echarts_js_content(server_bar) }}
+        </div>
+    </div>
+    <div style="clear:both;"></div>
+    <div class="style_hr" style="margin-top:1.5%"></div>
+    <script>
+        var bar_list = {{ Bars.keys()|safe }};
+        {%  if days > 30 %}
+            $.each(bar_list,function (i,v) {if (v != 'tomcat'){
+                $('#'+v).hide();
+            };
+            })
+            var url = window.location.href;
+            var url_param = url.split("?")[1];
+            if (url_param.indexOf('days=') >-1){
+                var days = url_param.split('=')[1];
+                $('#select').val(days);
+            }
+        {% else %}
+            $.each(bar_list,function (i,v) {
+                $('#btn_'+v).attr("disabled","disabled");
+            });
+        {% endif %}
+        function select_date(){
+            var days = $('#select').val();
+            location.href = "/resource_report?days="+days;
+        }
+        function bar_show(id) {
+            $.each(bar_list,function (i,val) {
+                if (val ==id){
+                    $('#'+val).show();
+                }else{
+                    $('#'+val).hide();
+                };
+            })
+        }
+    </script>
+{% endblock page %}

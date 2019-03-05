@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block page %}
+    <div>
+        <a href="#" style="float: left;display: inline" onclick="referrer_url()">
+            <span class="icon-hand-left"></span>返回
+        </a>
+    </div>
+    <div style="clear:both"></div>
+    <div style="width: 98%">
+        <!-- 自有资源 -->
+        {% if values %}
+            <strong>{{ project }}自有资源列表:</strong>
+            <table class="table table-hover table-striped table-condensed table-bordered" id="self_table">
+                <thead>
+                    <tr style="background-color:#F9F9FA">
+                    {% for t in values[0][1:-1] %}
+                        <th style="text-align: center;vertical-align: middle">{{ t }}</th>
+                    {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for val in values[1:] %}
+                        {% if val %}
+                            <tr>
+                                <td style="text-align: center;vertical-align: middle">
+                                    <a href="/assets_get?type=server&ip={{ val[1] }}&port={{ val[2] }}">
+                                        {{ val[3] }}
+                                    </a>
+                                </td>
+                                <td style="text-align: center;vertical-align: middle">
+                                    <a href="/resource_pool?application={{ val[4] }}&application-id={{ val[0] }}">
+                                        {{ val[4] }}
+                                    </a>
+                                </td>
+                                {% for va in val[5:] %}
+                                    <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+    <div style="width: 98%;margin-top: 2%">
+        <!-- 第三方资源 -->
+        {% if third_values %}
+            <strong>{{ project }}第三方资源列表:</strong>
+            <table class="table table-hover table-striped table-condensed table-bordered" id = "third_table">
+                <thead>
+                    <tr style="background-color:#F9F9FA">
+                    {% for t in third_values[0][:-1] %}
+                        <th style="text-align: center;vertical-align: middle">{{ t }}</th>
+                    {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for val in third_values[1:] %}
+                        {% if val %}
+                            <tr>
+                                <td style="text-align: center;vertical-align: middle">
+                                    <a href="/resource_pool?application={{ val[1] }}&application-id={{ val[0] }}">
+                                        {{ val[1] }}
+                                    </a>
+                                </td>
+                                {% for va in val[2:3] %}
+                                    <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                {% endfor %}
+                                <td style="text-align: center;vertical-align: middle">
+                                    <a href="/assets_get?type=server&ip={{ val[3] }}&port={{ val[4] }}">
+                                        {{ val[5] }}
+                                    </a>
+                                </td>
+                                {% for va in val[6:] %}
+                                    <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+    <script>
+        $(document).ready(function () {table_data('self_table');
+            table_data('third_table');})
+    </script>
+{% endblock page %}

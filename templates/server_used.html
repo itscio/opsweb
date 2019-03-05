@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block page %}
+    <div>
+        {% if INFOS %}
+            {% for info in INFOS %}
+                <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
+                    <div style="height: 330px;margin-left: -18px">
+                        {{ echarts_js_dependencies(info) }}
+                        {{ echarts_container(info) }}
+                        {{ echarts_js_content(info) }}
+                    </div>
+                </div>
+            {% endfor %}
+            {% if free_list %}
+                 <div  style="float:left;margin-left: 1%;margin-top: 1%;width:48%;height: 330px;border:1px solid gainsboro;overflow: scroll">
+                    <span style="text-align: center">
+                        <strong style="color: tomato">近3天资源使用率低于3%的服务器{{ host_count }}台</strong>
+                    </span>
+                    <span style="font-size: small;float: right;margin-right: 1%">
+                        <a href="/assets_get/export">
+                            <i class="fas fa-download"></i>导出Excel文件
+                        </a>
+                    </span>
+                    <div style="margin-top: 1%"></div>
+                    <table class="table table-hover table-striped table-condensed table-bordered">
+                        <tbody>
+                            {% for hosts in free_list %}
+                                <tr>
+                                    {% for host in hosts %}
+                                        <td class="table_list" style="text-align: center;">
+                                            <a href="/assets_get?type=server&hostname={{ host }}">{{ host }}</a>
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                 </div>
+            {% endif %}
+            {% if PIES %}
+                {% for pie in PIES %}
+                    <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
+                        <div style="height: 330px;margin-left: 20px">
+                            {{ echarts_js_dependencies(pie) }}
+                            {{ echarts_container(pie) }}
+                            {{ echarts_js_content(pie) }}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+        <div style="clear: both"></div>
+    </div>
+{% endblock page %}

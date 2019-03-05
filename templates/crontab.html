@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">{{ lable }}</div>
+    <div style="width: 99%">
+         <table id="make_table" class="table table-striped table-bordered table-hover table-condensed">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <td>{{ tab }}</td>
+                    {% endfor %}
+                </tr>
+            </thead>
+             <tbody>
+                 {% for val in vals %}
+                    <tr>
+                        <td width="10%">{{ val[0] }}</td>
+                        <td width='40%'>{{ val[1] }}</td>
+                        {% for va in val[2:-1] %}
+                            <td>{{ va }}</td>
+                        {% endfor %}
+                        <td><a href="/assets_get?type=server&hostname={{ val[-1] }}">{{ val[-1] }}</a></td>
+                    </tr>
+                 {% endfor %}
+             </tbody>
+         </table>
+    </div>
+    <script>
+        $(document).ready(table_order('make_table',4));
+    </script>
+{% endblock page %}

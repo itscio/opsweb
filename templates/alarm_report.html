@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block page %}
+    <div>
+        {% if alarm_count %}
+            <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;height:330px;border:1px solid gainsboro;overflow: scroll">
+                <span style="text-align: center"><strong>近7天业务接口报警TOP10</strong></span>
+                {% for info in alarm_count %}
+                    <div class="alert alert-info" style="text-align: left;margin: 1%">
+                        <span>{{ info[0] }}</span>
+                        <span class="badge index_zabbix">{{ info[1] }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if INFOS %}
+            {% for info in INFOS %}
+                <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
+                    <div style="height: 330px;margin-left: 20px">
+                        {{ echarts_js_dependencies(info) }}
+                        {{ echarts_container(info) }}
+                        {{ echarts_js_content(info) }}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <script>
+                js_msg('暂时没有相关数据展示!',3000,'error');
+                setTimeout(function () {
+                    location.href = '/index';
+                },3000);
+            </script>
+        {% endif %}
+    </div>
+{% endblock page %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">
+        <a href="#" onclick="referrer_url()" style="float: left;margin-top: 1%"><span class="icon-hand-left"></span>返回</a>
+        {% if room %}
+            {% set ref = room %}
+            <span><strong>{{ room }}应用部署情况</strong></span>
+        {% endif %}
+        {% if busi %}
+            {% set ref = 'business/'+busi %}
+            <span><strong>{{ busi }}业务服务器使用情况</strong></span>
+        {% endif %}
+        <div class="style_hr"></div>
+    </div>
+    {% if INFOS %}
+        <div style="width: 99%">
+            <table class="table table-hover table-striped table-condensed table-bordered" id="table_data">
+                <thead>
+                    <tr style="background-color:#F9F9FA">
+                        {% for tab in tables %}
+                            <th class="table_list" style="text-align: center">{{ tab }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hostname in INFOS %}
+                        <tr>
+                            <td class="table_list" style="text-align: center"><a href="/assets_get?type=server&hostname={{ hostname }}">{{ hostname }}</a></td>
+                            {% if INFOS[hostname] %}
+                                {% set apps = INFOS[hostname]|join(',') %}
+                                <td class="table_list" style="text-align: left">{{ apps }}
+                                    <a href="#" style="float: right;font-size: smaller" onclick="assets_deploy('{{ hostname|safe }}','{{ apps|safe }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            {% else %}
+                                <td class="table_list" style="text-align: left">
+                                    <a href="#" style="float: right;font-size: smaller" onclick="assets_deploy('{{ hostname|safe }}','None')">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            {% endif %}
+                            {% if  BUSIS[hostname] %}
+                                <td class="table_list" style="text-align:center">
+                                    {% for busi_id in BUSIS[hostname] %}
+                                        {% if room %}
+                                            <a href="/business/{{ busi_id }}">{{ busi_vals[busi_id] }}</a> &nbsp;
+                                        {% endif %}
+                                        {% if busi %}
+                                            <a href="/assets_deploy/{{ busi_vals[busi_id] }}">{{ busi_vals[busi_id] }}</a> &nbsp;
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                            {% else %}
+                                <td class="table_list" style="text-align: left"></td>
+                            {% endif %}
+                            {% if CONFS[hostname][0] == 'physical' %}
+                                <td class="table_list" style="text-align: center">物理机</td>
+                            {% else %}
+                                <td class="table_list" style="text-align: center">虚拟机</td>
+                            {% endif %}
+                            <td class="table_list" style="text-align: center">{{ CONFS[hostname][1] }}</td>
+                            <td class="table_list" style="text-align: center">{{ CONFS[hostname][2] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <script>
+            js_msg('没有获取到相关数据!',3000,'error');
+            setTimeout(function () {location.href=document.referrer;
+            },3000);
+        </script>
+    {% endif %}
+    <script>
+        $(document).ready(table_order('table_data',0));
+        window.localStorage.clear();
+        function assets_deploy(hostname,apps) {
+            window.localStorage.setItem('assets_deploy_hostname',hostname);
+            window.localStorage.setItem('assets_deploy_apps',apps);
+            window.localStorage.setItem('assets_deploy_referrer','/assets_deploy/{{ ref|safe }}');
+            location.href='/resource_modify#+资产管理';
+        }
+    </script>
+{% endblock page %}

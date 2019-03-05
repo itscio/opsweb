@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block page %}
+    <ul id="myTab" class="nav nav-tabs">
+        <li class="active">
+            <a href="#self" data-toggle="tab">
+                自有资源环境
+            </a>
+        </li>
+        <li><a href="#third" data-toggle="tab">第三方资源环境</a></li>
+    </ul>
+    <div id="myTabContent" class="tab-content">
+        <div class="tab-pane fade in active" id="self">
+            <div class="panel panel-info" style="border: 1px solid #a6d3e8 ;width: 40%;margin-left: 30%;margin-top: 3%">
+                <div class="panel-heading" style="background-color: #a6d3e8">
+                    <h4 class="panel-title" style="margin:0px;color: #374b0b" >新项目环境部署</h4>
+                </div>
+                <div class="panel-body" style="margin-top: 5%">
+                    <form action="/deploy" method="post">
+                        {{ form.csrf_token }}
+                        <p>项目名称:{{ form.project (style="width:155px") }}&nbsp;开发语言:{{ form.select_dev }}</p>
+                        <p>项目域名:{{ form.domain (style="width:285px") }}</p>
+                        <p>选择资源:{{ form.select_resource (style="width:300px") }}</p>
+                        <p>{{ form.submit (class="btn-sub") }}</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="tab-pane fade" id="third">
+            <div class="panel panel-info" style="border: 1px solid #a6d3e8 ;width: 40%;margin-left: 30%;margin-top: 3%">
+                <div class="panel-heading" style="background-color: #a6d3e8">
+                    <h4 class="panel-title" style="margin:0px;color: #374b0b" >第三方资源分配录入</h4>
+                </div>
+                <div class="panel-body" style="margin-top: 5%">
+                    <form action="/deploy" method="post">
+                        {{ form.csrf_token }}
+                        <p>部门:{{ form.department(style="width:58px") }}&nbsp;负责人:{{ form.person (style="width:133px")}}</p>
+                        <p>联系方式:{{ form.contact (style="width:225px")}}</p>
+                        <p>资源:{{ form.select_third (style="width:265px")}}</p>
+                        <p>{{ form.submit_third (class="btn-sub") }}</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="margin-top: 5%">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-success" style="display:inline-block;*display:inline;*zoom:1;">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+{% endblock page %}

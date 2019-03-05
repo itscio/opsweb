@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="table table-hover table-striped table-bordered table-condensed" style="margin-top: 2%;float: left;width: 45%">
+        <strong>墨迹顶级域名列表:</strong>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        {% for t in domain_tables %}
+                            <th style="text-align: center;vertical-align: middle;background-color:aliceblue">{{ t }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if domain_values %}
+                        {% for val in domain_values %}
+                            <tr>
+                                {% for va in val %}
+                                    <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="table table-hover table-striped table-bordered table-condensed" align="center" style="margin-top: 2%;float: left;width: 45%;margin-left: 3%">
+        <strong>CDN加速域名列表:</strong>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        {% for t in cdn_tables %}
+                            <th style="text-align: center;vertical-align: middle;background-color:aliceblue">{{ t }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if cdn_tables %}
+                        {% for val in cdn_values %}
+                            <tr>
+                                {% for va in val %}
+                                    <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock page %}

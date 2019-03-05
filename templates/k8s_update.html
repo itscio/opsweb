@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #a6d3e8 ;width:750px;float:left;margin-left:25%;margin-top: 4%">
+        <div class="panel-heading" style="background-color: #a6d3e8">
+            <h4 class="panel-title" style="margin:0px;color:#374b0b" >项目镜像容器更新</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/image_update" method="post">
+                {{ form.csrf_token }}
+                <p>镜像名称:{{ form.deployment (style="width:190px")}}</p>
+                <p>新版本号:{{ form.version (style="width:175px")}}</p>
+                <p>副本数量:{{ form.replicas (style="width:175px",placeholder="可不填写")}}</p>
+                <p>{{ form.submit (class="btn-sub") }}</p>
+            </form>
+        </div>
+    </div>
+{% endblock page %}

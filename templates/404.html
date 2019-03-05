@@ -4,30 +4,26 @@
         <meta name="HandheldFriendly" content="true" />
         <meta name="MobileOptimized" content="320" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" type="text/css" href="/static/css/dandelion.css"  media="screen" />
-        <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/static/css/dandelion.css"  media="screen" />
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/static/css/style.css" />
     <title>404错误页面</title>
     </head>
     <body>
-        <div id="da-wrapper" class="fluid">
-                <!-- Content -->
-                <div id="da-content">
-                    <!-- Container -->
-                    <div class="da-container clearfix">
-
-                        <div id="da-error-wrapper">
-
-                            <div id="da-error-pin"></div>
-                            <div id="da-error-code">error <span>404</span></div>
-                            <br>
-                            <p style=""><a href="/index">点击进入首页</a></p>
-                        </div>
+        <div class="Page" style="width: 100%">
+            <!-- Content -->
+            <div id="da-content">
+                <!-- Container -->
+                <div class="da-container clearfix">
+                    <div id="da-error-wrapper">
+                        <div id="da-error-pin"></div>
+                        <div id="da-error-code" style="font-size: medium">页面不存在!<span><a href="/index">404</a></span></div>
                     </div>
                 </div>
-                <!-- Footer -->
-            <div align="center" class="footer" style="margin-top: 5%">
-                <p>百合网股份有限公司|版权所有© 2005-2017 百合网|运维邮箱:alarm@baihe.com</p>
             </div>
         </div>
     </body>
+    <footer>
+        <p>北京墨迹风云科技股份有限公司|版权所有© 2005-{{ ym }} 墨迹科技|运维邮箱:yw@moji.com</p>
+    </footer>
 </html>

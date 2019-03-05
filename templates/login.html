@@ -1,44 +1,59 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <div class=".header">
-            <title>百合网运维平台</title>
-            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-            <link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-            <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
-            <link rel="stylesheet" type="text/css" href="/static/css/font-awesome.min.css" />
-            <script src="/static/js/jquery.min.js"></script>
-            <script src="/static/js/bootstrap.min.js"></script>
-        </div>
+        <title>墨迹科技运维综合管理平台</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/static/css/style.css" />
+        <link rel="stylesheet" href="/static/css/spop.css">
+        <script src="/static/js/jquery.min.js"></script>
+        <script src="/static/js/bootstrap.min.js"></script>
+        <script src="/static/js/ddLogin.js"></script>
+        <script src="/static/js/function.js"></script>
+        <script src="/static/js/spop.js"></script>
     </head>
-    <body style="background-color: #ebeef0;background:url(/static/images/background.png) 0 0 no-repeat scroll transparent;background-size:80%;background-position:center">
-        <div style="width: 100%;position: absolute; top:0">
-                <div style="width: 10%;float: left">
-                    <img src="/static/images/logo.gif">
-                </div>
-                <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
-                    <p>运维综合管理平台</p>
-                </div>
-            </div>
-        <div class="content" style="margin-top: 16%;" >
-            <form action="/login" method="post" class="login-form">
-                {{ form.csrf_token }}
-                <p style="margin-left:25%;">用户:{{ form.name(size=15,autocomplete="on",style="width:150px") }}</p>
-                <p style="margin-left:25%;">密码:{{ form.password(size=15,style="width:150px") }}</p>
-                <p align="center">{{ form.remember_me }}免密码登录</p>
-                <p align="center">{{ form.submit(class="btn btn-info")}}</p>
-            </form>
-            <br>
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <div class="alert alert-success alert-dismissable" style="display:inline-block;*display:inline;*zoom:1;">
-                        <p>{{ messages[-1] }}<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button></p>
+    <body>
+        <div class="Page" style="width: 100%">
+            <div style="width: 100%;position: absolute; top:0">
+                    <div style="width: 10%;float: left;padding-top: 1%">
+                        <img class="img-rounded" src="/static/images/logo.gif" style="width: auto; height: auto;max-width: 100%;max-height: 100%;">
                     </div>
-                {% endif %}
-            {% endwith %}
-        </div>
-        <div class="footer" style="margin-top: 5%">
-                <p>百合网股份有限公司|版权所有© 2005-{{ ym }} 百合网|运维邮箱:alarm@baihe.com</p>
+                    <div style="float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 1.5%;margin-left: 0.5%">
+                            <p>运维综合管理平台</p>
+                    </div>
             </div>
+            <div style="clear:both"></div>
+            <div style="padding-top: 10%" align="center">
+                <div class="panel" style="border: 1px solid #a6d3e8 ;width: 400px;height: 400px">
+                    <div class="panel-heading  alert alert-info" >
+                        <h3 class="panel-title" style="margin:0px;line-height: 15px">登陆</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="login_container"></div>
+                    </div>
+                </div>
+                {% if ENV == 'dev' %}
+                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/sns_authorize?appid=dingoa7wymhx6dbeffjels&response_type=code&scope=snsapi_login&state=STATE&redirect_uri=http://172.16.68.13/login">钉钉账户密码登陆>></a>
+                {% else %}
+                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/sns_authorize?appid=dingoadq3qon8zb34vzdff&response_type=code&scope=snsapi_login&state=STATE&redirect_uri=http://op.moji.com/login">钉钉账户密码登陆>></a>
+                {% endif %}
+            </div>
+            {% if ENV %}
+                <script src="/static/js/dingding_dev.js"></script>
+            {% else %}
+                <script src="/static/js/dingding_pro.js"></script>
+            {% endif %}
+        </div>
     </body>
+    <div style="clear:both"></div>
+    <footer>
+            <p>北京墨迹风云科技股份有限公司|版权所有© 2009-{{ ym }} 墨迹科技|运维邮箱:yw@moji.com</p>
+    </footer>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <script language="JavaScript">
+                js_msg('{{ messages[-1] }}',5000,'error');
+            </script>
+        {% endif %}
+    {% endwith %}
 </html>

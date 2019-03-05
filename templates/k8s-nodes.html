@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block page %}
+    {% for context in NODES %}
+        <div class="div"><p>{{ context }}集群节点信息</p></div>
+        <div style="width:97.7%;margin-left: 0.5%">
+            <table class="table table-bordered table-hover table-striped table-condensed">
+                <thead>
+                    {% for t in tables %}
+                        <th style="text-align: center">{{ t }}</th>
+                    {% endfor %}
+                </thead>
+                <tbody>
+                    {% for node in NODES[context] %}
+                        <tr>
+                            <td style="text-align: center">
+                                <a href="/assets_get?type=server&hostname={{ node }}">{{ node }}</a>
+                            </td>
+                            {% for key in keys %}
+                                <td style="text-align: center">{{ NODES[context][node][key] }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
+{% endblock page %}

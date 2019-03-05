@@ -1,94 +1,225 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/html">
+<html xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
     <head>
     <div class=".header">
-        <title>百合网运维平台</title>
+        <title>墨迹科技运维综合管理平台</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <link rel="stylesheet" type="text/css" href="/static/css/bootstrap.min.css" />
-        <link rel="stylesheet" type="text/css" href="/static/css/style.css" />
-        <link rel="stylesheet" type="text/css" href="/static/css/table_style.css" />
-        <link rel="stylesheet" type="text/css" href="/static/css/font-awesome.min.css" />
+        <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="/static/css/all.min.css" />
+        <link rel="stylesheet" href="/static/css/font-awesome.min.css" />
+        <link rel="stylesheet" href="/static/css/datatables.min.css">
+        <link rel="stylesheet" href="/static/css/flatpickr.min.css">
+        <link rel="stylesheet" href="/static/css/material_blue.css">
+        <link rel="stylesheet" href="/static/css/all.css">
+        <link rel="stylesheet" href="/static/css/table_style.css" />
+        <link rel="stylesheet" href="/static/css/style.css" />
+        <link rel="stylesheet" href="/static/css/menu.css" />
+        <link rel="stylesheet" href="/static/css/spop.css"/>
+        <link rel="stylesheet" href="/static/css/fishBone.css"/>
+        <link rel="stylesheet" href="/static/css/buttons.css"/>
+        <link href="/static/imgages/favicon.png" rel="icon" type="image/png">
+        <link href="/static/css/xterm.min.css" rel="stylesheet" type="text/css"/>
+        <link href="/static/css/fullscreen.min.css" rel="stylesheet" type="text/css"/>
         <script src="/static/js/jquery.min.js"></script>
         <script src="/static/js/bootstrap.min.js"></script>
+        <script src="/static/js/jquery.cookie.js"></script>
+        <script src="/static/js/jquery.SuperSlide.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="/static/js/zh.js"></script>
+        <script src="/static/js/datatables.min.js"></script>
         <script src="/static/js/menu.js"></script>
-        <script src="/static/js/highcharts.js"></script>
-        <script src="/ck/static/chartkick.js"></script>
+        <script src="/static/js/autocomplete.js"></script>
+        <script src="/static/js/spop.js"></script>
+        <script src="/static/js/function.js"></script>
+        <script src="/static/js/fishBone.js"></script>
+        <script src='/static/js/dropdown.js'></script>
+        <script src='/static/js/tooltip.min.js'></script>
+        <script src='/static/js/clipboard.min.js'></script>
+        <script src='/static/js/Modal.js'></script>
+        <script src='/static/js/d3.js'></script>
+        <script src="/static/js/popper.min.js"></script>
+        <script src="/static/js/xterm.min.js"></script>
+        <script src="/static/js/fullscreen.min.js"></script>
+
     </div>
 </head>
     <body>
+        {% set Main_Menu = g.Base_Menu %}
+        {% if g.discovery %}
+            {% set discovery = g.discovery %}
+        {% else %}
+            {% set discovery = [] %}
+        {% endif %}
         <div style="width: 100%">
-            <div style="width: 10%;float: left">
+            <div style="width: 10%;float: left;margin-top: 1%">
                 <img src="/static/images/logo.gif">
             </div>
-            <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 3%">
+            <div style="width: 30%;float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 2%;margin-left: 1%">
                 <p>运维综合管理平台</p>
             </div>
-            <div style="width:60%;font-size:9pt;float:left;text-align:right;margin-top: 2%">
+            <div style="width:58%;font-size:9pt;float:left;text-align:right;margin-top: 1%">
+                <div class="tooltip-container no-display"></div>
                 <p>
-                    你好:<font color="#006400" style="font-weight:bold">{{ Main_Infos['datas'][0] }}</font>
-                    &nbsp;<a  href={{ url_for('pw.pw') }}>修改密码</a>
-                    &nbsp;<a  href={{ url_for('logout.logout',_external=True,_scheme='https') }}>退出</a>
+                    {% if discovery|length >0 %}
+                        <span style="font-size:13px" data-tooltip="发现{{ discovery|length - 1 }}台新物理服务器,点击查看详情">
+                            <i class="fas fa-bell" style="color: tomato"></i>
+                            <a href="#" onclick="message()">消息(<span style="color:red">{{ discovery|length - 1 }}</span>)</a>
+                        </span>&nbsp;&nbsp;
+                    {% else %}
+                        <span>
+                            <i class="fas fa-bell"></i>消息(0)
+                        </span>&nbsp;&nbsp;
+                    {% endif %}
+                    <i class="fas fa-user" style="color:cornflowerblue"></i>&nbsp;<span style="font-weight:bold;color:darkgreen">{{ g.user }}</span> &nbsp;
+                    <i class="fas fa-users" style="color: cornflowerblue"></i>在线人数:<span style="font-weight:bold;color:darkgreen">{{ g.active_users }}</span>
+                    &nbsp;<a  href={{ url_for('logout.logout') }}><i class="fas fa-sign-out-alt"></i>退出</a>
+                </p>
+                <p>
+                    <i class="fas fa-calendar-alt" style="color: cornflowerblue"></i>日期:
+                    <span style="font-weight:bold;color:#006400">{{ g.date }}</span>&nbsp;
+                    <i class="fas fa-broadcast-tower" style="color: cornflowerblue"></i>来源IP:
+                    <span style="font-weight:bold;color:green">{{ g.ip }}</span>
                 </p>
             </div>
         </div>
-        <div align="right" style="font-size:9pt;text-align:right">
-            <p>
-                {{ moment().format('YYYY-MM-DD') }}
-                &nbsp;今日运维值班:<font color=#ff4500 style="font-weight:bold">{{ Main_Infos['datas'][1] }}</font>
-                &nbsp;明日运维值班:<font color=#006400 style="font-weight:bold">{{ Main_Infos['datas'][2] }}</font>
-                &nbsp;来源IP:<font color="#006400">{{ Main_Infos['ip'] }} </font>
-            </p>
-        </div>
         <div id="navMenu">
-            <ul>
-                <li><a href="/index" target="_self">首页</a></li>
-                {% for Menu in Main_Infos['navMenu'] %}
-                <li><a rel= {{ Menu }} target="_self">{{ Main_Infos['nav_val'][Menu][0][0] }}</a></li>
+            <ul style="list-style-type:none;">
+                <li style="list-style-type:none;"><a href="/index" target="_self"><i class="fas fa-home"></i>首页</a></li>
+                {% for Menu in Main_Menu['navMenu'] %}
+                    <li style="list-style-type:none;">
+                        <a rel= {{ Menu }} target="_self" id ="nav_{{ Menu }}">
+                            <i class="fab fa-google-drive"></i>
+                            {{ Main_Menu['nav_val'][Menu][0][0] }}
+                        </a>
+                    </li>
                 {% endfor %}
+                <li style=";float: right;margin-right: -2.5%">
+                    {% if g.weather %}
+                        <span style="color: whitesmoke;font-size: smaller" >
+                            <span style="color: sandybrown"><i class="fas fa-sun fa-spin"></i></span>
+                            城市:<span>{{ g.weather['city'] }}</span>&nbsp;
+                            当前气温:<span>{{ g.weather['wendu'] }}℃</span>&nbsp;
+                            空气:<span>{{ g.weather['quality'] }}</span>&nbsp;
+                            明日天气:<span>{{ g.weather['type'] }}</span>&nbsp;
+                            最高气温:<span>{{ g.weather['high'] }}</span>&nbsp;
+                        </span>
+                    {% endif %}
+                </li>
             </ul>
         </div>
-        <div style="background-color: #ebeef0;">
-            <script type='text/javascript' src='/static/js/dropdown.js'></script>
-            {% for Menu in Main_Infos['navMenu'] %}
+        <div>
+            {% for Menu in Main_Menu['navMenu'] %}
                 <ul id={{ Menu }} class="dropMenu">
-                    {% for val in Main_Infos['nav_val'][Menu] %}
+                    {% for val in Main_Menu['nav_val'][Menu] %}
                         {% if 'http' in val[1] %}
-                            <li><a href={{ val[1] }} target="_blank">{{ val[2] }}</a></li>
+                            <li style="list-style-type:none;">
+                                <a href={{ val[1] }} target="_blank">{{ val[2] }}</a>
+                            </li>
                         {% else %}
-                            <li><a target="_self" href={{ url_for(val[1]) }} >{{ val[2] }}</a></li>
+                            <li style="list-style-type:none;">
+                                <a target="_self" href="{{ url_for(val[1]) }}#+nav_{{ Menu|urlencode }}" >{{ val[2] }}</a>
+                            </li>
                         {% endif %}
                     {% endfor %}
                 </ul>
             {% endfor %}
-            <script type="text/javascript">cssdropdown.startchrome("navMenu")</script>
-            <div style="display: inline;background-color: #ebeef0;">
-                <div class="fl">
-                    <ul id="accordion" class="accordion">
-                        {% for Menu in Main_Infos['submenu'] %}
-                            <li>
-                                <div class="link"><i class="fa fa-paint-brush"></i>{{ Menu }}<i class="fa fa-chevron-down"></i></div>
-                                <ul class="submenu">
-                                    {% for val in Main_Infos['sub_val'][Menu] %}
-                                        {% if 'http' in val[0] %}
-                                            <li><a href={{ val[0] }} target="_blank">{{ val[1] }}</a></li>
-                                        {% else %}
-                                            <li><a target="_self" href={{ url_for(val[0]) }} > {{ val[1] }}</a></li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="Page">
-                    <br>
-                    {% block page %} {% endblock page %}
-                </div>
+        </div>
+        <script>
+            cssdropdown.startchrome("navMenu")
+        </script>
+        <div style="display: inline;background-color: #ebeef0;">
+            <div class="fl">
+                <ul id="accordion" class="accordion">
+                    {% for Menu in Main_Menu['submenu'] %}
+                        <li style="list-style-type:none">
+                            <div class="link">{{ Menu }}
+                                <i class="fas fa-angle-double-down" style="color:whitesmoke;top:35%;position:unset"></i>
+                            </div>
+                            <ul class="submenu" id="menu_{{ Menu }}" style="margin: 0 0 0px 0px">
+                                {% for val in Main_Menu['sub_val'][Menu] %}
+                                    {% if 'http' in val[0] %}
+                                        <li style="list-style-type:none;">
+                                            <a href={{ val[0] }} target="_blank">{{ val[1] }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li style="list-style-type:none;">
+                                            {% set sub_id = url_for(val[0]).split('/')[-1] %}
+                                            <a target="_self" href="{{ url_for(val[0]) }}#+{{ Menu|urlencode }}" id="sub_{{ sub_id }}"> {{ val[1] }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
             </div>
-            <div class="footer" style="margin-top: 5%">
-                <br><br><br>
-                <p>百合网股份有限公司|版权所有© 2005-{{ Main_Infos['ym'] }} 百合网|运维邮箱:alarm@baihe.com</p>
+        </div>
+        <div class="Page">
+            {% block page %} {% endblock page %}
+        </div>
+        <div style="clear:both;"></div>
+        <div class="modal fade" id="Result_Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#f5f5f5">
+                        <h4 class="modal-title" id="myModalLabel">发现新物理服务器，请及时进行上架操作</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-bordered" id="message_table" style="display: none">
+                            <thead>
+                                <tr>
+                                    {% for tab in discovery[0] %}
+                                       <th style="text-align: center;vertical-align: middle">{{ tab }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for infos in discovery[1:] %}
+                                    <tr>
+                                        {% for info in infos %}
+                                            <td style="text-align: center;vertical-align: middle">{{ info }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-link" data-dismiss="modal">关闭</button>
+                    </div>
+                </div>
             </div>
         </div>
     </body>
+    <footer>
+        <br><br>
+        <p>北京墨迹风云科技股份有限公司|版权所有© 2009-{{ g.ym }} 墨迹科技|运维邮箱:yw@moji.com</p>
+    </footer>
+    <script>
+        var url = window.location.href;
+        if (url.indexOf('#+')>=0){
+            var menu_id = decodeURI(url.split('#+')[1]);
+            if (menu_id.indexOf('nav_') >=0){
+                $('#'+menu_id).css('color','bisque');
+            } else{
+            var uri_id  = url.split('/')[3].split('#+')[0];
+            $('#menu_'+menu_id).show();
+            $('#sub_'+uri_id).css({'background':'#CCCCCC','color':'tomato'});
+            }
+        }
+        function message() {
+            $('#message_table').show();
+            $('#Result_Modal').modal('show');
+        }
+    </script>
+    {% if discovery %}
+        <script>
+            var discovery_show = $.cookie('discovery_show');
+            if (discovery_show != 'True'){
+                $('#message_table').show();
+                $('#Result_Modal').modal('show');
+                $.cookie('discovery_show','True',{ expires:1 ,path:'/'});
+            };
+        </script>
+    {% endif %}
 </html>

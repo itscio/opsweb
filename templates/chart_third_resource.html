@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="width:97.7%;margin-left:0.5%;float:left;border:1px solid gainsboro;overflow: hidden">
+        <div style="margin-left: -8%;">
+            {{ echarts_js_dependencies(bar) }}
+            {{ echarts_container(bar) }}
+            {{ echarts_js_content(bar) }}
+        </div>
+    </div>
+    <div style="clear:both"></div>
+    <div style="width: 99%;margin-left: 0.5%">
+        {% for key in idc_vals %}
+            <div style="border: 1px solid;border-color:gainsboro;float: left;width: 49%;height:250px;margin-right: 0.5%;margin-top:0.3%;overflow: hidden">
+                <strong>部署<a href="/resource_pool?application={{ key }}"> {{ key }}</a>实例服务器分布情况:</strong>
+                {{ echarts_js_dependencies(idc_vals[key]) }}
+                {{ echarts_container(idc_vals[key]) }}
+                {{ echarts_js_content(idc_vals[key]) }}
+            </div>
+        {% endfor %}
+    </div>
+{% endblock page %}

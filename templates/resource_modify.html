@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #a6d3e8  ;float: left;width: 50%;margin-left: 22%;margin-top: 4%">
+        <div class="panel-heading" style="background-color: #a6d3e8">
+            <h4 class="panel-title" style="margin:0px;color:#374b0b" >线上服务资源信息手动操作</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/resource_modify" method="post">
+                <div align="center" style="margin-top: 1%">
+                    {{ form.csrf_token }}
+                    <p>资源类型:{{ form.source_type (onchange = "select_cluster_type()") }}&nbsp;所属业务:{{ form.select_busi }}&nbsp;操作:{{ form.action }}</p>
+                    <p>资源名称:{{ form.resource (style="width:170px") }}&nbsp;应用端口:{{ form.app_port (style="width:80px")}}</p>
+                    <p id="deploy_apps" style="display: none"></p>
+                    <p>主机信息:{{ form.hosts (style="width:325px;resize:none",rows=4)}}</p>
+                    <p>{{ form.submit(class="btn-sub") }}</p>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        var ref_url = window.localStorage.getItem('assets_deploy_referrer');
+        window.localStorage.removeItem('assets_deploy_referrer');
+        /*判断是否执行完成*/
+        {% if INFOS %}
+            {% for info in INFOS %}
+                {% if '成功' in info %}
+                    var style = 'info';
+                {% else %}
+                    var style = 'error';
+                {% endif %}
+                js_msg("{{ info|safe }}",3000,style);
+            {% endfor %}
+            if (ref_url){
+                $('#hosts').attr('readonly','True');
+                setTimeout(function () {
+                    window.localStorage.clear();
+                    location.href=ref_url;
+                },3000)
+            };
+        {% endif %}
+        /*判断选择框动作*/
+        function select_cluster_type() {
+            var cluster_type = $('#source_type').val();
+            if (cluster_type.indexOf('集群模式') >=0){
+                $('#app_port').val(0);
+                $('#app_port').attr("readonly","readonly");
+            }
+            else{
+                $('#app_port').val("");
+                $('#app_port').removeAttr("readonly");
+            };
+        }
+        /*判断是否是assets_deploy引导页*/
+        if (ref_url){
+            var hostname = window.localStorage.getItem('assets_deploy_hostname');
+            var apps = window.localStorage.getItem('assets_deploy_apps');
+            if (apps != 'None') {
+                $('#deploy_apps').show();
+                $('#deploy_apps').html('<div style="width:400px;text-align: left;border: 1px dashed tomato;overflow: hidden;background-color: #eee">已部署:' + apps+'</div>');
+            };
+            $('#hosts').text(hostname);
+            $('#hosts').attr('readonly','True');
+        };
+    </script>
+{% endblock page %}

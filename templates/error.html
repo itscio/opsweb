@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="alert alert-danger" style="margin-top: 13%;display:inline-block;*display:inline;*zoom:1;">
+        {% if Error_info %}
+            <p>发现异常操作,{{ Error_info|safe }}</p>
+        {% else %}
+            <p>发生未知异常错误!</p>
+        {% endif %}
+        <strong><span id="jumpTo">5</span>秒后页面自动跳转到登陆页......</strong>
+    </div>
+    <script type="text/javascript">
+        var jumpTo = document.getElementById('jumpTo');
+        secs = jumpTo.innerHTML;
+        countDown(secs,'/logout');
+    </script>
+{% endblock page %}

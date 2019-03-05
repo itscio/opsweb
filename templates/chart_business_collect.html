@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="float:inside;text-align:left;margin-left: 2%">
+        <span class="icon-hand-right icon-align-center">
+            业务域名:<input id="business_bigdata_select_host" type="text" autocomplete="off" placeholder="输入域名"/>
+        </span>
+        <span class="icon-hand-right icon-align-center" style="margin-left: 1%">
+            域名接口:<input id="business_bigdata_select_uri" type="text" autocomplete="off" placeholder="暂无接口"/>
+        </span>
+        <span class="icon-calendar icon-align-center" style="margin-left: 1%">
+            选择日期:<input id="select_datatime" type="text" autocomplete="off" placeholder="选择日期" onchange="set_cookies('select_datatime')"/>
+        </span>
+    </div>
+    <div style="clear:both"></div>
+    <div class="style_hr" style="width: 95.3%;margin-left: 2%"></div>
+    <div style="text-align: left;margin-left:1.9%"></div>
+    <div id = "Lines">
+        {% for line in Lines %}
+            <div style="margin-left:1.9%;margin-top: 1%;width:95.3%;float:left;border:1px solid gainsboro;overflow: hidden">
+                <div style="margin-left: -3%;">
+                    {{ echarts_js_dependencies(line) }}
+                    {{ echarts_container(line) }}
+                    {{ echarts_js_content(line) }}
+                </div>
+            </div>
+        {% endfor %}
+        <div style="clear:both"></div>
+    </div>
+    <script language="JavaScript">
+        $.input_host('business_bigdata_select_host',{{ searchs|safe }},function(){get_uri_lists('business_bigdata_select_host');});
+  	    $("#select_datatime").flatpickr({dateFormat: "Z",locale: "zh",maxDate: new Date().fp_incr(-7)});
+        var host = $.cookie('business_bigdata_select_host');
+        var date = $.cookie('select_datatime');
+        if (host){
+            $("#business_bigdata_select_host").val(host);
+            $("#select_datatime").val(date);
+            business_change_select(host,'/chart_business_collect');
+        }
+    </script>
+{% endblock page %}

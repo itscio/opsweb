@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="margin-left: 2%"><p style="text-align:left;font-weight:bold">执行输出(等待时间可能会稍长):</p></div>
+    <div style="margin-left: 2%;text-align:left;max-height:60%;overflow: hidden">
+        <p id="MSG"></p>
+    </div>
+    <script type="text/javascript">
+        js_msg('执行中,请耐心等待......',false,'info');
+        var id = setInterval("publish_Request()",500);
+        function publish_Request(){
+            $.get("/deploy_query/{{ session['redis_key'] }}",function(data){
+            if (data !=""){
+                if (data.indexOf("_End_") < 0){
+                    if(data.indexOf("fail") > 0){
+                        $("#MSG").before('<p>'+data+'&nbsp;<span class="icon-remove" style="color: red"></span></p>');}
+                    else{
+                        if (data.indexOf("success")>0){
+                            $("#MSG").before('<p>'+data+'&nbsp;<span class="icon-ok" style="color: green"></span></p>');}
+                        else{
+                            $("#MSG").before('<p>'+data+'</p>');
+                        }
+                    }}
+                else {
+                    js_msg('',3,'success');
+                    $("#MSG").before('<p style="font-weight:bold">本次操作执行完毕!</p>');
+                    clearInterval(id);
+                }}
+                window.scrollTo(0,document.body.scrollHeight);});
+        }
+    </script>
+{% endblock page %}

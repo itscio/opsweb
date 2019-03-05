@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #a6d3e8 ;width:750px;float:left;margin-left:20%;margin-top: 3%">
+        <div class="panel-heading" style="background-color: #a6d3e8">
+            <h4 class="panel-title" style="margin:0px;color:#374b0b" >资产变更管理</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/assets_manage" method="post">
+                <div align="center" style="margin-top: 1%">
+                    {{ form.csrf_token }}
+                    <p>
+                        机房:{{ form.select_aid (id='select_aid') }}&nbsp;
+                        机柜:<a href="#" data-toggle="popover" title="虚拟机、云主机统一填写KVM">{{ form.rack (id='rack',style="width:158px",placeholder="必选,鼠标悬停提示")}}</a>&nbsp;
+                        资产设备:{{ form.select_device (onchange="selectdevice()")}}&nbsp;
+                        操作:{{ form.select_action (onchange="selectaction()") }}&nbsp;
+                        <span id="fault" style="display: none">{{ form.fault }}维护中</span>
+                    </p>
+                    <p>
+                        <span id="device_type" style="display: none">设备型号:{{ form.device_type (style="width:118px",placeholder="必选") }}</span>
+                        <span id="idrac">远程管理:{{ form.idrac (style="width:118px",placeholder="idrac ip 可选") }}</span>&nbsp;
+                        采购日期:{{ form.purch (style="width:118px",id="input_purch",placeholder="必选,点击选择日期") }}&nbsp;
+                        过保日期:{{ form.expird (style="width:118px",id="input_expird",placeholder="必选,点击选择日期") }}
+                    </p>
+                    <p id="old_host" style="display: none">需变更服务器原有IP:{{ form.old_host (style="width:448px",placeholder="可选,服务器IP(默认ssh_port:20443)或者IP:ssh_port")}}</p>
+                    <p>{{ form.text( id="text",cols = 80, rows = 10 ,style="width:auto;resize:none",placeholder="请按照以下格式分行输入:  1.服务器IP(默认ssh_port:20443)或者IP:ssh_port  2.其它设备IP  3.下架设备只需再选择机房即可") }}</p>
+                    <p>{{ form.submit(class="btn-sub") }}</p>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="file_upload" class="panel panel-info" style="border: 1px solid #a6d3e8 ;float: left;width: 35%;margin-left: 3%;margin-top: 4%;display: none">
+        <form action="/assets_manage/upload" method="post" enctype=multipart/form-data>
+            {{ form.csrf_token }}
+            <div class="panel-heading" style="background-color: #a6d3e8">
+                <h5 class="panel-title" style="margin:0px;color:#374b0b" >批量录入资产信息</h5>
+            </div>
+            <div class="panel-body">
+                <p style="text-align: left;padding: 2%"><strong>说明:</strong>批量录入只适用于<strong style="color:green">服务器</strong>，请先下载<a href="/static/doc/upload.xlsx">模版</a>
+                    <span class="icon-hand-left"></span>，并按照模版格式填写相关服务器资产信息
+                    <span style="color:orangered;font-size: smaller">(除idrac和ssh_port字段外均为必填项,ssh_port不填默认为20443)</span>,请勿变更excel列字段名称否则将导致录入失败.
+                </p>
+                <p>{{ form.File }}{{ form.upload(class="btn btn-link") }}</p>
+            </div>
+        </form>
+    </div>
+    <script type="text/javascript">
+        document.getElementById("input_purch").flatpickr({dateFormat: "Y-m-d",locale: "zh"});
+        document.getElementById("input_expird").flatpickr({dateFormat: "Y-m-d",locale: "zh"});
+    </script>
+    {% if change_infos %}
+        <script type="text/javascript">
+            $('#select_aid').val('{{ change_infos["aid"] }}');
+            $('#select_device').val('server');
+            $('#text').text('{{ change_infos["sid"] }}');
+            $('#select_action').val('{{ change_infos["action"] }}');
+            selectaction();
+            document.getElementById("rack").setAttribute("placeholder",'{{ change_infos["cid"] }}');
+            document.getElementById("idrac").setAttribute("placeholder",'{{ change_infos["idrac"] }}');
+            document.getElementById("input_purch").setAttribute("placeholder",'{{ change_infos["purch_date"] }}');
+            document.getElementById("input_expird").setAttribute("placeholder",'{{ change_infos["expird_date"] }}');
+        </script>
+    {% endif %}
+{% endblock page %}

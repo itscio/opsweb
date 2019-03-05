@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>线上业务接口监控</p></div>
+    <div class="table table-hover table-striped table-bordered table-condensed" align="center" style="width: 95%;margin-left: 2%">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{{ tables[0] }}</th>
+                        {% for tab in tables[1:] %}
+                            <th style="text-align: center">{{ tab }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for val in vals %}
+                        <tr>
+                            <td>{{ val[1] }}</td>
+                            {% if val[2] == '健康' %}
+                                <td style="color: green;text-align: center">{{ val[2] }}<span style="font-size:xx-small"><i class="fas fa-check"></i></span></td>
+                            {% else %}
+                                <td style="color: red;text-align: center">{{ val[2] }}<span style="font-size:xx-small"><i class="fas fa-times"></i></span></td>
+                            {% endif %}
+                            {% for va in val[3:] %}
+                                <td style="text-align: center">{{ va }}</td>
+                            {% endfor %}
+                            <td style="text-align: center"><a href="#" onclick="ajax_url('/business_monitor/{{ val[0] }}')">检测</a></td>
+                            <td style="text-align: center"><a href="#" onclick="ajax_url('/business_monitor/lock/{{ val[0] }}')">停止</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock page %}

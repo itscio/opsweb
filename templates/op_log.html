@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>平台访问记录</p></div>
+    <div style="width: 99%">
+        <table id="table_data" class="table table-striped table-bordered table-hover" width="100%">
+        <thead>
+            <tr style="background-color:#F9F9FA">
+                {% for t in tables %}
+                    <td>{{ t }}</td>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if values %}
+                 {% for value in values %}
+                    <tr>
+                        {% for va in value %}
+                            <td>{{ va }}</td>
+                        {% endfor %}
+                    </tr>
+                 {% endfor %}
+            {% endif %}
+        </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',0));
+    </script>
+{% endblock page %}
