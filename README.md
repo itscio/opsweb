@@ -14,7 +14,7 @@
     - 通过分布式全局锁,进程排它锁,实现多机多进程部署后台单任务运行
     
 # 界面展示
-![]https://github.com/wylok/opsweb/blob/master/static/images/01.jpg
+![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
 
 # 安装文档: #
 已在某互联网公司落地，近期准备搞一个docker镜像、容器化后开箱即用。
