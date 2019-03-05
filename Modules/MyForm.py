@@ -99,7 +99,7 @@ class MyFrom_third_resource(Form):
         submit_recucle = SubmitField('回收', id='submit')
 
 class MyForm_dns_conf(Form):
-    select_domain = SelectField(choices=[('moji.com','moji.com'),('service.moji','service.moji'),('sql.moji','sql.moji')])
+    select_domain = SelectField(choices=[('xxxx.com','xxxx.com'),('service.xxx','service.xxx'),('sql.xxx','sql.xxx')])
     select_type = SelectField(choices=[('A','A'),('CNAME','CNAME'),('MX','MX'),('TEXT','TEXT'),('NS','NS')])
     select_action = SelectField(choices=[ ('query', '查询'),('add', '新增'), ('modify', '修改'), ('del', '删除')])
     select_sys = SelectField(choices=[('cw', '测外'), ('xs', '线上')])
