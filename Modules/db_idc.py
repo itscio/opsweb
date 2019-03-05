@@ -1,162 +1,174 @@
 #-*- coding: utf-8 -*-
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import __init__
-app = __init__.app
+app = Flask(__name__)
+app.config.from_pyfile('../conf/sql.conf')
 DB = SQLAlchemy(app)
-class idc_mysqldb(DB.Model):
-    __tablename__ = 'mysqldb'
-    __bind_key__='idc'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    ip = DB.Column(DB.String(20))
-    port = DB.Column(DB.String(8))
-    db = DB.Column(DB.String(200))
-    master = DB.Column(DB.String(8))
-    slave = DB.Column(DB.String(8))
-    Master_Host = DB.Column(DB.String(20))
-    Master_User = DB.Column(DB.String(20))
-    Master_Port = DB.Column(DB.String(8))
-    def __init__(self,ip,port,DB,master,slave,Master_host,Master_User,Master_Port):
-        self.ip = ip
-        self.port = port
-        self.DB = DB
-        self.master = master
-        self.slave = slave
-        self.Master_Host = Master_host
-        self.Master_User = Master_User
-        self.Master_Port = Master_Port
-    def __repr__(self):
-        values=(self.ip,self.port,self.DB,self.master,self.slave,self.Master_Host,self.Master_User,self.Master_Port)
-        return '%s,%s,%s,%s,%s,%s,%s,%s' %values
-
 class idc_servers(DB.Model):
     __tablename__ = 'servers'
     __bind_key__='idc'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    cid = DB.Column(DB.String(20))
-    sn = DB.Column(DB.String(30))
-    type = DB.Column(DB.String(30))
-    system = DB.Column(DB.String(30))
+    idc_id = DB.Column(DB.Integer)
+    ip = DB.Column(DB.String(20))
+    ssh_port = DB.Column(DB.Integer)
+    s_ip = DB.Column(DB.String(100))
+    host_type = DB.Column(DB.String(20))
+    hostname = DB.Column(DB.String(45))
+    sn = DB.Column(DB.String(50))
+    manufacturer = DB.Column(DB.String(50))
+    productname = DB.Column(DB.String(50))
+    system = DB.Column(DB.String(50))
+    cpu_info = DB.Column(DB.String(50))
     cpu_core = DB.Column(DB.Integer)
     mem = DB.Column(DB.String(30))
-    disk_size = DB.Column(DB.Integer)
-    ip = DB.Column(DB.String(30))
-    department = DB.Column(DB.String(30))
-    status = DB.Column(DB.String(30))
-    application = DB.Column(DB.String(20))
+    disk_count = DB.Column(DB.Integer)
+    disk_size = DB.Column(DB.String(20))
+    idrac = DB.Column(DB.String(30))
+    purch_date = DB.Column(DB.String(30))
+    expird_date = DB.Column(DB.String(30))
+    status = DB.Column(DB.String(8))
     comment = DB.Column(DB.String(30))
-    def __init__(self,cid,sn,type,system,cpu_core,mem,disk_size,ip,department,status,application,comment):
-        self.cid = cid
+    def __init__(self,idc_id,ip,ssh_port,s_ip,host_type,hostname,sn,manufacturer,productname,system,cpu_info,cpu_core,mem,disk_size,disk_count,idrac,purch_date,expird_date,status,comment):
+        self.idc_id = idc_id
+        self.ip = ip
+        self.s_ip = s_ip
+        self.ssh_port = ssh_port
+        self.host_type = host_type
+        self.hostname = hostname
         self.sn = sn
-        self.type = type
+        self.manufacturer = manufacturer
+        self.productname = productname
         self.system = system
+        self.cpu_info = cpu_info
         self.cpu_core = cpu_core
         self.mem = mem
+        self.disk_count = disk_count
         self.disk_size = disk_size
-        self.ip = ip
-        self.department = department
+        self.idrac = idrac
+        self.purch_date = purch_date
+        self.expird_date = expird_date
         self.status = status
-        self.application = application
         self.comment = comment
     def __repr__(self):
-        values=(self.cid,self.sn,self.type,self.system,self.cpu_core,self.mem,self.disk_size,self.ip,self.department,self.status,self.application,self.comment)
-        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'%values
+        values=(self.idc_id,self.ip,self.ssh_port,self.s_ip,self.host_type,self.hostname,self.sn,self.manufacturer,self.productname,self.system,self.cpu_info,self.cpu_core,self.mem,self.disk_count,self.disk_size,self.idrac,self.purch_date,self.expird_date,self.status,self.comment)
+        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'%values
+
+class idc_id(DB.Model):
+    __tablename__ = 'idc_id'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    aid = DB.Column(DB.String(20))
+    cid = DB.Column(DB.String(20))
+    def __init__(self,aid,cid):
+        self.aid = aid
+        self.cid = cid
+    def __repr__(self):
+        values=(self.aid,self.cid)
+        return '%s,%s'%values
+
+class third_resource(DB.Model):
+    __tablename__ = 'third_resource'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    resource_type = DB.Column(DB.String(30))
+    cluster_type = DB.Column(DB.String(30))
+    ip = DB.Column(DB.String(30))
+    ssh_port = DB.Column(DB.Integer)
+    app_port = DB.Column(DB.Integer)
+    busi_id = DB.Column(DB.Integer)
+    department = DB.Column(DB.String(30))
+    person = DB.Column(DB.String(30))
+    contact = DB.Column(DB.String(30))
+    status = DB.Column(DB.String(8))
+    update_date = DB.Column(DB.String(45))
+    def __init__(self,resource_type,cluster_type,ip,ssh_port,app_port,busi_id,department,person,contact,status,update_date):
+        self.resource_type = resource_type
+        self.cluster_type = cluster_type
+        self.ip = ip
+        self.ssh_port = ssh_port
+        self.app_port = app_port
+        self.busi_id = busi_id
+        self.department = department
+        self.person = person
+        self.contact = contact
+        self.status = status
+        self.update_date = update_date
+    def __repr__(self):
+        values=(self.resource_type,self.cluster_type,self.ip,self.ssh_port,self.app_port,self.busi_id,self.department,self.person,self.contact,self.status,self.update_date)
+        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'%values
 
 class idc_networks(DB.Model):
     __tablename__ = 'networks'
     __bind_key__='idc'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    cid = DB.Column(DB.String(20))
-    type = DB.Column(DB.String(30))
+    idc_id = DB.Column(DB.Integer)
+    type = DB.Column(DB.String(20))
     ip = DB.Column(DB.String(30))
+    redundance = DB.Column(DB.String(8))
+    purch_date = DB.Column(DB.String(20))
+    expird_date = DB.Column(DB.String(20))
     status = DB.Column(DB.String(8))
     comment = DB.Column(DB.String(30))
-    def __init__(self,cid,type,ip,status,comment):
-        self.cid = cid
+    def __init__(self,idc_id,type,ip,redundance,purch_date,expird_date,status,comment):
+        self.idc_id = idc_id
         self.type = type
         self.ip = ip
+        self.redundance = redundance
+        self.purch_date = purch_date
+        self.expird_date = expird_date
         self.status = status
         self.comment = comment
     def __repr__(self):
-        values=(self.cid,self.type,self.ip,self.status,self.comment)
-        return '%s,%s,%s,%s,%s'%values
-
-class idc_app(DB.Model):
-    __tablename__ = 'app'
-    __bind_key__='idc'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    ip = DB.Column(DB.String(20))
-    user = DB.Column(DB.String(30))
-    appName = DB.Column(DB.String(100))
-    domainName = DB.Column(DB.String(500))
-    def __init__(self,ip,user,appName,domainName):
-        self.ip = ip
-        self.user = user
-        self.appName = appName
-        self.domainName = domainName
-    def __repr__(self):
-        values=(self.ip,self.user,self.appName,self.domainName)
-        return '%s,%s,%s,%s'%values
+        values=(self.idc_id,self.type,self.ip,self.redundance,self.purch_date,self.expird_date,self.status,self.comment)
+        return '%s,%s,%s,%s,%s,%s,%s,%s'%values
 
 class idc_store(DB.Model):
     __tablename__ = 'store'
     __bind_key__='idc'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    cid = DB.Column(DB.String(20))
+    idc_id = DB.Column(DB.Integer)
     type = DB.Column(DB.String(30))
     ip = DB.Column(DB.String(20))
-    department = DB.Column(DB.String(20))
+    purch_date = DB.Column(DB.String(20))
+    expird_date = DB.Column(DB.String(20))
     status = DB.Column(DB.String(8))
     comment = DB.Column(DB.String(30))
-    def __init__(self,cid,type,ip,department,status,comment):
-        self.cid = cid
+    def __init__(self,idc_id,type,ip,purch_date,expird_date,status,comment):
+        self.idc_id = idc_id
         self.type = type
         self.ip = ip
-        self.department = department
+        self.purch_date = purch_date
+        self.expird_date = expird_date
         self.status = status
         self.comment = comment
     def __repr__(self):
-        values=(self.cid,self.type,self.ip,self.department,self.status,self.comment)
-        return '%s,%s,%s,%s,%s,%s'%values
-
-class idc_twemproxy(DB.Model):
-    __tablename__ = 'twemproxyInfo'
-    __bind_key__='idc'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    serviceType = DB.Column(DB.String(20))
-    serviceGroup = DB.Column(DB.String(30))
-    clientIP = DB.Column(DB.String(30))
-    clientPort = DB.Column(DB.String(10))
-    clientKey = DB.Column(DB.String(60))
-    clientKeyItems = DB.Column(DB.String(60))
-    comments = DB.Column(DB.String(200))
-    def __init__(self,serviceType,serviceGroup,clientIP,clientPort,clientKey,clientKeyItems,comments):
-        self.serviceType = serviceType
-        self.serviceGroup = serviceGroup
-        self.clientIP = clientIP
-        self.clientPort = clientPort
-        self.clientKey = clientKey
-        self.clientKeyItems = clientKeyItems
-        self.comments = comments
-    def __repr__(self):
-        values=(self.serviceType,self.serviceGroup,self.clientIP,self.clientPort,self.clientKey,self.clientKeyItems,self.comments)
+        values=(self.idc_id,self.type,self.ip,self.purch_date,self.expird_date,self.status,self.comment)
         return '%s,%s,%s,%s,%s,%s,%s'%values
 
-class idc_kestrel(DB.Model):
-    __tablename__ = 'kestrel'
+class idc_mysqldb(DB.Model):
+    __tablename__ = 'mysqldb'
     __bind_key__='idc'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    kestrel_ip = DB.Column(DB.String(30))
-    kestrel_port = DB.Column(DB.String(10))
-    kestrel_key = DB.Column(DB.String(50))
-    kestrel_num = DB.Column(DB.Integer)
-    def __init__(self,kestrel_ip,kestrel_port,kestrel_key,kestrel_num):
-        self.kestrel_ip = kestrel_ip
-        self.kestrel_port = kestrel_port
-        self.kestrel_key = kestrel_key
-        self.kestrel_num = kestrel_num
+    ip = DB.Column(DB.String(20))
+    port = DB.Column(DB.Integer)
+    db = DB.Column(DB.String(500))
+    master = DB.Column(DB.String(8))
+    slave = DB.Column(DB.String(8))
+    Master_Host = DB.Column(DB.String(20),default=None)
+    Master_User = DB.Column(DB.String(20),default=None)
+    Master_Port = DB.Column(DB.String(8),default=None)
+    def __init__(self,ip,port,db,master,slave,Master_Host,Master_User,Master_Port):
+        self.ip = ip
+        self.port = port
+        self.db = db
+        self.master = master
+        self.slave = slave
+        self.Master_Host = Master_Host
+        self.Master_User = Master_User
+        self.Master_Port = Master_Port
     def __repr__(self):
-        values=(self.kestrel_ip,self.kestrel_port,self.kestrel_key,self.kestrel_num)
-        return '%s,%s,%s,%s'%values
+        values=(self.ip,self.port,self.db,self.master,self.slave,self.Master_Host,self.Master_User,self.Master_Port)
+        return '%s,%i,%s,%s,%s,%s,%s,%s' %values
 
 class idc_tableinfo(DB.Model):
     __tablename__ = 'tableinfo'
@@ -165,47 +177,176 @@ class idc_tableinfo(DB.Model):
     ip = DB.Column(DB.String(20))
     port = DB.Column(DB.Integer)
     database_name = DB.Column(DB.String(50))
-    table_name = DB.Column(DB.String(30))
-    Engine_name = DB.Column(DB.String(30))
+    table_name = DB.Column(DB.String(50))
+    Engine_name = DB.Column(DB.String(50))
     Rows = DB.Column(DB.Integer)
-    Charset = DB.Column(DB.String(30))
-    version = DB.Column(DB.String(30))
-    def __init__(self,ip,port,database_name,table_name,Engine_name,Rows,Charset,version):
+    size = DB.Column(DB.String(50))
+    Charset = DB.Column(DB.String(50))
+    version = DB.Column(DB.String(50))
+    update_time = DB.Column(DB.DateTime)
+    def __init__(self,ip,port,database_name,table_name,Engine_name,Rows,size,Charset,version,update_time):
         self.ip = ip
         self.port = port
         self.database_name = database_name
         self.table_name = table_name
         self.Engine_name = Engine_name
         self.Rows = Rows
+        self.size = size
         self.Charset = Charset
         self.version = version
+        self.update_time = update_time
     def __repr__(self):
-        values=(self.ip,self.port,self.database_name,self.table_name,self.Engine_name,self.Rows,self.Charset,self.version)
-        return '%s,%i,%s,%s,%s,%i,%s,%s'%values
+        values=(self.ip,self.port,self.database_name,self.table_name,self.Engine_name,self.Rows,self.size,self.Charset,self.version,self.update_time)
+        return '%s,%i,%s,%s,%s,%i,%s,%s,%s,%s'%values
 
-class idc_redis_cluster_info(DB.Model):
-    __tablename__ = 'redis_cluster_info'
+class resource_ip(DB.Model):
+    __tablename__ = 'resource_ip'
     __bind_key__='idc'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    getdate = DB.Column(DB.String(20))
-    gettime = DB.Column(DB.String(20))
-    master = DB.Column(DB.String(20))
-    add_keys = DB.Column(DB.Integer)
-    connected_clients = DB.Column(DB.Integer)
-    HitRate = DB.Column(DB.Integer)
-    commands = DB.Column(DB.Integer)
-    net_input = DB.Column(DB.Integer)
-    net_output = DB.Column(DB.Integer)
-    def __init__(self,getdate,gettime,master,add_keys,connected_clients,HitRate,commands,net_input,net_output):
-        self.getdate = getdate
-        self.gettime = gettime
-        self.master = master
-        self.add_keys = add_keys
-        self.connected_clients = connected_clients
-        self.HitRate = HitRate
-        self.commands = commands
-        self.net_input = net_input
-        self.net_output = net_output
+    aid = DB.Column(DB.String(20))
+    network = DB.Column(DB.String(30))
+    def __init__(self,aid,network):
+        self.aid = aid
+        self.network = network
     def __repr__(self):
-        values=(self.getdate,self.gettime,self.master,self.add_keys,self.connected_clients,self.HitRate,self.commands,self.net_input,self.net_output)
-        return '%s,%s,%s,%i,%i,%i,%i,%i,%i'%values
+        values=(self.aid,self.network)
+        return '%s,%s'%values
+
+class other_resource(DB.Model):
+    __tablename__ = 'other_resource'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    type = DB.Column(DB.String(20))
+    domain = DB.Column(DB.String(50))
+    provider = DB.Column(DB.String(45))
+    def __init__(self,type,domain,provider):
+        self.type = type
+        self.domain = domain
+        self.provider = provider
+    def __repr__(self):
+        values=(self.type,self.domain,self.provider)
+        return '%s,%s,%s'%values
+
+class zabbix_info(DB.Model):
+    __tablename__ = 'zabbix_info'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    ip = DB.Column(DB.String(20))
+    ssh_port = DB.Column(DB.Integer)
+    hostname = DB.Column(DB.String(50))
+    icmpping = DB.Column(DB.Integer)
+    cpu_load = DB.Column(DB.Float)
+    mem_use = DB.Column(DB.Float)
+    disk_io = DB.Column(DB.Float)
+    openfile = DB.Column(DB.Integer)
+    disk_path = DB.Column(DB.String(200))
+    network = DB.Column(DB.String(100))
+    update_time = DB.Column(DB.String(45))
+    def __init__(self,ip,ssh_port,hostname,icmpping,cpu_load,mem_use,disk_io,openfile,disk_path,network,update_time):
+        self.ip = ip
+        self.ssh_port = ssh_port
+        self.hostname = hostname
+        self.icmpping =icmpping
+        self.cpu_load = cpu_load
+        self.mem_use = mem_use
+        self.disk_io = disk_io
+        self.openfile = openfile
+        self.disk_path = disk_path
+        self.network = network
+        self.update_time = update_time
+    def __repr__(self):
+        values=(self.ip,self.ssh_port,self.hostname,self.icmpping,self.cpu_load,self.mem_use,self.disk_io,self.openfile,self.disk_path,self.network,self.update_time)
+        return '%s,%i,%s,%i,%i,%i,%i,%i,%s,%s,%s'%values
+
+class influxdb_alarm(DB.Model):
+    __tablename__ = 'influxdb_alarm'
+    __bind_key__ = 'idc'
+    id = DB.Column(DB.Integer, primary_key=True, autoincrement=True)
+    host = DB.Column(DB.String(50))
+    uri = DB.Column(DB.String(100))
+    avg_resp = DB.Column(DB.Float)
+    resp_100 = DB.Column(DB.Float)
+    resp_200 = DB.Column(DB.Float)
+    resp_500 = DB.Column(DB.Float)
+    resp_1000 = DB.Column(DB.Float)
+    status_4xx = DB.Column(DB.Float)
+    status_5xx = DB.Column(DB.Float)
+    year = DB.Column(DB.String(20))
+    def __init__(self, host, uri, avg_resp, resp_100, resp_200, resp_500, resp_1000, status_4xx, status_5xx, year):
+        self.host = host
+        self.uri = uri
+        self.avg_resp = avg_resp
+        self.resp_100 = resp_100
+        self.resp_200 = resp_200
+        self.resp_500 = resp_500
+        self.resp_1000 = resp_1000
+        self.status_4xx = status_4xx
+        self.status_5xx = status_5xx
+        self.year = year
+    def __repr__(self):
+        values = (self.host, self.uri, self.avg_resp, self.resp_100, self.resp_200, self.resp_500, self.resp_1000,
+                  self.status_4xx, self.status_5xx, self.year)
+        return '%s,%s,%i,%i,%i,%i,%i,%i,%i,%s' % values
+
+class crontabs(DB.Model):
+    __tablename__ = 'crontabs'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    cron = DB.Column(DB.String(45))
+    action = DB.Column(DB.String(500))
+    server_id = DB.Column(DB.Integer)
+    update_date = DB.Column(DB.String(45))
+    def __init__(self,cron,action,server_id,update_time):
+        self.cron = cron
+        self.action = action
+        self.server_id = server_id
+        self.update_date = update_time
+    def __repr__(self):
+        values=(self.cron,self.action,self.server_id,self.update_date)
+        return '%s,%s,%i,%s'%values
+
+class hosts(DB.Model):
+    __tablename__ = 'hosts'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    host = DB.Column(DB.String(45))
+    hostname = DB.Column(DB.String(100))
+    server_id = DB.Column(DB.Integer)
+    update_date = DB.Column(DB.String(45))
+    def __init__(self,host,hostname,server_id,update_time):
+        self.host = host
+        self.hostname = hostname
+        self.server_id = server_id
+        self.update_date = update_time
+    def __repr__(self):
+        values=(self.host,self.hostname,self.server_id,self.update_date)
+        return '%s,%s,%i,%s'%values
+
+class redis_info(DB.Model):
+    __tablename__ = 'redis_info'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    server_id = DB.Column(DB.String(50))
+    port = DB.Column(DB.Integer)
+    masterauth = DB.Column(DB.String(50))
+    requirepass = DB.Column(DB.String(50))
+    master = DB.Column(DB.String(8))
+    slave = DB.Column(DB.String(8))
+    cluster = DB.Column(DB.String(8))
+    Master_Host = DB.Column(DB.String(20))
+    Master_Port = DB.Column(DB.String(8))
+    update_date = DB.Column(DB.String(45))
+    def __init__(self,server_id,port,masterauth,requirepass,master,slave,cluster,Master_host,Master_Port,update_date):
+        self.server_id = server_id
+        self.port = port
+        self.masterauth = masterauth
+        self.requirepass = requirepass
+        self.master = master
+        self.slave = slave
+        self.cluster = cluster
+        self.Master_Host = Master_host
+        self.Master_Port = Master_Port
+        self.update_date = update_date
+    def __repr__(self):
+        values=(self.server_id,self.port,self.masterauth,self.requirepass,self.master,self.slave,self.cluster,self.Master_Host,self.Master_Port,self.update_date)
+        return '%i,%i,%s,%s,%s,%s,%s,%s,%i,%s' %values

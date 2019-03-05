@@ -1,25 +1,31 @@
 #-*- coding: utf-8 -*-
-from flask import request,g ,session,render_template_string,redirect,url_for,flash
-import datetime,time
-import db_op
+from flask import Flask,request,g,render_template_string,redirect,url_for,flash,session
+import datetime
+import time
+from  Modules import db_op,loging,db_idc
 import redis
 from functools import wraps
-import loging
-from rediscluster import RedisCluster
 import socket
 from random import choice
-import __init__
-app = __init__.app
+from sqlalchemy import and_,distinct
+from collections import defaultdict
+from flask_sqlalchemy import SQLAlchemy
+app = Flask(__name__)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/security.conf')
+app.config.from_pyfile('../conf/task.conf')
+app.config.from_pyfile('../conf/main.conf')
 logging = loging.Error()
-PID = choice([i for i in range(65535)])
-HOST = socket.gethostbyname(socket.gethostname())
+DB = SQLAlchemy(app)
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
-Redis = redis.StrictRedis(host=redis_host, port=redis_port)
-nodes = app.config.get('NODES_PRODUCE')
-RC = RedisCluster(startup_nodes=nodes, decode_responses=True)
+redis_password = app.config.get('REDIS_PASSWORD')
+RC= Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
+redis_data = app.config.get('REDIS_DATA')
+RC_CLUSTER = redis.StrictRedis(host=redis_data, port=redis_port,decode_responses=True)
 white_list = app.config.get('WHITE_LIST')
 task_servers = app.config.get('TASK_SERVERS')
+HOST = socket.gethostbyname(socket.gethostname())
 def timestamp(i):
     '''
     i is 0 days ago
@@ -30,42 +36,96 @@ def timestamp(i):
         t = (datetime.datetime.now() - datetime.timedelta(days=1))
     tp = int(time.mktime(t.timetuple()))
     return tp
-#登陆检查
-def login_required(grade = 0):
+#用户登录鉴权
+def login_required(grade = None):
     def login_check(func):
         @wraps(func)
         def Login(*args, **kwargs):
-            user = request.cookies.get('user')
-            ID = request.cookies.get('ID')
-            Error_Key = '%s:%s' %(user,ID)
+            db_auth = db_op.user_auth
             try:
-                if user and ID:
-                    if Redis.get('%s_lock' %user):
-                        Redis.set(Error_Key,'该帐号异常登陆,已被锁定1分钟!')
-                        return redirect(url_for('message.message'))
-                    if request.cookies.get('ID') == Redis.get('OP_ID_%s' % user):
-                        g.user = user
-                        g.secret_key = request.cookies.get('secret_key')
-                        db = db_op.idc_users
-                        val = db.query.with_entities(db.grade).filter(db.name == user).all()
-                        g.grade = int(val[0][0]) if val else 10
-                        if g.grade > grade:
-                            Redis.set(Error_Key,'无权限访问该页面!')
-                            return redirect(url_for('message.message'))
-                        return func(*args, **kwargs)
+                user = Redis.get('OP_user_%s' %request.cookies.get('user'))
+                openid = Redis.get('OP_openid_%s' %request.cookies.get('openid'))
+                dingId = Redis.get('OP_dingId_%s' %request.cookies.get('dingId'))
+                token = Redis.get('OP_token_%s' %request.cookies.get('token'))
+                Error_Key = 'error_%s' % (token)
+            except:
+                return redirect(url_for('logout.logout'))
+            else:
+                try:
+                    if user and token and dingId and openid:
+                        if token == Redis.get('OP_verify_%s' %dingId):
+                            g.user = user
+                            g.openid = openid
+                            g.dingId = dingId
+                            g.secret_key = request.cookies.get('secret_key')
+                            g.token = token
+                            val = db_auth.query.with_entities(db_auth.grade).filter(and_(db_auth.dingId == dingId,db_auth.token == token,db_auth.openid == openid)).all()
+                            g.grade = val[0][0].split(',') if val else ('11',)
+                            if str(grade) in g.grade:
+                                grades = g.grade
+                                g.ip = request.headers.get('X-Forwarded-For')
+                                if not g.ip:
+                                    g.ip = request.remote_addr
+                                if ',' in g.ip:
+                                    g.ip = g.ip.split(',')[0]
+                                session['remote_ip'] = g.ip
+                                Redis.sadd('active_users', dingId)
+                                Redis.expire('active_users', 30)
+                                g.active_users = Redis.scard('active_users')
+                                g.date = time.strftime('%Y-%m-%d', time.localtime())
+                                g.ym = time.strftime('%Y', time.localtime())
+                                g.weather = RC_CLUSTER.hgetall('weather_inofs')
+                                #新发现物理服务器
+                                try:
+                                    db_server = db_idc.idc_servers
+                                    discovery = db_server.query.with_entities(db_server.ip, db_server.ssh_port).filter(
+                                        db_server.status == '新发现').all()
+                                    if discovery:
+                                        tables = ['机房', 'IP', 'ssh_poort']
+                                        discovery = [list(info) for info in discovery]
+                                        for infos in discovery:
+                                            infos.insert(0, '未知')
+                                        discovery.insert(0, tables)
+                                    g.discovery = discovery
+                                except Exception as e:
+                                    logging.error(e)
+                                # 生成用户权限对应的页面菜单
+                                try:
+                                    for key in ('navMenu', 'nav_val','submenu', 'sub_val'):
+                                        if g.Base_Menu[key]:
+                                            pass
+                                except:
+                                    DB = db_op.op_menu
+                                    nav_val = defaultdict()
+                                    sub_val = defaultdict()
+                                    navMenu = DB.query.with_entities(distinct(DB.Menu_name)).filter(and_(DB.Menu == 'navMenu', DB.grade.in_(grades))).order_by(DB.Menu_id).all()
+                                    navMenu = [Menu[0] for Menu in navMenu]
+                                    for Menu in navMenu:
+                                        val = DB.query.with_entities(DB.id_name, DB.module_name,DB.action_name).filter(and_(DB.grade.in_(grades),DB.Menu_name==Menu)).order_by(DB.sub_id).all()
+                                        if val:
+                                            nav_val[Menu] = val
+                                    submenu = DB.query.with_entities(distinct(DB.Menu_name)).filter(and_(DB.Menu == 'submenu', DB.grade.in_(grades))).order_by(DB.Menu_id).all()
+                                    submenu = [menu[0] for menu in submenu]
+                                    for Menu in submenu:
+                                        val = DB.query.with_entities(DB.module_name, DB.action_name).filter(and_(DB.grade.in_(grades), DB.Menu_name == Menu)).order_by(DB.sub_id).all()
+                                        if val:
+                                            sub_val[Menu] = val
+                                    g.Base_Menu = {'navMenu': navMenu, 'nav_val': nav_val,'submenu': submenu, 'sub_val': sub_val}
+                                return func(*args, **kwargs)
+                            else:
+                                flash('未授权访问该页面!')
+                                return redirect(url_for('login.login'))
+                        else:
+                            flash('该帐号已在其他地方登陆,请确认账号安全!')
+                            return redirect(url_for('login.login'))
                     else:
-                        for info in ('user', 'ID', 'session'):
-                            session[info] = ''
-                        Redis.set(Error_Key,'该帐号已在其他地方登陆,请确认账号安全!')
-                        return redirect(url_for('message.message'))
-                else:
-                    Redis.set(Error_Key,'认证已过期,请重新登陆!')
-                    return redirect(url_for('message.message'))
-            except Exception as e:
-                Redis.set(Error_Key,str(e))
-                return redirect(url_for('message.message'))
+                        return redirect(url_for('login.login'))
+                except Exception as e:
+                    Redis.set(Error_Key,str(e))
+                    return redirect(url_for('error.error'))
             finally:
                 db_op.DB.session.remove()
+                db_idc.DB.session.remove()
         return Login
     return login_check
 #访问ip限制
@@ -102,39 +162,20 @@ def acl_ip(func):
             return render_template_string('%s 该IP地址未被授权访问!' % src_ip)
         return func(*args, **kwargs)
     return check_ip
-#分布式全局锁
-def scheduler_lock():
-    try:
-        if HOST in task_servers:
-            if RC.exists('host_lock') and RC.get('pid_lock'):
-                if HOST == RC.get('host_lock') and PID == int(RC.get('pid_lock')):
-                    RC.expire('host_lock',30)
-                    RC.expire('pid_lock', 30)
-                    loging.write('lock_info:host>>%s  pid>>%s unlock......' % (HOST,PID))
-                else:
-                    raise AssertionError
-            else:
-                RC.set('host_lock',HOST)
-                RC.set('pid_lock',PID)
-                RC.expire('host_lock',30)
-                RC.expire('pid_lock', 30)
-        else:
-            raise AssertionError
-    except:
-        pass
-#进程排它锁
+#任务执行锁
 def proce_lock(func):
     @wraps(func)
     def LOCK(*args, **kwargs):
         try:
-            if RC.exists('host_lock') and RC.get('pid_lock'):
-                if HOST == RC.get('host_lock') and PID == int(RC.get('pid_lock')):
-                    loging.write('host:%s  pid:%s   task:%s run......' % (HOST,PID, func.__name__))
-                    return func(*args, **kwargs)
-                else:
-                    return None
-            return None
-        except Exception as e:
-            if e:
-                logging.error(str(e))
+            if HOST in task_servers:
+                time.sleep(choice([i for i in range(1,10)]))
+                if RC.exists('task_%s'%func.__name__):
+                    raise AssertionError
+                RC.set('task_%s' %func.__name__, HOST)
+                RC.expire('task_%s' % func.__name__,15)
+                return func(*args, **kwargs)
+            else:
+                raise AssertionError
+        except:
+            pass
     return LOCK

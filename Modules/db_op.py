@@ -1,222 +1,112 @@
 #-*- coding: utf-8 -*-
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import __init__
-app = __init__.app
+app = Flask(__name__)
+app.config.from_pyfile('../conf/sql.conf')
 DB = SQLAlchemy(app)
-class users(DB.Model):
-    __tablename__ = 'users'
+class user_auth(DB.Model):
+    __tablename__ = 'user_auth'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    name = DB.Column(DB.String(100))
-    passwd = DB.Column(DB.String(100))
-    system = DB.Column(DB.String(100))
-    host = DB.Column(DB.String(100))
-    def __init__(self,name,passwd,system,host):
+    name = DB.Column(DB.String(20))
+    openid = DB.Column(DB.String(100))
+    dingId = DB.Column(DB.String(100))
+    grade = DB.Column(DB.String(20))
+    token = DB.Column(DB.String(45))
+    update_time = DB.Column(DB.String(20))
+    def __init__(self,name,openid,dingId,grade,token,update_time):
         self.name = name
-        self.passwd = passwd
-        self.system = system
-        self.host = host
-    def __repr__(self):
-        values=(self.name,self.passwd,self.system,self.host)
-        return '%s,%s,%s,%s'%values
-
-class idc_users(DB.Model):
-    __tablename__ = 'idc_users'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    name = DB.Column(DB.String(100))
-    passwd = DB.Column(DB.String(100))
-    grade = DB.Column(DB.Integer)
-    def __init__(self,name,passwd,grade):
-        self.name = name
-        self.passwd = passwd
+        self.openid = openid
+        self.dingId = dingId
         self.grade = grade
+        self.token = token
+        self.update_time = update_time
     def __repr__(self):
-        values=(self.name,self.passwd,self.grade)
-        return '%s,%s,%s' % values
+        values=(self.name,self.openid,self.dingId,self.grade,self.token,self.update_time)
+        return '%s,%s,%s,%s,%s,%s' % values
 
-class php_list(DB.Model):
-    __tablename__ = 'php_list'
+class project_list(DB.Model):
+    __tablename__ = 'project_list'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    resource = DB.Column(DB.String(30))
     project = DB.Column(DB.String(30),index=True)
-    user = DB.Column(DB.String(8))
+    domain = DB.Column(DB.String(30))
     ip = DB.Column(DB.String(30),index=True)
-    type = DB.Column(DB.Integer)
-    Gray =  DB.Column(DB.Enum('0','1'))
-    operation = DB.Column(DB.String(20))
-    def __init__(self,project,user,ip,type,Gray,operation):
+    ssh_port = DB.Column(DB.Integer)
+    app_port = DB.Column(DB.String(30))
+    business_id = DB.Column(DB.Integer)
+    sys_args = DB.Column(DB.String(30))
+    env = DB.Column(DB.String(8))
+    gray =  DB.Column(DB.String(8))
+    status = DB.Column(DB.String(8))
+    update_date = DB.Column(DB.String(45))
+    def __init__(self,resource,project,domain,ip,ssh_port,app_port,business_id,sys_args,env,gray,status,update_date):
+        self.resource = resource
         self.project = project
-        self.user = user
-        self.ip = ip
-        self.type = type
-        self.Gray = Gray
-        self.operation  = operation
-    def __repr__(self):
-        values=(self.project,self.user,self.ip,self.type,self.Gray,self.operation)
-        return '%s,%s,%s,%s,%s,%s' % values
-
-class java_list(DB.Model):
-    __tablename__ = 'java_list'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    project = DB.Column(DB.String(50),index=True)
-    user = DB.Column(DB.String(8))
-    ip = DB.Column(DB.String(30),index=True)
-    type = DB.Column(DB.Integer)
-    Gray =  DB.Column(DB.Enum('0','1'))
-    operation = DB.Column(DB.String(20))
-    def __init__(self,project,user,ip,type,Gray,operation):
-        self.project = project
-        self.user = user
-        self.ip = ip
-        self.type = type
-        self.Gray = Gray
-        self.operation = operation
-    def __repr__(self):
-        values=(self.project,self.user,self.ip,self.type,self.Gray,self.operation)
-        return '%s,%s,%s,%s,%s,%s' % values
-
-class haproxy_conf(DB.Model):
-    __tablename__ = 'haproxy_conf'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    domain = DB.Column(DB.String(30),index=True)
-    balance = DB.Column(DB.String(12))
-    monitor = DB.Column(DB.String(50))
-    session = DB.Column(DB.String(2),default='0')
-    ip = DB.Column(DB.String(16))
-    port = DB.Column(DB.Integer)
-    maxconn = DB.Column(DB.Integer)
-    backup = DB.Column(DB.Enum('0','1'))
-    intranet = DB.Column(DB.Enum('0','1'))
-    Type = DB.Column(DB.Enum('xs','cw','hd'))
-    def __init__(self,domain,balance,monitor,session,ip,port,maxconn,backup,intranet,Type):
         self.domain = domain
-        self.balance = balance
-        self.monitor = monitor
-        self.session = session
         self.ip = ip
-        self.port = port
-        self.maxconn = maxconn
-        self.backup = backup
-        self.intranet = intranet
-        self.Type = Type
-
-    def __repr__(self):
-        values=(self.domain,self.balance,self.monitor,self.session,self.ip,self.port,self.maxconn,self.backup,self.intranet,self.Type)
-        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s' % values
-
-class svn_users(DB.Model):
-    __tablename__ = 'svn_users'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    user = DB.Column(DB.String(30))
-    password = DB.Column(DB.String(30))
-    status = DB.Column(DB.Integer())
-    def __init__(self,user,password,status):
-        self.user = user
-        self.password = password
+        self.ssh_port = ssh_port
+        self.app_port = app_port
+        self.business_id = business_id
+        self.sys_args = sys_args
+        self.env = env
+        self.gray = gray
         self.status = status
+        self.update_date = update_date
     def __repr__(self):
-        values=(self.user,self.password,self.status)
-        return '%s,%s,%i'%values
+        values=(self.resource,self.project,self.domain,self.ip,self.ssh_port,self.app_port,self.business_id,self.sys_args,self.env,self.gray,self.status,self.update_date)
+        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s' % values
 
-class svn_permission(DB.Model):
-    __tablename__ = 'svn_permission'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    groups = DB.Column(DB.String(50))
-    path = DB.Column(DB.String(100))
-    permission = DB.Column(DB.String(8))
-    def __init__(self,groups,path,permission):
-        self.groups = groups
-        self.path = path
-        self.permission = permission
-    def __repr__(self):
-        values=(self.groups,self.path,self.permission)
-        return '%s,%s,%s'%values
-
-class svn_groups(DB.Model):
-    __tablename__ = 'svn_groups'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    groups = DB.Column(DB.String(50))
-    users = DB.Column(DB.String(50))
-    def __init__(self,groups,users):
-        self.groups = groups
-        self.users = users
-    def __repr__(self):
-        values=(self.groups,self.users)
-        return '%s,%s'%values
-
-class sql_scheduler(DB.Model):
-    __tablename__ = 'sql_scheduler'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    master_ip = DB.Column(DB.String(20))
-    master_port = DB.Column(DB.Integer)
-    db = DB.Column(DB.String(50))
-    time = DB.Column(DB.String(20))
-    sql_cmd = DB.Column(DB.String(1000))
-    status = DB.Column(DB.String(20))
-    results = DB.Column(DB.String(1000))
-    def __init__(self,master_ip,master_port,db,time,sql_cmd,status,results):
-        self.master_ip = master_ip
-        self.master_port = master_port
-        self.db = db
-        self.time = time
-        self.sql_cmd = sql_cmd
-        self.status = status
-        self.results = results
-    def __repr__(self):
-        values=(self.master_ip,self.master_port,self.db,self.time,self.sql_cmd,self.status,self.results)
-        return '%s,%s,%s,%s,%s,%s,%s'%values
-
-class rota(DB.Model):
-    __tablename__ = 'rota'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    name = DB.Column(DB.String(30))
-    duty = DB.Column(DB.String(20))
-    date = DB.Column(DB.String(30))
-    def __init__(self,name,duty,date):
-        self.name = name
-        self.duty = duty
-        self.date = date
-    def __repr__(self):
-        values=(self.name,self.duty,self.date)
-        return '%s,%s,%ss'%values
-
-
-class op_operation(DB.Model):
-    __tablename__ = 'op_operation'
+class publish_records(DB.Model):
+    __tablename__ = 'publish_records'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
     date = DB.Column(DB.String(20))
     time = DB.Column(DB.String(20))
     user = DB.Column(DB.String(20))
-    project = DB.Column(DB.String(100))
-    version = DB.Column(DB.String(20))
-    action = DB.Column(DB.String(20))
-    Type = DB.Column(DB.String(8))
-    work = DB.Column(DB.String(30))
-    grade = DB.Column(DB.Integer)
-    changelog = DB.Column(DB.String(1000))
-    def __init__(self,date,time,user,project,version,action,Type,work,grade,changelog):
+    project = DB.Column(DB.String(50))
+    version = DB.Column(DB.String(50))
+    package_url = DB.Column(DB.String(500))
+    describe = DB.Column(DB.String(500))
+    package_md5 = DB.Column(DB.String(500))
+    package_type = DB.Column(DB.String(20))
+    publish_type = DB.Column(DB.String(20))
+    restart = DB.Column(DB.String(20))
+    check_url = DB.Column(DB.String(500))
+    callback_url = DB.Column(DB.String(500))
+    token = DB.Column(DB.String(500))
+    execute = DB.Column(DB.String(20))
+    gray = DB.Column(DB.Integer)
+    channel = DB.Column(DB.String(20))
+    result = DB.Column(DB.String(20))
+    flow_number = DB.Column(DB.String(45))
+    def __init__(self,date,time,user,project,version,package_url,describe,package_md5,package_type,
+                 publish_type,restart,check_url,callback_url,token,execute,gray,channel,result,flow_number):
         self.date = date
         self.time = time
         self.user = user
         self.project = project
         self.version = version
-        self.action = action
-        self.Type = Type
-        self.work = work
-        self.grade = grade
-        self.changelog = changelog
+        self.package_url = package_url
+        self.describe = describe
+        self.package_md5 = package_md5
+        self.package_type = package_type
+        self.publish_type = publish_type
+        self.restart = restart
+        self.check_url = check_url
+        self.callback_url = callback_url
+        self.token = token
+        self.execute = execute
+        self.gray = gray
+        self.channel = channel
+        self.result = result
+        self.flow_number = flow_number
     def __repr__(self):
-        values=(self.date,self.time,self.user,self.project,self.version,self.action,self.Type,self.work,self.grade,self.changelog)
-        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'%values
+        values=(self.date,self.time,self.user,self.project,self.version,self.package_url,self.describe,self.package_md5,
+                self.package_type,self.publish_type,self.restart,self.check_url,self.callback_url,self.token,
+                self.execute,self.gray,self.channel,self.result,self.flow_number)
+        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%i,%s,%s,%s'%values
 
 class op_log(DB.Model):
     __tablename__ = 'op_log'
@@ -237,46 +127,6 @@ class op_log(DB.Model):
         values=(self.date,self.time,self.ip,self.user,self.access)
         return '%s,%s,%s,%s,%s'%values
 
-class server_pool(DB.Model):
-    __tablename__ = 'server_pool'
-    __bind_key__ = 'op'
-    id = DB.Column(DB.Integer, primary_key=True, autoincrement=True)
-    Type = DB.Column(DB.Enum('php','java'))
-    user = DB.Column(DB.Enum('work','java','java2','java3','java4'))
-    ip = DB.Column(DB.String(30))
-    status = DB.Column(DB.Enum('0','1'))
-    target = DB.Column(DB.Enum('xs', 'cw'))
-    def __init__(self, Type, user,ip, status,target):
-        self.Tpye = Type
-        self.user = user
-        self.ip = ip
-        self.status = status
-        self.target = target
-
-    def __repr__(self):
-        values = (self.Type, self.user, self.ip, self.status,self.target)
-        return '%s,%s,%s,%s,%s' % values
-
-class publish_code(DB.Model):
-    __tablename__ = 'publish_code'
-    __bind_key__ = 'op'
-    id = DB.Column(DB.Integer, primary_key=True, autoincrement=True)
-    project = DB.Column(DB.String(100))
-    code = DB.Column(DB.String(20))
-    platfrom = DB.Column(DB.String(20))
-    user = DB.Column(DB.String(20))
-    Time = DB.Column(DB.String(20))
-    def __init__(self,project,code,platfrom,user,Time):
-        self.project = project
-        self.code = code
-        self.platfrom = platfrom
-        self.user = user
-        self.Time = Time
-
-    def __repr__(self):
-        values = (self.project,self.platfrom,self.code, self.user,self.Time)
-        return '%s,%s,%s,%s,%s' % values
-
 class dns_innr(DB.Model):
     __tablename__ = 'dns_innr'
     __bind_key__ = 'op'
@@ -285,8 +135,8 @@ class dns_innr(DB.Model):
     field = DB.Column(DB.String(50))
     Type = DB.Column(DB.String(30))
     ip = DB.Column(DB.String(100))
-    stats = DB.Column(DB.Enum('0','1'))
-    system = DB.Column(DB.Enum('cw', 'xs'))
+    stats = DB.Column(DB.String(8))
+    system = DB.Column(DB.String(8))
     def __init__(self,domain,field,Type,ip,stats,system):
         self.domain = domain
         self.field = field
@@ -305,14 +155,16 @@ class op_menu(DB.Model):
     id = DB.Column(DB.Integer, primary_key=True, autoincrement=True)
     Menu = DB.Column(DB.String(10))
     Menu_id = DB.Column(DB.Integer)
+    sub_id = DB.Column(DB.Integer)
     Menu_name = DB.Column(DB.String(10))
     id_name = DB.Column(DB.String(20))
     module_name = DB.Column(DB.String(50))
     action_name = DB.Column(DB.String(50))
     grade = DB.Column(DB.Integer)
-    def __init__(self,Menu,Menu_id,Menu_name,id_name,module_name,action_name,grade):
+    def __init__(self,Menu,Menu_id,sub_id,Menu_name,id_name,module_name,action_name,grade):
         self.Menu = Menu
         self.Menu_id = Menu_id
+        self.sub_id = sub_id
         self.Menu_name = Menu_name
         self.id_name = id_name
         self.module_name = module_name
@@ -320,8 +172,8 @@ class op_menu(DB.Model):
         self.grade = grade
 
     def __repr__(self):
-        values = (self.Menu,self.Menu_id,self.Menu_name,self.id_name,self.module_name,self.action_name,self.grade)
-        return '%s,%s,%s,%s,%s,%s,%s' % values
+        values = (self.Menu,self.Menu_id,self.sub_id,self.Menu_name,self.id_name,self.module_name,self.action_name,self.grade)
+        return '%s,%s,%s,%s,%s,%s,%s,%s' % values
 
 class apscheduler_jobs(DB.Model):
     __tablename__ = 'apscheduler_jobs'
@@ -338,87 +190,203 @@ class apscheduler_jobs(DB.Model):
         values = (self.id,self.next_run_time,self.job_state)
         return '%s,%s,%r' % values
 
-class haproxy_blacklist(DB.Model):
-    __tablename__ = 'haproxy_blacklist'
+class user_approval(DB.Model):
+    __tablename__ = 'user_approval'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    addtime = DB.Column(DB.String(30))
-    ip = DB.Column(DB.String(16))
-    stats = DB.Column(DB.Enum('0','1'))
-    expire = DB.Column(DB.String(30))
-    rule = DB.Column(DB.String(100))
-    def __init__(self,addtime,ip,stats,expire,rule):
-        self.addtime = addtime
-        self.ip = ip
-        self.stats = stats
-        self.expire = expire
-        self.rule = rule
-    def __repr__(self):
-        values=(self.addtime,self.ip,self.stats,self.expire,self.rule)
-        return '%s,%s,%s,%s,%s' % values
-
-class vpn_users(DB.Model):
-    __tablename__ = 'vpn_users'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    user = DB.Column(DB.String(30))
-    password = DB.Column(DB.String(100))
-    status = DB.Column(DB.Integer())
-    vpn_type = DB.Column(DB.Enum('intranet', 'internet'))
-    def __init__(self,user,password,status,vpn_type):
-        self.user = user
-        self.password = password
+    name = DB.Column(DB.String(20))
+    openid = DB.Column(DB.String(50))
+    dingId = DB.Column(DB.String(50))
+    apply_time = DB.Column(DB.String(20))
+    approval_time = DB.Column(DB.String(20))
+    approval_person = DB.Column(DB.String(20))
+    apply_grade = DB.Column(DB.Integer)
+    status = DB.Column(DB.String(20))
+    def __init__(self,name,openid,dingId,apply_time,approval_time,approval_person,apply_grade,status):
+        self.name =  name
+        self.openid = openid
+        self.dingId = dingId
+        self.apply_time = apply_time
+        self.approval_time = approval_time
+        self.approval_person = approval_person
+        self.apply_grade = apply_grade
         self.status = status
-        self.vpn_type = vpn_type
     def __repr__(self):
-        values=(self.user,self.password,self.status,self.vpn_type)
-        return '%s,%s,%i,%s'%values
+        values=(self.name,self.openid,self.dingId,self.apply_time,self.approval_time,self.approval_person,self.apply_grade,self.status)
+        return '%s,%s,%s,%s,%s,%s,%s,%s' % values
 
-class url_blacklist(DB.Model):
-    __tablename__ = 'url_blacklist'
+class permission(DB.Model):
+    __tablename__ = 'permission'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    url = DB.Column(DB.String(100))
-    counts = DB.Column(DB.Integer)
-    stats = DB.Column(DB.Enum('0', '1'))
-    def __init__(self,url,counts,stats):
-        self.url = url
-        self.counts = counts
-        self.stats = stats
+    auth = DB.Column(DB.String(20))
+    authid = DB.Column(DB.Integer)
+    def __init__(self,auth,authid):
+        self.auth = auth
+        self.authid = authid
     def __repr__(self):
-        values=(self.url,self.counts,self.stats)
-        return '%s,%s,%s' % values
-
-class project_level(DB.Model):
-    __tablename__ = 'project_level'
-    __bind_key__='op'
-    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    project = DB.Column(DB.String(50),unique=True)
-    level = DB.Column(DB.Enum('1', '2','3', '4','5', '6','7'))
-    def __init__(self,project,level):
-        self.project = project
-        self.level = level
-    def __repr__(self):
-        values=(self.project,self.level)
+        values=(self.auth,self.authid)
         return '%s,%s' % values
 
-class project_apply(DB.Model):
-    __tablename__ = 'project_apply'
+class business(DB.Model):
+    __tablename__ = 'business'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    project = DB.Column(DB.String(50),index=True)
-    types = DB.Column(DB.String(20),index=True)
-    describe = DB.Column(DB.String(500))
-    content = DB.Column(DB.String(500))
-    Rollback = DB.Column(DB.String(500))
-    sender = DB.Column(DB.String(30),index=True)
-    def __init__(self,project,types,describe,content,Rollback,sender):
-        self.project = project
-        self.types = types
+    business = DB.Column(DB.String(50))
+    describe = DB.Column(DB.String(50))
+    person = DB.Column(DB.String(30))
+    contact = DB.Column(DB.String(30))
+    def __init__(self,business,describe,person,contact):
+        self.business = business
         self.describe = describe
-        self.content = content
-        self.Rollback = Rollback
-        self.sender = sender
+        self.person = person
+        self.contact = contact
     def __repr__(self):
-        values=(self.project,self.types,self.describe,self.content,self.Rollback,self.sender)
-        return '%s,%s,%s,%s,%s,%s' % values
+        values=(self.business,self.describe,self.person,self.contact)
+        return '%s,%s,%s,%s' % values
+
+class project_third(DB.Model):
+    __tablename__ = 'project_third'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    project = DB.Column(DB.String(30))
+    project_id = DB.Column(DB.Integer)
+    third_id = DB.Column(DB.Integer)
+    def __init__(self,project,project_id,third_id):
+        self.project = project
+        self.project_id = project_id
+        self.third_id = third_id
+    def __repr__(self):
+        values=(self.project,self.project_id,self.third_id)
+        return '%s,%s,%s'%values
+
+class business_monitor(DB.Model):
+    __tablename__ = 'business_monitor'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    url = DB.Column(DB.String(50))
+    method = DB.Column(DB.String(8))
+    project = DB.Column(DB.String(50))
+    version = DB.Column(DB.String(20))
+    code = DB.Column(DB.Integer)
+    error_ip = DB.Column(DB.String(50))
+    update_time = DB.Column(DB.String(20))
+    alarm_time = DB.Column(DB.String(20))
+    lock = DB.Column(DB.Integer)
+    alart_token = DB.Column(DB.String(500))
+    def __init__(self,url,method,project,version,code,error_ip,update_time,alarm_time,lock,alart_token):
+        self.url = url
+        self.method = method
+        self.project = project
+        self.version = version
+        self.code = code
+        self.error_ip = error_ip
+        self.update_time = update_time
+        self.alarm_time = alarm_time
+        self.lock = lock
+        self.alart_token = alart_token
+    def __repr__(self):
+        values=(self.url,self.method,self.project,self.version,self.code,self.error_ip,self.update_time,self.alarm_time,self.lock,self.alart_token)
+        return '%s,%s,%s,%s,%i,%s,%s,%s,%i,%s'%values
+
+class platform_token(DB.Model):
+    __tablename__ = 'platform_token'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    platform = DB.Column(DB.String(50))
+    channel = DB.Column(DB.String(30))
+    token = DB.Column(DB.String(100))
+    award = DB.Column(DB.String(30))
+    expire = DB.Column(DB.String(30))
+    def __init__(self,platform,channel,token,award,expire):
+        self.platform = platform
+        self.channel = channel
+        self.token = token
+        self.award = award
+        self.expire = expire
+    def __repr__(self):
+        values=(self.platform,self.channel,self.token,self.award,self.expire)
+        return '%s,%s,%s,%s,%s'%values
+
+class publish_log(DB.Model):
+    __tablename__ = 'publish_log'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    fid = DB.Column(DB.Integer)
+    record = DB.Column(DB.TEXT)
+    def __init__(self,fid,record):
+        self.fid = fid
+        self.record = record
+    def __repr__(self):
+        values=(self.fid,self.record)
+        return '%s,%s'%values
+
+class project_other(DB.Model):
+    __tablename__ = 'project_other'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    lable = DB.Column(DB.String(45))
+    project = DB.Column(DB.String(100))
+    server_id = DB.Column(DB.Integer)
+    business_id = DB.Column(DB.Integer)
+    update_date = DB.Column(DB.String(45))
+    def __init__(self,lable,project,server_id,business_id,update_time):
+        self.lable = lable
+        self.project = project
+        self.server_id = server_id
+        self.business_id = business_id
+        self.update_date = update_time
+    def __repr__(self):
+        values=(self.labe,self.project,self.server_id,self.business_id,self.update_date)
+        return '%s,%s,%i,%i,%s'%values
+
+class k8s_deploy(DB.Model):
+    __tablename__ = 'k8s_deploy'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    project = DB.Column(DB.String(50))
+    deployment = DB.Column(DB.String(45))
+    image = DB.Column(DB.String(100))
+    war = DB.Column(DB.String(45))
+    container_port = DB.Column(DB.String(45))
+    replicas = DB.Column(DB.Integer)
+    re_requests = DB.Column(DB.String(45))
+    re_limits = DB.Column(DB.String(45))
+    action = DB.Column(DB.String(45))
+    update_date = DB.Column(DB.String(45))
+    update_time = DB.Column(DB.String(45))
+    def __init__(self,project,deployment,image,war,container_port,replicas,re_requests,re_limits,
+                 action,update_date,update_time):
+        self.project = project
+        self.deployment = deployment
+        self.image = image
+        self.war = war
+        self.container_port = container_port
+        self.replicas = replicas
+        self.re_requests = re_requests
+        self.re_limits = re_limits
+        self.action = action
+        self.update_date = update_date
+        self.update_time = update_time
+    def __repr__(self):
+        values=(self.project,self.deployment,self.image,self.war,self.container_port,self.replicas,self.re_requests,self.re_limits,
+                self.action,self.update_date,self.update_time)
+        return '%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s'%values
+class k8s_ingress(DB.Model):
+    __tablename__ = 'k8s_ingress'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    name = DB.Column(DB.String(50),default='nginx-ingress')
+    namespace = DB.Column(DB.String(45),default='default')
+    domain = DB.Column(DB.String(100))
+    serviceName = DB.Column(DB.String(100))
+    servicePort = DB.Column(DB.Integer)
+    def __init__(self,name,namespace,domain,serviceName,servicePort):
+        self.name = name
+        self.namespace = namespace
+        self.domain = domain
+        self.serviceName = serviceName
+        self.servicePort = servicePort
+    def __repr__(self):
+        values=(self.name,self.namespace,self.domain,self.serviceName,self.servicePort)
+        return '%s,%s,%s,%s,%i'%values

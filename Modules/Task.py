@@ -1,885 +1,2001 @@
 #-*- coding: utf-8 -*-
-import Mysql
-import loging
-import memcache
-import kestrel
-import datetime
-import os
+from elasticsearch import Elasticsearch
+from elasticsearch import helpers
+import oss2
+from tcpping import tcpping
 import redis
-import json
-import socket
-import check
-import zabbix_api
-import SSH
-import Md5
+from  Modules import check
 import time
-from Modules import db_idc
-from rediscluster import RedisCluster
-from sqlalchemy import and_
-from confluent_kafka import Consumer, KafkaError
+import datetime
+import requests
+import socket
+from influxdb import InfluxDBClient
 from multiprocessing.dummy import Pool as ThreadPool
-import __init__
-app = __init__.app
+from Modules import loging,db_op,db_idc,SSH,ip_adress,Mysql,tools,Md5
+from sqlalchemy import distinct,and_,func
+from collections import defaultdict
+from functools import reduce
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+app = Flask(__name__)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
+app.config.from_pyfile('../conf/task.conf')
+app.config.from_pyfile('../conf/es.conf')
+app.config.from_pyfile('../conf/assets.conf')
+app.config.from_pyfile('../conf/oss.conf')
 logging = loging.Error()
-kafka_hosts = app.config.get('KAFKA_HOSTS_HAPROXY')
+DB = SQLAlchemy(app)
+HOST = socket.gethostbyname(socket.gethostname())
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
-Redis = redis.Redis(redis_host, redis_port)
-nodes = app.config.get('NODES_PRODUCE')
-cluster_java_nodes = app.config.get('NODES_CLUSTER_JAVA')
-RC = RedisCluster(startup_nodes=nodes,decode_responses=True)
-USER = app.config.get('MYSQL_USER')
-PASSWORD = app.config.get('MYSQL_PASSWORD')
-HOST = app.config.get('MYSQL_HOST')
-PORT = app.config.get('MYSQL_PORT')
-BACKUP_SERVERS = app.config.get('BACKUP_SERVERS')
-NOT_BACKUP_MYSQL = app.config.get('NOT_BACKUP_MYSQL')
-TWEMPROXY_HOSTS = app.config.get('TWEMPROXY_HOSTS')
-HA_SERVERS = app.config.get('HA_SERVERS')
-DB = 'idc'
+redis_password = app.config.get('REDIS_PASSWORD')
+RC = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
+redis_data = app.config.get('REDIS_DATA')
+RC_CLUSTER = redis.StrictRedis(host=redis_data, port=redis_port,decode_responses=True)
+es_hosts = app.config.get('ES_HOSTS')
+es = Elasticsearch(hosts=es_hosts,timeout=60)
+influxdb_host = app.config.get('INFLUXDB_HOST')
+influxdb_port = app.config.get('INFLUXDB_PORT')
+influxdb_user = app.config.get('INFLUXDB_USER')
+influxdb_pw = app.config.get('INFLUXDB_PASSWORD')
+influxdb_db = app.config.get('INFLUXDB_DB')
+Influx_cli = InfluxDBClient(influxdb_host,influxdb_port,influxdb_user,influxdb_pw,influxdb_db)
+PHYSICAL_TYPES = app.config.get('PHYSICAL_TYPES')
 dt = time.strftime('%m%d',time.localtime())
-def analytics_internet_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Internet_logs_%s' %dt,'default.topic.config': {'auto.offset.reset': 'latest','auto.commit.enable':'true'}})
-    consumer.subscribe(['haproxy_logs'])
+TASK_SERVERS = app.config.get('TASK_SERVERS')
+oss_id = app.config.get('ID')
+oss_key = app.config.get('KEY')
+def counts_logs(vals):
     try:
-        while True:
-            msg = consumer.poll()
-            if not msg.error():
-                Msg = msg.value().decode('utf-8').strip()
-                try:
-                    tt = time.strftime('%Y%m%d', time.localtime())
-                    th = time.strftime('%Y%m%d%H', time.localtime())
-                    pv_key = 'baihe_pv_%s' % tt
-                    if Msg:
-                        Msg = Msg.split()
-                        RC.incr(pv_key)
-                        if len(Msg) >= 17:
-                            Topic = str(Msg[14]).split('|')[0].replace('{', '').strip()
-                            IP = str(Msg[5])
-                            H_key = 'haproxy_topic_%s' % tt
-                            top_ip = 'top_ip_%s' % tt
-                            top_ip_hour = 'top_ip_%s' % th
-                            top_url_hour = 'top_url_%s' % th
-                            PATH = str(Msg[16]).split('?')[0]
-                            URL = 'http://%s%s' % (Topic,PATH)
-                            Ha_Key = 'haproxy_logs_%s_%s' % (tt, Topic)
-                            top_ip_domain = 'top_%s_domain_%s' % (IP, tt)
-                            top_ip_domain_hour = 'top_%s_domain_%s' % (IP, th)
-                            for KEY in (H_key, pv_key, top_ip, top_url_hour, top_ip_hour,Ha_Key, top_ip_domain, top_ip_domain_hour):
-                                RC.expire(KEY,3600)
-                            RC.sadd(H_key, Topic)
-                            RC.incr(Ha_Key)
-                            # ip
-                            RC.zincrby(top_ip, IP, 1)
-                            RC.zincrby(top_ip_hour, IP, 1)
-                            # IP_接口
-                            RC.zincrby(top_ip_domain, URL, 1)
-                            RC.zincrby(top_ip_domain_hour, URL, 1)
-                            # 接口
-                            RC.zincrby(top_url_hour, URL, 1)
-                except:
-                    continue
-            elif msg.error().code() != KafkaError._PARTITION_EOF:
-                logging.error(msg.error())
-                continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-def analytics_internet2_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Internet2_logs_%s' %dt,'default.topic.config': {'auto.offset.reset': 'latest','auto.commit.enable':'true'}})
-    consumer.subscribe(['haproxy_logs'])
-    try:
-        while True:
-            msg = consumer.poll()
-            if not msg.error():
-                Msg = msg.value().decode('utf-8').strip()
-                try:
-                    tt = time.strftime('%Y%m%d', time.localtime())
-                    tm = time.strftime('%Y%m%d%H%M', time.localtime())
-                    Tm = time.strftime('%H:%M', time.localtime())
-                    Tra_ser_minute_Key = 'traffic.ser.%s' % tm
-                    Tra_cli_minute_Key = 'traffic.cli.%s' % tm
-                    if Msg:
-                        Msg = Msg.split()
-                        if len(Msg) >= 17:
-                            traffic_cli = Msg[10]
-                            traffic_ser = Msg[11]
-                            Topic = str(Msg[14]).split('|')[0].replace('{', '').strip()
-                            IP = str(Msg[5])
-                            Rtime = Msg[8].split('/')[-1]
-                            if Rtime.isdigit():
-                                Rtime = int(Rtime)
-                            else:
-                                Rtime = 0
-                            uv_key = 'baihe_uv_%s' % tt
-                            Rt_Key = 'Rtime_%s_%s' % (tt, Topic)
-                            PATH = str(Msg[16]).split('?')[0]
-                            URL = 'http://%s%s' % (Topic,PATH)
-                            Tra_ser_url_minute_Key = 'traffic.ser.url_%s' % Tm
-                            Tra_cli_url_minute_Key = 'traffic.cli.url_%s' % Tm
-                            for KEY in (uv_key,Rt_Key,Tra_ser_url_minute_Key,Tra_cli_url_minute_Key):
-                                RC.expire(KEY,3600)
-                            # 流量
-                            if traffic_ser.isdigit() and traffic_cli.isdigit():
-                                RC.zincrby(Tra_cli_url_minute_Key, URL, int(traffic_cli))
-                                RC.zincrby(Tra_ser_url_minute_Key,URL, int(traffic_ser))
-                                # 实时流量
-                                RC.zincrby(Tra_cli_minute_Key, Topic, int(traffic_cli))
-                                RC.expire(Tra_cli_minute_Key, 300)
-                                RC.zincrby(Tra_ser_minute_Key, Topic, int(traffic_ser))
-                                RC.expire(Tra_ser_minute_Key, 300)
-                            #
-                            if Rtime:
-                                RC.lpush(Rt_Key, Rtime)
-                                RC.sadd(uv_key, IP)
-                except Exception as e:
-                    logging.error(e)
-                    continue
-            elif msg.error().code() != KafkaError._PARTITION_EOF:
-                logging.error(msg.error())
-                continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-def analytics_internet3_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Internet3_logs_%s' %dt,
-                         'default.topic.config': {'auto.offset.reset': 'latest', 'auto.commit.enable': 'true'}})
-    consumer.subscribe(['haproxy_logs'])
-    try:
-        while True:
-            msg = consumer.poll()
-            if not msg.error():
-                Msg = msg.value().decode('utf-8').strip()
-                try:
-                    tm = time.strftime('%Y%m%d%H%M', time.localtime())
-                    if Msg:
-                        Msg = Msg.split()
-                        if len(Msg) >= 17:
-                            internet_access_minute = 'internet_access_minute_%s' % tm
-                            RC.incr(internet_access_minute)
-                            RC.expire(internet_access_minute,3600)
-                except Exception as e:
-                    logging.error(e)
-                    continue
-            elif msg.error().code() != KafkaError._PARTITION_EOF:
-                logging.error(msg.error())
-                continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-def analytics_intranet_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Intranet_logs_%s' %dt,'default.topic.config': {'auto.offset.reset': 'latest','auto.commit.enable':'true'}})
-    consumer.subscribe(['haproxy2_logs'])
-    try:
-        while True:
-            msg = consumer.poll()
-            if not msg.error():
-                Msg = msg.value().decode('utf-8').strip()
-                try:
-                    tt = time.strftime('%Y%m%d', time.localtime())
-                    th = time.strftime('%Y%m%d%H', time.localtime())
-                    tm = time.strftime('%Y%m%d%H%M', time.localtime())
-                    H_key = 'haproxy2_topic_%s' % tt
-                    top2_url_hour = 'top2_url_hour_%s' % th
-                    top2_url_minute = 'top2_url_minute_%s' % tm
-                    if len(Msg.split()) >= 17:
-                        val = Msg.split('{')
-                        if len(val) >= 2:
-                            Topic = val[1].split('}')[0]
-                            Rtime = val[0].split()[8]
-                            Rtime = int(Rtime.split('/')[4])
-                            if ':' in Topic:
-                                Topic = str(Topic.split(':')[0])
-                            if '|' in Topic:
-                                Topic = str(Topic.split('|')[0])
-                            if '.baihe.com' in Topic:
-                                Key = 'haproxy2_logs_%s_%s' % (tt, Topic)
-                                Rt_Key = 'Rtime2_%s_%s' % (tt, Topic)
-                                # 接口
-                                PATH = str(Msg.split()[17]).split('?')[0]
-                                URL = 'http://%s%s' % (Topic,PATH)
-                                RC.zincrby(top2_url_hour, URL, 1)
-                                RC.zincrby(top2_url_minute, URL, 1)
-                                for KEY in (H_key, Key, Rt_Key,top2_url_hour,top2_url_minute):
-                                    RC.expire(KEY,3600)
-                                RC.sadd(H_key, Topic)
-                                RC.incr(Key)
-                                if Rtime:
-                                    RC.lpush(Rt_Key, Rtime)
-                except Exception as e:
-                    logging.error(e)
-                    continue
-            elif msg.error().code() != KafkaError._PARTITION_EOF:
-                logging.error(msg.error())
-                continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-def analytics_intranet2_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Intranet2_logs_%s' %dt,'default.topic.config': {'auto.offset.reset': 'latest','auto.commit.enable':'true'}})
-    consumer.subscribe(['haproxy2_logs'])
-    try:
-        while True:
-            msg = consumer.poll()
-            if not msg.error():
-                Msg = msg.value().decode('utf-8').strip()
-                try:
-                    tm = time.strftime('%Y%m%d%H%M', time.localtime())
-                    intranet_access_minute = 'intranet_access_minute_%s' %tm
-                    if len(Msg.split()) >= 17:
-                        RC.incr(intranet_access_minute)
-                        RC.expire(intranet_access_minute,3600)
-                except Exception as e:
-                    logging.error(e)
-                    continue
-            elif msg.error().code() != KafkaError._PARTITION_EOF:
-                logging.error(msg.error())
-                continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-def WAF_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Waf_logs_%s' %dt,'default.topic.config': {'auto.offset.reset': 'latest','auto.commit.enable':'true'}})
-    consumer.subscribe(['haproxy_logs'])
-    try:
-        while True:
-            msg = consumer.poll()
-            if not msg.error():
-                Msg = msg.value().decode('utf-8').strip()
-                try:
-                    tm = time.strftime('%Y%m%d%H%M',time.localtime())
-                    if Msg:
-                        Msg = Msg.split()
-                        if len(Msg) >= 17:
-                            url_code = Msg[9]
-                            Topic =str(Msg[14]).split('|')[0].replace('{','').strip()
-                            IP = str(Msg[5])
-                            if url_code in ('200', '206', '301', '302', '304', '404'):
-                                top_ip_minute = 'top_ip_%s' % tm
-                                top_url_minute = 'top_url_%s' % tm
-                                PATH = str(Msg[16]).split('?')[0]
-                                URL = 'http://%s%s' % (Topic,PATH)
-                                top_ip_domain_minute = 'top_%s_domain_%s' % (IP, tm)
-                                top_url_ip_minute = 'top_%s_ip_%s' % (URL, tm)
-                                # ip
-                                RC.zincrby(top_ip_minute, IP, 1)
-                                RC.expire(top_ip_minute, 300)
-                                # IP_接口
-                                RC.zincrby(top_ip_domain_minute, URL, 1)
-                                RC.expire(top_ip_domain_minute, 300)
-                                # 接口
-                                RC.zincrby(top_url_minute, URL, 1)
-                                RC.expire(top_url_minute, 300)
-                                # 接口_ip
-                                RC.zincrby(top_url_ip_minute, IP, 1)
-                                RC.expire(top_url_ip_minute, 300)
-                except Exception as e:
-                    logging.error(e)
-                    continue
-            elif msg.error().code() != KafkaError._PARTITION_EOF:
-                logging.error(msg.error())
-                continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-def httpry_logs():
-    consumer = Consumer({'bootstrap.servers': kafka_hosts, 'group.id': 'Httpry_logs_%s' %dt,'default.topic.config': {'auto.offset.reset': 'latest','auto.commit.enable':'true'}})
-    consumer.subscribe(['httpry_logs'])
-    try:
-        while True:
-            msg = consumer.poll()
-            if msg:
-                if not msg.error():
-                    Msg = msg.value().decode('utf-8').strip()
-                    try:
-                        tm = time.strftime('%Y%m%d%H%M', time.localtime())
-                        httpry_Key = 'httpry_domain.%s' % tm
-                        if Msg:
-                            msg = Msg.split()
-                            if len(msg) == 11:
-                                if msg[6] != '-':
-                                    RC.zincrby(httpry_Key,msg[6], 1)
-                                    RC.expire(httpry_Key,600)
-                    except Exception as e:
-                        logging.error(e)
-                        continue
-                elif msg.error().code() != KafkaError._PARTITION_EOF:
-                    logging.error(msg.error())
-                    continue
-    except Exception as e:
-        logging.error(e)
-    finally:
-        consumer.close()
-@check.proce_lock
-def kafka_internet():
-    tt = time.strftime('%Y%m%d', time.localtime())
-    H_key = 'haproxy_topic_%s' % tt
-    for Topic in RC.smembers(H_key):
-        try:
-            Key = 'haproxy_logs_%s_%s' % (tt, Topic)
-            web_key = 'internet_access_%s_%s' % (tt, Topic)
-            Rt_Key = 'Rtime_%s_%s' % (tt, Topic)
-            web_rt_key = 'internet_rt_%s_%s' % (tt, Topic)
-            for KEY in (web_key, Key, Rt_Key, web_rt_key):
-                RC.expire(KEY,3600)
-            va = int(RC.getset(Key, 0))
-            Rt_va = RC.lrange(Rt_Key, 0, -1)
-            if len(Rt_va) > 2:
-                Rt_va = reduce(lambda x, y: int(x) + int(y), Rt_va) / len(Rt_va)
-                RC.delete(Rt_Key)
-                TT = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                Rt_data = [TT, Rt_va]
-                RC.rpush(web_rt_key, Rt_data)
-                data = [TT, va]
-                RC.rpush(web_key, data)
-                tt = time.strftime('%Y%m%d', time.localtime())
-                H_key = 'haproxy_topic_%s' % tt
-        except Exception as e:
-            logging.error(e)
-            continue
-@check.proce_lock
-def kafka_intranet():
-    tt = time.strftime('%Y%m%d', time.localtime())
-    H_key = 'haproxy2_topic_%s' % tt
-    for Topic in RC.smembers(H_key):
-        try:
-            Key = 'haproxy2_logs_%s_%s' % (tt, Topic)
-            web_key = 'intranet_access_%s_%s' % (tt, Topic)
-            Rt_Key = 'Rtime2_%s_%s' % (tt, Topic)
-            web_rt_key = 'intranet_rt_%s_%s' % (tt, Topic)
-            for KEY in (web_key, Key, Rt_Key, web_rt_key):
-                RC.expire(KEY,3600)
-            va = int(RC.getset(Key, 0))
-            Rt_va = RC.lrange(Rt_Key, 0, -1)
-            if len(Rt_va) > 2:
-                Rt_va = reduce(lambda x, y: int(x) + int(y), Rt_va) / len(Rt_va)
-                RC.delete(Rt_Key)
-                TT = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                Rt_data = [TT, Rt_va]
-                RC.rpush(web_rt_key, Rt_data)
-                data = [TT, va]
-                RC.rpush(web_key, data)
-                tt = time.strftime('%Y%m%d', time.localtime())
-                H_key = 'haproxy2_topic_%s' % tt
-        except Exception as e:
-            logging.error(e)
-            continue
-@check.proce_lock
-def task_tables_info():
-    MYSQL_IDC = Mysql.MYSQL(USER,PASSWORD,HOST,PORT,DB)
-    Table = 'tableinfo'
-    cmds = ("TRUNCATE TABLE %s;" %Table,"select ip,port,db from mysqldb;")
-    results = map(MYSQL_IDC.Run,cmds)
-    for host,port,dbs in results[1]:
-        try:
-            if '172.16.9.' not in host:
-                MYSQL = Mysql.MYSQL(USER,PASSWORD,host,port,'mysql')
-                cmd = "show variables like 'version';"
-                version = MYSQL.Run(cmd)
-                version = version[0][1]  or 'None'
-                for db in dbs.split('|'):
-                    cmd = "show table status from %s;"  %db
-                    results = MYSQL.Run(cmd)
-                    if results:
-                        for table_info in results:
-                            try:
-                                Table_Name = table_info[0]
-                                Engine = table_info[1] or 'None'
-                                Rows = table_info[4]  or 0
-                                Charset = table_info[14]  or 'None'
-                                cmd = ("insert into %s (ip,port,database_name,table_name,Engine_name,Rows,Charset,version)  VALUES ('%s',%i,'%s','%s','%s',%i,'%s','%s');" %(Table,host,int(port),db,Table_Name,Engine,Rows,Charset,version))
-                                MYSQL_IDC.Run(cmd)
-                            except Exception as e:
-                                logging.error(e)
-                                continue
-                MYSQL.Close()
-        except Exception as e:
-            logging.error(e)
-            continue
-    MYSQL_IDC.Close()
-@check.proce_lock
-def clear_kestrel():
-    MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-    cmd = "select kestrel_ip,kestrel_port,kestrel_key from kestrel where kestrel_num ='0';"
-    results = MYSQL.Run(cmd)
-    if results:
-        MYSQL.Close()
-        for ip,port,key in results:
+        def share_counts(host_key,uri_key):
             try:
-                Kestrel = memcache.Client(['%s:%s'%(ip,port)],debug=0,socket_timeout=1)
-                Kestrel.delete(str(key))
+                # 统计域名
+                RC.hincrby(host_key, host, 1)
+                # 统计uri
+                RC.hincrby(uri_key, uri, 1)
+                # 统计地区及ISP运营商
             except Exception as e:
                 logging.error(e)
-                continue
-@check.proce_lock
-def check_publish():
-    try:
-        DB = 'op'
-        td  = time.strftime('%Y-%m-%d',time.localtime())
-        tt = (datetime.datetime.now()-datetime.timedelta(hours=4)).strftime('%H:%M:%S')
-        MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-        cmd = "SELECT DISTINCT(project) FROM op_operation WHERE TYPE = '灰度' AND DATE  = '{0}' AND TIME <= '{1}';".format(td,tt)
-        result  = MYSQL.Run(cmd)
-        if result:
-            for Project in result:
-                os.system("/bin/tomail pd.list@baihe.com 灰度发布警告 {0} 项目已经保持灰度状态超过4个时间,请相关开发人员尽快处理!".format(Project[0]))
-        MYSQL.Close()
-    except Exception as e:
-        logging.error(e)
-@check.proce_lock
-def get_twemproxy_redis():
-    MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-    redis_info = {}
-    for twemproxy_ip in TWEMPROXY_HOSTS:
-            for port in (22222,22220):
-                try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.connect((twemproxy_ip,port))
-                    INFOS = json.loads(sock.recv(86400))
-                    for key in INFOS:
-                        if 'redis_' in key:
-                            IP_list = []
-                            for ip_key in INFOS[key]:
-                                if '172.16.' in ip_key:
-                                    IP_list.append(ip_key.split(':')[0])
-                            redis_info[key] = IP_list
-                except Exception as e:
-                    logging.error(e)
-                    continue
-    cmd = "TRUNCATE TABLE twemproxyInfo;"
-    MYSQL.Run(cmd)
-    for key in redis_info:
-        for ip in redis_info[key]:
+        remote_addr,status,host,uri,upstream_addr,response_time,time_t = vals
+        tm = ':'.join(time_t.split(':')[:-1])
+        tm = '%s_%s'%(time.strftime('%Y-%m-%d',time.localtime()),tm)
+        code_key = 'error_logs_status_%s' % tm
+        host_key = 'error_logs_domain_%s_%s' % (status, tm)
+        uri_key = 'error_logs_domain_%s_%s_%s' % (status, host, tm)
+        total_key = 'total_access_%s' % tm
+        domain_key = 'domain_counts_%s' % tm
+        domain_status_key = 'domain_counts_status_%s' % tm
+        counts_status_key = 'counts_%s:%s_%s' % (host, status, tm)
+        RC.incr(total_key, 1)
+        if int(status) < 400:
             try:
-                Redis = redis.StrictRedis(host=ip,port=6379,db=0,socket_timeout=1)
-                Keys = Redis.info()['db0']['keys']
-                cmd = "insert into twemproxyInfo (serviceGroup,clientIP,clientKeyItems) VALUES('%s','%s','%s');"%(key,ip,Keys)
-                MYSQL.Run(cmd)
+                if int(response_time) >= 1:
+                    if int(response_time) >= 1 and int(response_time) <= 3:
+                        r_time = '1000-3000'
+                    else:
+                        r_time = '3000+'
+                    host_key = 'response_time_domain_%s_%s' % (r_time, tm)
+                    uri_key = 'response_time_domain_%s_%s_%s' % (host, r_time, tm)
+                    # 域名下后端tomcat响应时间统计
+                    counts_key = 'counts_%s:%s_%s' % (host, r_time, tm)
+                    RC.hincrby(domain_key, '%s:%s' % (host, r_time), 1)
+                    RC.hincrby(counts_key, upstream_addr, 1)
+                    share_counts(host_key, uri_key)
+                    RC.expire(counts_key, 86400)
             except Exception as e:
                 logging.error(e)
-                continue
-    MYSQL.Close()
-@check.proce_lock
-def zabbix_api_lvs():
-    try:
-        t = time.strftime('%H',time.localtime())
-        tm = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime())
-        Key = 'lvs_internet'
-        Key1 = 'lvs_intranet'
-        if t == '00':
-            Redis.delete(Key)
-            Redis.delete(Key1)
-        key='lvs[80]'
-        history = 3
-        method = 'history.get'
-        host = '172.16.16.8'
-        v8 = zabbix_api.GET_value(host,key,method,history)
-        host = '172.16.16.4'
-        v4 = zabbix_api.GET_value(host,key,method,history)
-        host = '172.16.16.5'
-        v5 = zabbix_api.GET_value(host,key,method,history)
-        if v4 and v8:
-            lvs_conn = int(v4)+int(v8)
-            Redis.lpush(Key,[tm,lvs_conn])
-        if v5:
-            Redis.lpush(Key1,[tm,int(v5)])
-    except Exception as e:
-        logging.error(e)
-@check.proce_lock
-def zabbix_api_host():
-    def Get_values(hosts,Redis_Key,keys,history,preset,operation):
-        RC.delete(Redis_Key)
-        hosts = [str(host[0]) for host in hosts]
-        method = 'history.get'
-        RC.set('%s_time' % Redis_Key, time.strftime('%Y-%m-%d %H:%M',time.localtime()))
-        def Run(host):
+
+        else:
             try:
-                values = {}
-                for key in keys:
-                    value = zabbix_api.GET_value(host, keys[key], method, history)
-                    if value != None:
-                        if '.' in value:
-                            value = float(value)
-                        if operation == 'lt':
-                            if int(value) < preset:
-                                values[key] = value
-                                RC.hset(Redis_Key, host, values)
-                        if operation == 'gt':
-                            if int(value) > preset:
-                                values[key] = value
-                                RC.hset(Redis_Key, host, values)
+                share_counts(host_key, uri_key)
+                # 统计错误状态码
+                RC.hincrby(code_key, status, 1)
+                # 域名下后端tomcat状态码统计
+                RC.hincrby(domain_status_key, '%s:%s' % (host, status), 1)
+                RC.hincrby(counts_status_key, upstream_addr, 1)
+                for KEY in (code_key, domain_status_key, counts_status_key):
+                    RC.expire(KEY, 86400)
             except Exception as e:
                 logging.error(e)
-        pool = ThreadPool(4)
-        pool.map_async(Run,hosts)
-        pool.close()
-        pool.join()
-    try:
-        db = db_idc.idc_servers
-        hosts = db.query.with_entities(db.ip).filter(and_(db.department == '线上业务中心',db.status == '使用中',db.system.like('CentOS%'))).all()
-        if hosts:
-            history = 0
-            preset = 20
-            operation = 'lt'
-            Redis_Key = 'check_hosts_disk'
-            keys = {'/home': 'vfs.fs.size[/home,pfree]', '/': 'vfs.fs.size[/,pfree]'}
-            Get_values(hosts, Redis_Key, keys, history, preset,operation)
-            history = 3
-            preset = 5000
-            operation = 'gt'
-            Redis_Key = 'check_hosts_net'
-            keys = {'ESTAB': 'netstat[ESTAB]', 'TIME_WAIT': 'netstat[WAIT]'}
-            Get_values(hosts, Redis_Key, keys, history, preset,operation)
+        for KEY in (host_key, uri_key, total_key, domain_key):
+            RC.expire(KEY, 86400)
     except Exception as e:
         logging.error(e)
-@check.proce_lock
-def kestel_info():
-    MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-    cmd = "truncate table kestrel;"
-    MYSQL.Run(cmd)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('172.16.16.50', 22222))
-    INFOS = json.loads(sock.recv(86400))
-    for key in INFOS:
-        try:
-            if 'kestrel_' in key:
-                for ip_key in INFOS[key]:
-                    if '172.16.' in ip_key:
-                        ip = ip_key.split(':')[0]
-                        ks = kestrel.Client(['%s:22133' % ip.strip()])
-                        st = ks.stats()[1]['queues']
-                        for k in st:
-                            v = st[k]
-                            data = (ip,'22133', str(k.replace("'", "")), str(v['items']))
-                            cmd = "insert into kestrel (kestrel_ip,kestrel_port,kestrel_key,kestrel_num) values('%s',%s,'%s',%s);" % data
-                            MYSQL.Run(cmd)
-        except:
-            continue
-@check.proce_lock
-def haproxy_blacklist():
-    DB = 'op'
-    MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-    file_path = '/tmp/blacklist'
-    def write_ip():
-        cmd = "SELECT ip FROM haproxy_blacklist;"
-        hosts = [str(host[0]) for host in MYSQL.Run(cmd)]
-        with open(file_path, 'w') as f:
-            for host in hosts:
-                f.write('%s\n' % host)
-        for ip in HA_SERVERS:
-            ssh = SSH.ssh('work',ip)
-            ssh.Scp(file_path,file_path)
-    tm = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    cmd = "SELECT ip FROM haproxy_blacklist where expire <= '%s' and expire !='0000-00-00 00:00:00';" % tm
-    if MYSQL.Run(cmd):
-        cmd = "delete from haproxy_blacklist where expire <= '%s' and expire !='0000-00-00 00:00:00';" % tm
-        MYSQL.Run(cmd)
-        write_ip()
-    cmd = "SELECT ip FROM haproxy_blacklist where stats = '1';"
-    if MYSQL.Run(cmd):
-        cmd = "update haproxy_blacklist set stats = '0';"
-        MYSQL.Run(cmd)
-        write_ip()
-    cmd = "SELECT ip FROM haproxy_blacklist where stats = '2';"
-    if MYSQL.Run(cmd):
-        cmd = "delete from haproxy_blacklist where stats = '2';"
-        MYSQL.Run(cmd)
-        write_ip()
-    MYSQL.Close()
-@check.proce_lock
-def vpn_conf():
-    def create_file(Type):
-        try:
-            crypto = Md5.crypto('1qazxsw23edcvfr4')
-            file_path = '/tmp/chap-secrets'
-            ips = {'intranet':('172.16.9.2', '172.16.9.31'),'internet':('172.16.16.150','172.16.16.151','172.16.16.164','172.16.16.165')}
-            cmd = "SELECT user,password FROM vpn_users where vpn_type = '%s';" %Type
-            User_list = MYSQL.Run(cmd)
-            if User_list:
-                with open(file_path,'w') as f:
-                    f.write('####### system-config-network will overwrite this part!!! (begin) ##########\r\n')
-                    for user,pw in User_list:
-                        f.write('%s       *       %s       *\n' %(user,crypto.decrypt(pw)))
-                for ip in ips[Type]:
-                    ssh = SSH.ssh('work', ip)
-                    ssh.Scp(file_path, file_path)
-        except Exception as e:
-            logging.error(e)
-    DB = 'op'
-    MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-    for Type in ('intranet','internet'):
-        cmd = "SELECT user,password FROM vpn_users where status = 2 and vpn_type = '%s';" %Type
-        if MYSQL.Run(cmd):
-            cmd = "delete FROM vpn_users where status = 2 and vpn_type = '%s';" %Type
-            MYSQL.Run(cmd)
-            create_file(Type)
-        cmd = "SELECT user,password FROM vpn_users where status = 1 and vpn_type = '%s';" %Type
-        if MYSQL.Run(cmd):
-            cmd = "update vpn_users set status = 0 where status = 1 and vpn_type = '%s';" %Type
-            MYSQL.Run(cmd)
-            create_file(Type)
-    MYSQL.Close()
-@check.proce_lock
-def WAF():
-    DB = 'op'
-    black_list = {}
-    white_list = app.config.get('WHITE_LIST')
-    tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
-    tm = tm.strftime('%Y%m%d%H%M')
-    tt = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-    th = time.strftime('%Y%m%d%H', time.localtime())
-    dm = datetime.datetime.now() + datetime.timedelta(minutes=5)
-    expire_time = dm.strftime('%Y-%m-%d %H:%M:%S')
-    top_ip_minute = 'top_ip_%s' %tm
-    top_url_minute = 'top_url_%s' % tm
-    black_ip_minute = 'black_ip_%s' %tm
-    black_ip_hour = 'black_ip_%s' % th
-    try:
-        MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-        ip_list = MYSQL.Run("select ip from haproxy_blacklist;")
-        ip_list = [str(ip[0]) for ip in ip_list]
-        url_data = MYSQL.Run("select url,counts from url_blacklist where stats='1';")
-        if url_data:
-            for url,counts in url_data:
-                black_list[str(url)] = counts
-            # 基于ip统计接口
-            IP_DATAS = [str(ip) for ip in RC.zrevrange(top_ip_minute, 0,20) if ip not in white_list if ip not in ip_list]
-            if IP_DATAS:
-                for ip in IP_DATAS:
-                    try:
-                        top_ip_domain_minute = 'top_%s_domain_%s' % (ip,tm)
-                        URL_DATAS = [[str(url), int(RC.zscore(top_ip_domain_minute,url))] for url in RC.zrevrange(top_ip_domain_minute, 0,-1)]
-                        if URL_DATAS:
-                            for URL,URL_COUNT in URL_DATAS:
-                                try:
-                                    # 拦截
-                                    if URL in black_list.keys():
-                                        if URL_COUNT > int(black_list[URL]):
-                                            #pass
-                                            RC.lpush(black_ip_minute,ip)
-                                            RC.lpush(black_ip_hour,ip)
-                                            MYSQL.Run("insert into haproxy_blacklist (addtime,ip,stats,expire,rule) VALUES ('%s','%s','1','%s','%s');" %(tt,ip,expire_time,URL))
-                                    #学习
-                                    urls = [str(url[0]) for url in MYSQL.Run("select url from url_blacklist;")]
-                                    if URL not in urls and URL_COUNT > 60:
-                                        MYSQL.Run("insert into url_blacklist (url,counts,stats) VALUES ('%s',%i,'0');" %(URL,URL_COUNT))
-                                except Exception as e:
-                                    logging.error(e)
-                                    continue
-                    except Exception as e:
-                        logging.error(e)
-                        continue
-                RC.expire(black_ip_minute,300)
-                RC.expire(black_ip_hour, 3600)
-            #基于接口统计ip
-            URLS = [str(url) for url in RC.zrevrange(top_url_minute, 0,-1)]
-            if URLS:
-                for url in URLS:
-                    if url in black_list.keys():
-                        top_url_ip_minute = 'top_%s_ip_%s' % (url, tm)
-                        IP_DATAS = [ str(ip) for ip in RC.zrevrange(top_url_ip_minute, 0,-1) if int(RC.zscore(top_url_ip_minute,ip)) > int(black_list[url]) if ip not in white_list if ip not in ip_list]
-                        if IP_DATAS:
-                            for ip in IP_DATAS:
-                                try:
-                                    #分钟拦截
-                                    RC.lpush(black_ip_minute,ip)
-                                    RC.lpush(black_ip_hour,ip)
-                                    MYSQL.Run("insert into haproxy_blacklist (addtime,ip,stats,expire,rule) VALUES ('%s','%s','1','%s','%s');" % (tt,ip,expire_time,url))
-                                except Exception as e:
-                                    logging.error(e)
-                                    continue
-                RC.expire(black_ip_minute, 300)
-                RC.expire(black_ip_hour,3600)
-        MYSQL.Close()
-    except Exception as e:
-        logging.error(e)
-@check.proce_lock
-def WAF2():
-    DB = 'op'
-    tt = time.strftime('%Y%m%d',time.localtime())
-    th = time.strftime('%Y%m%d%H', time.localtime())
-    tm = datetime.datetime.now() - datetime.timedelta(minutes=2)
-    tm = tm.strftime('%Y%m%d%H%M')
-    dm = datetime.datetime.now() + datetime.timedelta(hours=1)
-    expire_time = dm.strftime('%Y-%m-%d %H:%M:%S')
-    black_ip_minute = 'black_ip_%s' % tm
-    black_ip_hour = 'black_ip_%s' % th
-    black_ip_day = 'black_ip_%s' % tt
-    try:
-        MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-        IP_LIST = RC.lrange(black_ip_minute,0,-1)
-        IP_LIST_HOUR = RC.lrange(black_ip_hour,0,-1)
-        if IP_LIST and IP_LIST_HOUR:
-            for ip in set(IP_LIST):
-                if ip in set(IP_LIST_HOUR):
-                    try:
-                        #小时拦截
-                        RC.lpush(black_ip_day,ip)
-                        MYSQL.Run("update haproxy_blacklist set expire = '%s' where ip = '%s';" % (expire_time,ip))
-                    except Exception as e:
-                        logging.error(e)
-                        continue
-            RC.expire(black_ip_day,86400)
-            MYSQL.Close()
-    except Exception as e:
-        logging.error(e)
-@check.proce_lock
-def WAF3():
-    DB = 'op'
-    tt = time.strftime('%Y%m%d',time.localtime())
-    tm = datetime.datetime.now() - datetime.timedelta(minutes=2)
-    tm = tm.strftime('%Y%m%d%H%M')
-    dm = datetime.datetime.now() + datetime.timedelta(days=1)
-    expire_time = dm.strftime('%Y-%m-%d %H:%M:%S')
-    black_ip_day = 'black_ip_%s' %tt
-    black_ip_minute = 'black_ip_%s' % tm
-    try:
-        MYSQL = Mysql.MYSQL(USER, PASSWORD, HOST, PORT, DB)
-        IP_LIST = RC.lrange(black_ip_minute,0,-1)
-        IP_LIST_DAY = RC.lrange(black_ip_day,0,-1)
-        if IP_LIST and IP_LIST_DAY:
-            for ip in set(IP_LIST):
-                if ip in set(IP_LIST_DAY):
-                    try:
-                        #全天拦截
-                        MYSQL.Run("update haproxy_blacklist set expire = '%s' where ip = '%s';" % (expire_time,ip))
-                    except Exception as e:
-                        logging.error(e)
-                        continue
-            MYSQL.Close()
-    except Exception as e:
-        logging.error(e)
-@check.proce_lock
-def mysql_backup():
-    MYSQL = Mysql.MYSQL(USER,PASSWORD,HOST,PORT,DB)
-    cmds = "select ip,port from mysqldb where master='是';"
-    results = MYSQL.Run(cmds)
-    key = 'mysql_backup'
-    Redis.delete('finish_backup')
-    if results:
-        try:
-            for host in BACKUP_SERVERS:
-                Redis.delete('%s_%s'%(key,host))
-            i = len(BACKUP_SERVERS)
-            for info in results:
-                info = [str(m) for m in info]
-                # 设置binlog过期时间
-                MHOST,MPORT = info
-                MDB = 'mysql'
-                MYSQL_SET = Mysql.MYSQL(USER, PASSWORD, MHOST, MPORT, MDB)
-                cmds = 'set global expire_logs_days=15;'
-                MYSQL_SET.Run(cmds)
-                if info[0] not in NOT_BACKUP_MYSQL:
-                    i = i-1
-                    Redis.lpush('%s_%s'%(key,BACKUP_SERVERS[i]),info)
-                    if i == 0:
-                        i = len(BACKUP_SERVERS)
-            MYSQL_SET.Close()
-        except Exception as e:
-            loging.write(e)
-    MYSQL.Close()
-@check.proce_lock
-def del_zabbix_events():
-    try:
-        HOST = '172.16.4.93'
-        PORT = 3306
-        DB = 'zabbix'
-        MYSQL = Mysql.MYSQL(USER,PASSWORD,HOST,PORT,DB)
-        cmd = "select eventid from events order by eventid  limit 10000;"
-        results = MYSQL.Run(cmd)
-        MYSQL.Close()
-        def Delete(eventid):
-            MySql = Mysql.MYSQL(USER,PASSWORD,HOST,PORT,DB)
-            cmd = "delete from events where eventid=%i" % int(eventid[0])
-            MySql.Run(cmd)
-            MySql.Close()
-        pool = ThreadPool(8)
-        pool.map(Delete, results)
-        pool.close()
-        pool.join()
-        loging.write('del_last_eventid:%s' %results[-1][0])
-    except Exception as e:
-        loging.write(e)
-@check.proce_lock
-def redis_cluster_info():
+
+def count_es_logs():
     try:
         dt = time.strftime('%Y-%m-%d',time.localtime())
-        tt = time.strftime('%H:%M:%S',time.localtime())
-        ot = (datetime.datetime.now() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
-        RC_JAVA = RedisCluster(startup_nodes=cluster_java_nodes, decode_responses=True)
-        results = RC_JAVA.info()
-        Redis_Key = 'redis_cluster_java_info'
-        for host in results:
+        now_date = datetime.datetime.now()
+        lte_date = now_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+        gd = now_date - datetime.timedelta(minutes=1)
+        tm = gd.strftime('%Y-%m-%d_%H:%M')
+        gte_date = gd.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+        gd = gd.strftime('%Y-%m-%dT%H:%M:%SZ')
+        index = 'logstash-nginx-log-*'
+        Key = 'api_domain_lists_%s' % dt
+        web_domain_key = 'web_domain_lists_%s' %dt
+        domain_list_key = 'domain_lists_%s' %tm
+        try:
+            # 获取域名
+            body = {'size': 0,
+                    "query": {"bool": {"must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}}]}},
+                    "aggs": {"counts": {"terms": {"field": "host.keyword", "size": 100}}}}
+            res = es.search(index=index, body=body)
+        except Exception as e:
+            logging.error(e)
+        # 获取指定域名列表
+        hosts = RC_CLUSTER.smembers(Key)
+        for val in res['aggregations']['counts']['buckets']:
+            host = val['key']
+            if host in hosts:
+                RC_CLUSTER.sadd(web_domain_key,host)
+                RC_CLUSTER.sadd(domain_list_key,host)
+        RC_CLUSTER.expire(web_domain_key,864000)
+        RC_CLUSTER.expire(domain_list_key,3600)
+        for i in range(len(RC_CLUSTER.smembers(domain_list_key))):
             try:
-                if results[host]['role'] == 'master':
-                    key_commands = '%s_redis_commands' % host
-                    key_offset = '%s_redis_offset' % host
-                    key_net_input = '%s_redis_net_input' % host
-                    key_net_output = '%s_redis_net_output' % host
-                    key_keys = '%s_redis_keys' % host
-                    Master_Info = {}
-                    Master_Info['maxmemory_policy'] = results[host]['maxmemory_policy']
-                    Master_Info['used_memory_human'] = results[host]['used_memory_human']
-                    Master_Info['slave_host'] = '%s:%s'%(results[host]['slave0']['ip'],results[host]['slave0']['port'])
-                    Master_Info['slave_state'] = results[host]['slave0']['state']
-                    Master_Info['rejected_connections'] = results[host]['rejected_connections']
-                    Master_Info['redis_version'] = results[host]['redis_version']
-                    Master_Info['redis_mode'] = results[host]['redis_mode']
-                    Master_Info['uptime_in_days'] = results[host]['uptime_in_days']
-                    Master_Info['space_keys'] = results[host]['db0']['keys']
-                    old_offset = new_offset = int(results[host]['slave0']['offset'])
-                    if RC.exists(key_offset):
-                        old_offset = int(RC.get(key_offset))
-                    RC.set(key_offset,new_offset)
-                    Master_Info['slave_offset'] = new_offset - old_offset
-                    #连接数
-                    connected_clients = results[host]['connected_clients']
-                    #增量keys
-                    old_keys = new_keys = int(results[host]['db0']['keys'])
-                    if RC.exists(key_keys):
-                        old_keys = int(RC.get(key_keys))
-                    RC.set(key_keys,int(new_keys))
-                    add_keys = new_keys - old_keys
-                    #命中率
-                    HitRate = int(float(results[host]['keyspace_hits']) / (float(results[host]['keyspace_hits']) + float(results[host]['keyspace_misses'])) * 100)
-                    # 执行指令
-                    old_commands = new_commands = int(results[host]['total_commands_processed'])
-                    if RC.exists(key_commands):
-                        old_commands = int(RC.get(key_commands))
-                    RC.set(key_commands,int(new_commands))
-                    commands = (new_commands - old_commands)/60
-                    #入口流量
-                    old_net_input = new_net_input = int(results[host]['total_net_input_bytes'])
-                    if RC.exists(key_net_input):
-                        old_net_input = int(RC.get(key_net_input))
-                    RC.set(key_net_input,int(new_net_input))
-                    net_input = (new_net_input - old_net_input)/1024/1024
-                    # 出口流量
-                    old_net_output = new_net_output = int(results[host]['total_net_output_bytes'])
-                    if RC.exists(key_net_output):
-                        old_net_output = int(RC.get(key_net_output))
-                    RC.set(key_net_output,int(new_net_output))
-                    net_output = (new_net_output - old_net_output)/1024/1024
-                    c = db_idc.idc_redis_cluster_info(getdate =dt,gettime =tt,master=host,add_keys=add_keys, connected_clients=connected_clients, HitRate=HitRate,commands=commands,net_input=net_input,net_output=net_output)
-                    db_idc.DB.session.add(c)
-                    db_idc.DB.session.commit()
-                    db = db_idc.idc_redis_cluster_info
-                    v = db.query.filter(db.getdate <= ot).all()
-                    if v:
-                        for c in v:
-                            db_idc.DB.session.delete(c)
-                            db_idc.DB.session.commit()
-                    RC.hset(Redis_Key,host,Master_Info)
+                host = RC_CLUSTER.spop(domain_list_key)
+                if host:
+                    # 获取指定域名接口列表
+                    Key = 'api_uri_lists_%s_%s' % (host, dt)
+                    uris = RC_CLUSTER.smembers(Key)
+                    # 获取域名下接口
+                    try:
+                        body = {'size': 0, "query": {"bool": {"must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                                                                       {"match_phrase": {"host": {"query": host}}}]}},
+                                "aggs": {"counts": {"terms": {"field": "uri.keyword","size":20}}}}
+                        res = es.search(index=index, body=body)
+                    except Exception as e:
+                        logging.error(e)
+                    for val in res['aggregations']['counts']['buckets']:
+                        try:
+                            uri = val['key']
+                            influx_fields = defaultdict()
+                            if uri in uris:
+                                #域名接口列表
+                                RC_CLUSTER.sadd('domain_api_lists_%s_%s' %(host,dt),uri)
+                                RC_CLUSTER.expire('domain_api_lists_%s_%s' %(host,dt),864000)
+                                #域名接口pv
+                                RC_CLUSTER.set('domain_api_pv_%s_%s_%s' %(host,uri,tm),val['doc_count'])
+                                RC_CLUSTER.expire('domain_api_pv_%s_%s_%s' % (host, uri, tm), 864000)
+                                #域名总pv
+                                RC_CLUSTER.incr('domain_api_pv_%s_%s' % (host, tm), int(val['doc_count']))
+                                RC_CLUSTER.expire('domain_api_pv_%s_%s' % (host, tm), 864000)
+                                #记录到influxdb
+                                influx_fields['pv'] = float('%.2f' % float(val['doc_count']))
+                                # 获取域名下接口状态码统计
+                                upstream = {'status_4xx': (400, 499), 'status_5xx': (500, 599)}
+                                for k in upstream:
+                                    try:
+                                        body = {'size': 0, "query": {"bool": {"must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                                                              {"match_phrase": {"host": {"query": host}}},
+                                                              {"match_phrase": {"uri": {"query": uri}}},
+                                                              {"range": {"status": {"gte": upstream[k][0], "lte": upstream[k][-1]}}}]}}}
+                                        res = es.search(index=index, body=body)
+                                    except Exception as e:
+                                        logging.error(e)
+                                    RC_CLUSTER.hset('domain_api_infos_%s_%s_%s'%(host,uri,tm),k,res['hits']['total'])
+                                    #域名维度状态码统计
+                                    RC_CLUSTER.hincrby('domain_api_infos_%s_%s' % (host, tm), k,int(float(res['hits']['total'])*100))
+                                    # 记录到influxdb
+                                    influx_fields[k]= float('%.2f' %float(res['hits']['total']))
+                                # 获取域名下接口响应时间
+                                upstream = {'resp_100': 0.1, 'resp_200': 0.2, 'resp_500': 0.5, 'resp_1000': 1}
+                                for k in upstream:
+                                    try:
+                                        body = {'size': 0, "query": {
+                                            "bool": {
+                                                "must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                                                         {"match_phrase": {"host": {"query": host}}},
+                                                         {"match_phrase": {"uri": {"query": uri}}},
+                                                         {"range": {"upstream_response_time": {"gte": upstream[k]}}}]}, }}
+                                        if k == 'resp_100':
+                                            body = {'size': 0, "query": {
+                                                "bool": {
+                                                    "must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                                                             {"match_phrase": {"host": {"query": host}}},
+                                                             {"match_phrase": {"uri": {"query": uri}}},
+                                                             {"range": {"upstream_response_time": {"gte": upstream[k]}}}]}, },
+                                                    "aggs": {
+                                                        "avg_resp": {
+                                                            "avg": {"field": "upstream_response_time"}
+                                                        }
+                                                    }}
+                                        res = es.search(index=index, body=body)
+                                    except Exception as e:
+                                        logging.error(e)
+                                    # 获取域名接口下平均延时响应时间
+                                    if k == 'resp_100':
+                                        avg_val = res['aggregations']['avg_resp']['value']
+                                        if isinstance(avg_val, float):
+                                            RC_CLUSTER.hset('domain_api_infos_%s_%s_%s' % (host, uri, tm), 'avg_resp',float('%.2f' % avg_val))
+                                            # 域名维度接口响应时间统计
+                                            RC_CLUSTER.hincrby('domain_api_infos_%s_%s' % (host, tm), 'avg_resp',int(float(avg_val)*100))
+                                            # 记录到influxdb
+                                            influx_fields['avg_resp'] = float('%.2f' % float(avg_val))
+                                    #获取接口统计数据
+                                    RC_CLUSTER.hset('domain_api_infos_%s_%s_%s'%(host,uri,tm),k,res['hits']['total'])
+                                    # 域名维度接口响应时间统计
+                                    RC_CLUSTER.hincrby('domain_api_infos_%s_%s' % (host, tm), k,int(float(res['hits']['total'])*100))
+                                    # 记录到influxdb
+                                    influx_fields[k] = float('%.2f' %float(res['hits']['total']))
+                                RC_CLUSTER.expire('domain_api_infos_%s_%s_%s' % (host, uri, tm), 864000)
+                                RC_CLUSTER.expire('domain_api_infos_%s_%s' % (host, tm), 864000)
+                        except Exception as e:
+                            logging.error(e)
+                            continue
+                        if influx_fields:
+                            try:
+                                #写入influxdb数据库
+                                json_body = [{"measurement": "analysis_logs","tags": {"host":host,"uri":uri},"fields": influx_fields,"time":gd}]
+                                Influx_cli.write_points(json_body)
+                            except Exception as e:
+                                logging.error(e)
             except Exception as e:
-                loging.write(e)
+                logging.error(e)
                 continue
     except Exception as e:
-        loging.write(e)
+        logging.error(e)
+
+@check.proce_lock
+def get_server_info():
+    db_store = db_idc.idc_store
+    db_server = db_idc.idc_servers
+    db_idc_id = db_idc.idc_id
+    server_val = db_server.query.with_entities(db_server.ip,db_server.ssh_port).filter(and_(db_server.status !='维护中',db_server.comment !='跳过')).all()
+    #获取阿里云存储情况
+    auth = oss2.Auth(oss_id, oss_key)
+    service = oss2.Service(auth, 'http://oss.aliyuncs.com')
+    Buckets = [b.name for b in oss2.BucketIterator(service)]
+    #获取idc id
+    idc_id = db_idc_id.query.with_entities(db_idc_id.id).filter(and_(db_idc_id.aid=='阿里云',db_idc_id.cid=='OSS')).all()
+    if idc_id:
+        store_val = db_store.query.with_entities(db_store.type).filter(db_store.idc_id == idc_id[0][0]).all()
+        if store_val:
+            store_val = [val[0] for val in store_val]
+        # bucket信息写入数据库
+        add_vals = set(Buckets) - set(store_val)
+        if add_vals:
+            for bucket_name in add_vals:
+                bucket = oss2.Bucket(auth, 'http://oss.aliyuncs.com', bucket_name)
+                bucket_info = bucket.get_bucket_info()
+                c = db_store(idc_id=idc_id[0][0],type=bucket_name,ip='http://oss.aliyuncs.com',purch_date=bucket_info.creation_date.split('T')[0],expird_date='',status='使用中',comment='')
+                db_idc.DB.session.add(c)
+                db_idc.DB.session.commit()
+        # 删除数据库中bucket信息
+        del_vals = set(store_val)-set(Buckets)
+        if del_vals:
+            for bucket_name in del_vals:
+                c = db_store.query.filter(db_store.type==bucket_name).all()
+                for v in c:
+                    db_idc.DB.session.delete(v)
+                    db_idc.DB.session.commit()
+    def get_info(info):
+        sip,port= info
+        sip = sip.strip()
+        if tcpping(host=sip, port=port, timeout=3):
+            try:
+                Ssh = SSH.ssh(ip=sip, ssh_port=port)
+                Ssh.Run('yum -y install dmidecode unzip zip md5sum')
+                Ssh.Close()
+            except:
+                pass
+            else:
+                try:
+                    Ssh = SSH.ssh(ip=sip, ssh_port=port)
+                    # 获取系统磁盘容量
+                    try:
+                        disk_size = ''
+                        disks = []
+                        values = Ssh.Run("cat /proc/partitions")
+                        for line in values['stdout']:
+                            line = line.strip('\n')
+                            if 'sd' in line or 'vd' in line or 'xvd' in line:
+                                try:
+                                    if int(line[-1]) >= 0 and 'xvd' not in line:
+                                        continue
+                                except:
+                                    disks.append(int(round(float(line.split()[-2]) / 1000 / 1000)))
+                                if 'xvd' in line:
+                                    try:
+                                        if int(line[-1]) >= 0:
+                                            disks.append(int(round(float(line.split()[-2]) / 1000 / 1000)))
+                                    except:
+                                        continue
+                        disk_count = len(disks)
+                        if disks:
+                            disk_size = '%sG' % disks[0]
+                            if disk_count > 1:
+                                disk_size = '%sG' % reduce(lambda x, y: x + y, disks)
+                    except Exception as e:
+                        logging.error(e)
+
+                    # 获取IP信息
+                    try:
+                        ips = ''
+                        IPS = []
+                        cmd = "ip a|grep 'inet '"
+                        values = Ssh.Run(cmd)
+                        for line in values['stdout']:
+                            IPS.append(line.strip('\n').split()[1].split('/')[0])
+                        if '127.0.0.1' in IPS:
+                            IPS.remove('127.0.0.1')
+                        if sip in IPS:
+                            IPS.remove(sip)
+                        if IPS:
+                            if len(IPS) == 1:
+                                ips = '%s;'%IPS[0]
+                            else:
+                                ips ='%s;'%';'.join(IPS[:4])
+                    except Exception as e:
+                        logging.error(e)
+
+                    #获取内存信息
+                    try:
+                        mem_size = ''
+                        cmd = "free -m"
+                        values = Ssh.Run(cmd)
+                        for line in values['stdout']:
+                            if 'Mem:' in line.strip('\n'):
+                                mem_size ='{0}G'.format(int(round(float(line.split()[1])/1000)))
+                                break
+                    except Exception as e:
+                        logging.error(e)
+
+                    # 获取CPU信息
+                    try:
+                        datas = []
+                        for cmd in ("cat /proc/cpuinfo|grep 'model name'|sed -n '1p' ", "cat /proc/cpuinfo|grep 'processor'|wc -l"):
+                            values = Ssh.Run(cmd)
+                            if values['stdout']:
+                                values = values['stdout'][0].strip('\n')
+                                if ':' in values:
+                                    values = values.split(':')[-1].strip()
+                                datas.append(values)
+                            else:
+                                datas.append('')
+                        db_server.query.filter(and_(db_server.ip==sip,db_server.ssh_port==port)).update({db_server.s_ip:ips,db_server.cpu_info:datas[0],db_server.cpu_core:datas[1],
+                                                                                                         db_server.mem:mem_size,db_server.disk_count:disk_count,db_server.disk_size:disk_size})
+                        db_idc.DB.session.commit()
+                    except Exception as e:
+                        logging.error(e)
+
+                    # 获取系统信息
+                    try:
+                        system = ''
+                        values = Ssh.Run("cat /etc/redhat-release")
+                        if values['stdout']:
+                            system = values['stdout'][0].strip()
+                        db_server.query.filter(and_(db_server.ip==sip,db_server.ssh_port==port)).update({db_server.system:system})
+                        db_idc.DB.session.commit()
+                    except Exception as e:
+                        logging.error(e)
+
+                    # 获取厂家信息
+                    try:
+                        infos = []
+                        for cmd in ('/usr/sbin/dmidecode -s system-serial-number', '/usr/sbin/dmidecode -s system-product-name', '/usr/sbin/dmidecode -s system-manufacturer'):
+                            values = Ssh.Run(cmd)
+                            if values['stdout']:
+                                infos.append(values['stdout'][0].strip('\n'))
+                            else:
+                                infos.append('Not Specified')
+                        if infos[-1] in PHYSICAL_TYPES:
+                            infos.append('physical')
+                        else:
+                            infos.append('vm')
+                        db_server.query.filter(and_(db_server.ip==sip,db_server.ssh_port==port)).update({db_server.sn:infos[0],db_server.productname:infos[1],
+                                                                                                         db_server.manufacturer:infos[2],db_server.host_type:infos[3]})
+                        db_idc.DB.session.commit()
+                    except Exception as e:
+                        logging.error(e)
+                except Exception as e:
+                    logging.error(e)
+                finally:
+                    Ssh.Close()
+    try:
+        loging.write("start get server infos ......")
+        if server_val:
+            pool = ThreadPool(5)
+            pool.map(get_info,server_val)
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        loging.write("get server infos complete!")
+        db_idc.DB.session.remove()
+
+@check.proce_lock
+def auto_discovery():
+    try:
+        loging.write("start %s ......" % auto_discovery.__name__)
+        db_ips = db_idc.resource_ip
+        db_idc_id = db_idc.idc_id
+        db_third = db_idc.third_resource
+        db_project = db_op.project_list
+        db_zabbix = db_idc.zabbix_info
+        db_server = db_idc.idc_servers
+        aids = db_ips.query.with_entities(db_ips.aid,db_ips.network).all()
+        aids = {aid[-1]:aid[0] for aid in aids}
+        exist_infos = db_server.query.with_entities(db_server.hostname,db_server.ip,db_server.ssh_port).all()
+        exist_hostname = set([info[0] for info in exist_infos])
+        exist_hosts = ["%s:%s"%(info[1],info[2]) for info in exist_infos]
+        hosts_list = tools.get_server_list()
+        dt = time.strftime('%Y-%m-%d', time.localtime())
+        server_ensure = []
+        Key = "op_disconnet_assets_count"
+        RC.delete(Key)
+        if RC.exists('server_ensure'):
+            server_ensure = RC.smembers('server_ensure')
+        def discovery(info):
+            ip, ssh_port, hostname,idc = info
+            aid = aids[idc]
+            if hostname not in exist_hostname:
+                if "%s:%s" %(ip,ssh_port) in exist_hosts:
+                    db_server.query.filter(and_(db_server.ip == ip,db_server.ssh_port == ssh_port)).update({db_server.hostname:hostname})
+                    db_idc.DB.session.commit()
+                else:
+                    if tcpping(host=ip, port=ssh_port, timeout=15):
+                        try:
+                            Ssh = SSH.ssh(ip=ip, ssh_port=ssh_port)
+                        except:
+                            if '%s:%s' % (ip, ssh_port) not in server_ensure:
+                                RC.hset('ssh_login_fault_%s'%dt, '%s:%s' % (ip, ssh_port), aid)
+                                RC.sadd(Key, hostname)
+                        else:
+                            val = None
+                            Ssh.Run("yum -y install dmidecode iproute")
+                            #自动识别变更新ip地址
+                            sn_val = Ssh.Run('/usr/sbin/dmidecode -s system-serial-number')
+                            if sn_val['stdout']:
+                                if 'Specified' not in sn_val['stdout']:
+                                    sn = sn_val['stdout']
+                                    val = db_server.query.with_entities(db_server.ip,db_server.ssh_port).filter(db_server.sn==sn).all()
+                                    if val:
+                                        sip,ssh_port = val[0]
+                                        #修改资产表
+                                        db_server.query.filter(db_server.sn==sn).update({db_server.ip:ip})
+                                        db_idc.DB.session.commit()
+                                        #修改第三方资源表
+                                        db_third.query.filter(and_(db_third.ip == sip,db_third.ssh_port == ssh_port)).update({db_third.ip:ip})
+                                        db_idc.DB.session.commit()
+                                        #修改自有服务资源表
+                                        db_project.query.filter(and_(db_project.ip == sip,db_project.ssh_port == ssh_port)).update({db_project.ip:ip})
+                                        db_op.DB.session.commit()
+                                        #修改zabbix信息表
+                                        db_zabbix.query.filter(and_(db_zabbix.ip == sip,db_zabbix.ssh_port == ssh_port)).update({db_zabbix.ip:ip})
+                                        db_idc.DB.session.commit()
+                            if not val:
+                                dmi_val = Ssh.Run("/usr/sbin/dmidecode -s system-manufacturer")
+                                if dmi_val['stdout']:
+                                    if dmi_val['stdout'][0].strip('\n') in PHYSICAL_TYPES:
+                                        v = db_server(idc_id=1053,ip=ip, ssh_port=ssh_port, s_ip='', host_type='physical', hostname=hostname, sn='',
+                                                      manufacturer='', productname='',
+                                                      system='', cpu_info='', cpu_core=0, mem='',disk_count=0, disk_size='', idrac='',
+                                                      purch_date='',
+                                                      expird_date='', status='新发现', comment='')
+                                        db_idc.DB.session.add(v)
+                                        db_idc.DB.session.commit()
+                                    else:
+                                        #判断机房机柜信息
+                                        idc_id = db_idc_id.query.with_entities(db_idc_id.id).filter(and_(db_idc_id.aid==aid,db_idc_id.cid == 'KVM')).all()
+                                        if not idc_id:
+                                            c = db_idc_id(aid=aid,cid='KVM')
+                                            db_idc.DB.session.add(c)
+                                            db_idc.DB.session.commit()
+                                        idc_id = db_idc_id.query.with_entities(db_idc_id.id).filter(and_(db_idc_id.aid == aid, db_idc_id.cid == 'KVM')).all()
+                                        idc_id = int(idc_id[0][0])
+                                        v = db_server(idc_id=idc_id,ip=ip,ssh_port=ssh_port,s_ip='',host_type='vm',hostname=hostname,sn='',manufacturer='',productname='',
+                                                      system='',cpu_info='',cpu_core=0,mem='',disk_count=0,disk_size='',idrac='',purch_date=dt,expird_date='2999-12-12',status='使用中',comment='')
+                                        db_idc.DB.session.add(v)
+                                        db_idc.DB.session.commit()
+                                    for cmd in ("yum -y install dmidecode","chmod +s /usr/sbin/dmidecode"):
+                                        Ssh.Run(cmd)
+                                    loging.write("auto discovery new server %s %s" %(ip,hostname))
+                                    RC.hdel('ssh_login_fault_%s'%dt, '%s:%s' % (ip, ssh_port))
+                                    RC.hdel('ssh_port_fault_%s'%dt, '%s:%s' % (ip, ssh_port))
+                    else:
+                        if '%s:%s' % (ip, ssh_port) not in server_ensure:
+                            RC.hset('ssh_port_fault_%s'%dt, '%s:%s' % (ip, ssh_port),aid)
+                            RC.sadd(Key,hostname)
+        if hosts_list:
+            pool = ThreadPool(10)
+            pool.map(discovery,hosts_list)
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        loging.write("%s complete" %auto_discovery.__name__)
+        db_idc.DB.session.remove()
+        db_op.DB.session.remove()
+
+@check.proce_lock
+def get_app_service():
+    def app_service(info):
+        apps = defaultdict()
+        app_ports = []
+        ip, ssh_port = info
+        # 判断ssh端口是否可连通
+        if tcpping(host=ip, port=ssh_port, timeout=3):
+            #获取应用监听端口
+            try:
+                Ssh = SSH.ssh(ip=ip, ssh_port=ssh_port)
+                try:
+                    pf = Ssh.Run("ss -l -t -4 -n -p")['stdout']
+                    for line in pf:
+                        if '*:*' in line:
+                            line = line.strip().split()
+                            try:
+                                app = line[-1].split('"')[1]
+                                pid = line[-1].split('"')[2].split(',')[1].split('=')[-1]
+                                app_port = line[3].split(':')[-1]
+                            except:
+                                continue
+                            if app and pid and app_port:
+                                try:
+                                    app_port = int(app_port)
+                                except:
+                                    continue
+                                else:
+                                    apps['%s:%s:%s' %(app,pid,app_port)] = app_port
+                    # 单独获取lvs,keepalived
+                    out_vals = Ssh.Run("ipvsadm -ln|wc -l")
+                    if out_vals['stdout']:
+                        if int(out_vals['stdout'][0]) > 3:
+                            app_ports.append('lvs:0')
+                    out_vals = Ssh.Run("ps -ef|grep keepalived|grep -v grep")
+                    if out_vals['stdout']:
+                        for line in out_vals['stdout']:
+                            if 'keepalived' in line:
+                                app_ports.append('keepalived:0')
+                except:
+                    pass
+                else:
+                    if apps:
+                        #删除已下架自有服务
+                        vals = db_project.query.with_entities(db_project.app_port).filter(and_(db_project.ip == ip, db_project.ssh_port == ssh_port,db_project.resource.in_(('tomcat',)))).all()
+                        if vals:
+                            ports = set([int(apps[app]) for app in apps])
+                            for val in vals:
+                                if int(val[0]) not in ports:
+                                    v = db_project.query.filter(and_(db_project.ip == ip, db_project.ssh_port == ssh_port,db_project.app_port==int(val[0]))).all()
+                                    for c in v:
+                                        db_op.DB.session.delete(c)
+                                        db_op.DB.session.commit()
+                                    loging.write('delete self service %s %s' % (ip,val[0]))
+                        #清洗应用服务数据
+                        for info in apps:
+                            try:
+                                app = info.split(':')[0]
+                                app_port = int(apps[info])
+                                #java单独处理
+                                if app =='java':
+                                    #判断是不是自有资源服务
+                                    val = db_project.query.filter(and_(db_project.ip == ip, db_project.ssh_port == ssh_port,db_project.app_port == app_port)).all()
+                                    if not val:
+                                        out_vals = Ssh.Run("ps -ef|grep java|grep -v grep")
+                                        for line in out_vals['stdout']:
+                                            for java_app in cluster_apps:
+                                                if java_app in line:
+                                                    if java_app == 'KFK':
+                                                        java_app = 'kafka'
+                                                    if java_app == 'ZK':
+                                                        java_app = 'zookeeper'
+                                                    app_ports.append('%s:0'%java_app)
+                                        if app_port in RPCS.keys():
+                                            app_ports.append('%s:%s' %(RPCS[app_port],app_port))
+                                        #发现新的自有服务资源写入数据库
+                                        val = db_project.query.with_entities(db_project.resource,db_project.project,db_project.domain,db_project.business_id).filter(and_(db_project.app_port == app_port,db_project.resource.in_(('tomcat',)))).first()
+                                        if val:
+                                            resource, project, domain, business_id = val
+                                            loging.write('find new self service %s %s %s' %(ip,app_port,project))
+                                            c = db_project(resource=resource,project=project,domain=domain,ip=ip,ssh_port=ssh_port,app_port=app_port,business_id=business_id,sys_args='java',env='生产',gray='',status='使用中',update_date=time.strftime('%Y-%m-%d',time.localtime()))
+                                            db_op.DB.session.add(c)
+                                            db_op.DB.session.commit()
+
+                                else:
+                                    if '-' in app:
+                                        app = app.split('-')[0]
+                                    if 'haprox' in app:
+                                        app = 'haproxy'
+                                    if 'kube' in app:
+                                        app = 'Kubernetes'
+                                    if 'memcache' in app:
+                                        app = 'memcached'
+                                    if 'rain_rate' in app:
+                                        app = 'rain_rate'
+                                    if 'Accuweather' in app:
+                                        app = 'Accuweather'
+                                    app = app.replace('(', '')
+                                    #判断是否在统计应用列表里
+                                    if app in in_apps:
+                                        if app in cluster_apps:
+                                            app_port = 0
+                                        if 'nginx' in app:
+                                            app_port = 80
+                                        app_ports.append("%s:%s" %(app,app_port))
+                                    else:
+                                        RC_CLUSTER.sadd('op_exclude_apps',"%s:%s" %(app,app_port))
+                            except Exception as e:
+                                logging.error(e)
+                        #写入第三方应用资源表
+                        if app_ports:
+                            application = db_third.query.with_entities(db_third.resource_type,db_third.app_port).filter(and_(db_third.ip == ip, db_third.ssh_port == ssh_port)).all()
+                            application = ['%s:%s' % (val[0], val[1]) for val in application]
+                            try:
+                                # 删除第三方应用服务列表,不删除手工录入信息
+                                for val in set(application):
+                                    if val not in set(app_ports):
+                                        if ':' in val:
+                                            app,app_port = val.split(':')
+                                            infos = db_third.query.with_entities(db_third.id,db_third.update_date).filter(and_(db_third.ip == ip,db_third.resource_type==app,db_third.app_port==int(app_port))).all()
+                                            if infos:
+                                                if '0000-00-00' not in infos[0]:
+                                                    third_id = infos[0][0]
+                                                    # 清除项目资源表
+                                                    c = db_project_third.query.filter(db_project_third.third_id == int(third_id)).all()
+                                                    if c:
+                                                        for v in c:
+                                                            db_op.DB.session.delete(v)
+                                                            db_op.DB.session.commit()
+                                                    #清除第三方资源表
+                                                    c = db_third.query.filter(db_third.id == int(third_id)).all()
+                                                    if c:
+                                                        for v in c:
+                                                            db_idc.DB.session.delete(v)
+                                                            db_idc.DB.session.commit()
+                                                    loging.write('del app service %s %s %s ' % (ip, app, app_port))
+                            except Exception as e:
+                                logging.error(e)
+                            try:
+                                #新增第三方资源信息
+                                for val in set(app_ports):
+                                    if val not in set(application):
+                                        if ':' in val:
+                                            app, app_port = val.split(':')
+                                            RC.sadd('third_app_counts', app)
+                                            cluster_type = '非集群'
+                                            if app in cluster_apps:
+                                                cluster_type = '集群模式'
+                                            if app == 'hadoop':
+                                                v = db_third(resource_type=app, cluster_type=cluster_type, ip=ip,
+                                                         ssh_port=ssh_port, app_port=int(app_port),busi_id=0, department='',
+                                                         person='', contact='', status='使用中',update_date=time.strftime('%Y-%m-%d',time.localtime()))
+                                            else:
+                                                v = db_third(resource_type=app, cluster_type=cluster_type, ip=ip,
+                                                         ssh_port=ssh_port, app_port=int(app_port), department='TPD',busi_id=0,
+                                                         person='章汉龙', contact='18901053089', status='使用中',update_date=time.strftime('%Y-%m-%d',time.localtime()))
+                                            db_idc.DB.session.add(v)
+                                            db_idc.DB.session.commit()
+                                            loging.write('add new app service %s %s %s' % (app, ip, app_port))
+                                            # 新发现数据库写入mysql信息表
+                                            if app == 'mysqld':
+                                                db_v = db_mysqld(ip=ip, port=int(app_port), db='', master='否',slave='否',
+                                                                 Master_Host='',Master_Port='',Master_User='')
+                                                db_idc.DB.session.add(db_v)
+                                                db_idc.DB.session.commit()
+                            except Exception as e:
+                                logging.error(e)
+            except:
+                pass
+            else:
+                Ssh.Close()
+    try:
+        loging.write("start run %s ......" %get_app_service.__name__)
+        db_server = db_idc.idc_servers
+        db_third = db_idc.third_resource
+        db_project = db_op.project_list
+        db_project_third = db_op.project_third
+        db_mysqld = db_idc.idc_mysqldb
+        RPCS = {9003:'weather-rpc', 9103:'location-rpc',9012:'sns-rpc',8647:'siriasis-rpc',8646:'sharebg-rpc',8648:'running-rpc',8649:'allergy-rpc'}
+        cluster_apps = ('KFK', 'hadoop', 'cachecloud', 'elasticsearch', 'ZK', 'kafka', 'zookeeper','codis','Kubernetes','mongod','haproxy','lvs','keepalived','docker')
+        in_apps = ['redis','nginx','mysqld','zookeeper','hadoop','elasticsearch','kafka','Kubernetes','codis','mongod','haproxy','docker','keepalived','rain_rate','searchd',
+                   'cachecloud','java','lvs','memcached','Accuweather','influxd','etcd']
+        in_apps.extend(RPCS.values())
+        infos = db_server.query.with_entities(db_server.ip,db_server.ssh_port).filter(and_(db_server.status !='维护中',db_server.comment != '跳过')).all()
+        if infos:
+            pool = ThreadPool(10)
+            pool.map(app_service,infos)
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        loging.write("%s complete!"  %get_app_service.__name__)
+        db_idc.DB.session.remove()
+        db_op.DB.session.remove()
+
+@check.proce_lock
+def get_project_app():
+    def get_third_app(app_list):
+        try:
+            project_id, project, ip, ssh_port, app_port = app_list
+            access_resource = []
+            Ssh = SSH.ssh(ip=ip, ssh_port=ssh_port)
+            Ssh.Run("yum -y install iproute")
+            #获取应用活动连接
+            values = Ssh.Run("ss -l -t -4 -n -p|grep {0}".format(app_port))
+            try:
+                if values['stdout']:
+                    app_pid = values['stdout'][0].strip().split()[-1].split(',')[1]
+                    if app_pid:
+                        values = Ssh.Run("lsof -i -n -P|grep EST|grep {0}".format(app_pid))
+                        if values['stdout']:
+                            for line in values['stdout']:
+                                if '->' in line:
+                                    line = line.split()[8]
+                                    if '->' in line:
+                                        access_resource.append(line.split('->')[-1])
+            except Exception as e:
+                logging.error(e)
+            Ssh.Close()
+        except:
+            pass
+        else:
+            if access_resource:
+                for info in set(access_resource):
+                    try:
+                        idc_ids = []
+                        third_ip, third_port = info.split(':')
+                        if '127.0.0.1' in third_ip:
+                            third_ip = ip
+                        # 获取机房机柜ID
+                        vals = db_servers.query.with_entities(db_servers.idc_id).filter(and_(db_servers.ip==ip,db_servers.ssh_port==ssh_port)).all()
+                        if vals:
+                            idc_id = vals[0][0]
+                            # 获取机房信息
+                            vals = db_idc_id.query.with_entities(db_idc_id.aid).filter(db_idc_id.id==idc_id).all()
+                            if vals:
+                                aid = vals[0][0]
+                                # 获取机房下所有机柜ID
+                                vals = db_idc_id.query.with_entities(db_idc_id.id).filter(db_idc_id.aid==aid).all()
+                                if vals:
+                                    idc_ids = [val[0] for val in vals]
+                        # 获取web服务器机房机柜信息
+                        vals = db_servers.query.with_entities(db_servers.ip,db_servers.ssh_port).filter(and_(db_servers.ip==third_ip,db_servers.idc_id.in_(tuple(idc_ids)))).all()
+                        if vals:
+                            third_ip, third_ssh_port = vals[0]
+                        else:
+                            vals = db_servers.query.with_entities(db_servers.ip, db_servers.ssh_port).filter(and_(db_servers.s_ip.like('%s{0};%'.format(third_ip)), db_servers.idc_id.in_(tuple(idc_ids)))).all()
+                            if vals:
+                                third_ip, third_ssh_port = vals[0]
+                            else:
+                                third_ip = third_ssh_port = None
+                        # 获取远程资源应用名称
+                        if third_ip and third_ssh_port:
+                            third_id = None
+                            # 查找应用服务ID
+                            vals = db_third.query.with_entities(db_third.id).filter(and_(db_third.ip==third_ip,db_third.ssh_port==third_ssh_port,db_third.app_port==third_port)).all()
+                            if vals:
+                                third_id = vals[0][0]
+                            else:
+                                vals = db_third.query.with_entities(db_third.id).filter(and_(db_third.ip == third_ip, db_third.ssh_port == third_ssh_port,db_third.app_port=='')).all()
+                                if vals:
+                                    if len(vals[0]) == 1:
+                                        third_id = vals[0][0]
+                            if third_id:
+                                vals = db_project_third.query.filter(and_(db_project_third.project == project,db_project_third.project_id == project_id,db_project_third.third_id == third_id)).all()
+                                if not vals:
+                                    v = db_project_third(project=project, project_id=project_id,third_id=third_id)
+                                    db_op.DB.session.add(v)
+                                    db_op.DB.session.commit()
+                                    loging.write('add project app_service %s  %s  %s' % (project, project_id, third_id))
+                    except Exception as e:
+                        logging.error(e)
+    try:
+        db_servers = db_idc.idc_servers
+        db_third = db_idc.third_resource
+        db_idc_id = db_idc.idc_id
+        db_project_third = db_op.project_third
+        db_project = db_op.project_list
+        app_lists = db_project.query.with_entities(db_project.id,db_project.project,db_project.ip,db_project.ssh_port,db_project.app_port).filter(db_project.resource.in_(('tomcat',))).all()
+        if app_lists:
+            pool = ThreadPool(10)
+            pool.map(get_third_app,app_lists)
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_op.DB.session.remove()
+        db_idc.DB.session.remove()
+
+@check.proce_lock
+def server_per():
+    def get_per(host_info):
+        host,ssh_port,hostname,cpu_core= host_info
+        icmpping = 0
+        disk_io = 0
+        mem_use = 0
+        cpu_load = 0
+        openfile = 0
+        if tcpping(host=host, port=ssh_port, timeout=5):
+            try:
+                icmpping = 1
+                Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
+            except:
+                pass
+            else:
+                ssh_values = Ssh.Run('cat /proc/sys/fs/file-nr')
+                if ssh_values['stdout']:
+                    openfile = int(ssh_values['stdout'][0].split('\t')[0])
+                ssh_values = Ssh.Run('w')
+                if ssh_values['stdout']:
+                    cpu_load = int(int(float(ssh_values['stdout'][0].split(',')[-2]))/int(cpu_core)*100)
+                ssh_values = Ssh.Run('free -g')
+                if ssh_values['stdout']:
+                    mem_use = int(float(ssh_values['stdout'][1].split()[2])/float(ssh_values['stdout'][1].split()[1])*100)
+                ssh_values = Ssh.Run('iostat -c')
+                if ssh_values['stdout']:
+                    disk_io = float(ssh_values['stdout'][3].split()[3])
+                Ssh.Close()
+        #写入数据库
+        try:
+            tm = time.strftime('%Y-%m-%d %H:%M:%S')
+            val = db_zabbix.query.filter(and_(db_zabbix.ip==host,db_zabbix.ssh_port==ssh_port,db_zabbix.hostname==hostname)).all()
+            if val:
+                db_zabbix.query.filter(and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port, db_zabbix.hostname == hostname)).update({db_zabbix.icmpping:icmpping,db_zabbix.cpu_load:cpu_load,
+                                                                            db_zabbix.mem_use:mem_use,db_zabbix.disk_io:disk_io,db_zabbix.openfile:openfile,db_zabbix.update_time:tm})
+                db_idc.DB.session.commit()
+            else:
+                v=db_zabbix(ip=host,ssh_port=ssh_port,hostname=hostname,icmpping=icmpping,cpu_load=cpu_load,
+                            mem_use=mem_use,disk_io=disk_io,openfile=openfile,disk_path='',network='',update_time=tm)
+                db_idc.DB.session.add(v)
+                db_idc.DB.session.commit()
+            if icmpping == 1:
+                now_date = datetime.datetime.now()
+                dm = now_date.strftime('%Y-%m-%dT%H:%M:00Z')
+                # 写入influxdb数据库
+                json_body = [{"measurement": "server_infos", "tags": {"ip": host, "ssh_port": ssh_port,"hostname":hostname},
+                                  "fields": {'cpu_load':cpu_load,'mem_use':mem_use,'openfile':openfile}, "time": dm}]
+                Influx_cli.write_points(json_body)
+        except Exception as e:
+            logging.error(e)
+
+        #获取服务器在zabbix的磁盘和网络信息
+        try:
+            Key = "zabbix_history_%s_%s" % (host, ssh_port)
+            val = db_zabbix.query.with_entities(db_zabbix.disk_path,db_zabbix.network).filter(and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port, db_zabbix.hostname == hostname)).all()
+            if val:
+                if None not in val[0]:
+                    disks,networks = val[0]
+                    if ',' in disks and ',' in networks:
+                        for disk_path in disks.split(','):
+                            try:
+                                v = zabi.zabbix_history(hostname, 'vfs.fs.size[%s,pfree]' % disk_path)
+                                if not v:
+                                    v = zabi.zabbix_history(host, 'vfs.fs.size[%s,pfree]' % disk_path)
+                                RC.hset(Key, disk_path, 100 - int(float(v)))
+                            except:
+                                continue
+                        for network in networks.split(','):
+                            try:
+                                v = zabi.zabbix_history(hostname,'net.if.in[%s]' %network)
+                                if not v:
+                                    v = zabi.zabbix_history(host,'net.if.in[%s]' %network)
+                                RC.hset(Key, 'in_%s' %network, int(float(v)/ 1000 / 1000))
+                                v = zabi.zabbix_history(hostname,'net.if.out[%s]'%network)
+                                if not v:
+                                    v = zabi.zabbix_history(host,'net.if.out[%s]' %network)
+                                RC.hset(Key, 'out_%s' % network,int(float(v) / 1000 / 1000))
+                            except:
+                                continue
+                        RC.expire(Key, 86400)
+        except Exception as e:
+            logging.error(e)
+    try:
+        zabi = tools.zabbix_api()
+        db_server = db_idc.idc_servers
+        db_zabbix = db_idc.zabbix_info
+        host_infos = db_server.query.with_entities(db_server.ip, db_server.ssh_port, db_server.hostname,db_server.cpu_core).filter(and_(db_server.status !='维护中',db_server.comment !='跳过')).all()
+        Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw, 'zabbix_infos')
+        if host_infos:
+            host_infos = [info for info in host_infos if info]
+            pool = ThreadPool(5)
+            pool.map(get_per, host_infos)
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        zabi.zabbix_logout()
+        db_idc.DB.session.remove()
+
+@check.proce_lock
+def zabbix_triggers():
+    zabi = tools.zabbix_api()
+    tm = time.strftime('%H:%M', time.localtime())
+    Key = 'zabbix_triggers_%s' % tm
+    IDS_Key = 'zabbix_ids_%s' % tm
+    try:
+        RC.delete(Key)
+        ID_ensure = []
+        priority = {'2': '警告','3': '严重', '4': '危险', '5': '灾难'}
+        # 获取zabbix报警信息
+        z_triggers = zabi.zapi.trigger.get(only_true=1, skipDependent=1, monitored=1, active=1,
+                                      output=["triggerid", "description", "priority"],
+                                      filter={"value": 1}, sortfield="priority", sortorder="DESC", expandDescription=1,
+                                      withLastEventUnacknowledged=1)
+        if RC.exists('zabbix_ensure'):
+            ID_ensure = RC.smembers('zabbix_ensure')
+        for result in z_triggers:
+            try:
+                if str(int(result['priority'])) in priority.keys():
+                    try:
+                        ID = Md5.Md5_make(result['description'])
+                    except Exception as e:
+                        logging.error(e)
+                    try:
+                        #完整报警列表
+                        RC.sadd(IDS_Key,ID)
+                        #展示未确认的报警
+                        if ID not in ID_ensure:
+                            RC.hset(Key,ID,result['description'])
+                    except Exception as e:
+                        logging.error(e)
+            except Exception as e:
+                logging.error(e)
+                continue
+        #已确认报警是否已恢复
+        if RC.exists(IDS_Key):
+            for ID in ID_ensure:
+                if ID not in RC.smembers(IDS_Key):
+                    RC.srem('zabbix_ensure',ID)
+        #获取天气信息
+        th = time.strftime('%H',time.localtime())
+        rth = RC_CLUSTER.get('op_get_weather_value')
+        if rth != th:
+            RC_CLUSTER.set('op_get_weather_value', th)
+            try:
+                url = "http://t.weather.sojson.com/api/weather/city/101010100"
+                f = requests.get(url)
+                INFOS = f.json()
+                city = INFOS['cityInfo']['city']
+                Key = 'weather_inofs'
+                RC_CLUSTER.hset(Key,'city',city)
+                DATAS = INFOS['data']
+                wendu = DATAS['wendu']
+                RC_CLUSTER.hset(Key, 'wendu', wendu)
+                quality = DATAS['quality']
+                RC_CLUSTER.hset(Key, 'quality', quality)
+                forecast = DATAS['forecast'][1]
+                type = forecast['type']
+                RC_CLUSTER.hset(Key, 'type', type)
+                high = forecast['high'].split()[-1]
+                RC_CLUSTER.hset(Key, 'high', high)
+                RC_CLUSTER.expire(Key,86400)
+            except Exception as e:
+                logging.error(e)
+    except Exception as e:
+        logging.error(e)
+    finally:
+        RC.expire(Key,3600)
+        RC.expire(IDS_Key,3600)
+        zabi.zabbix_logout()
+
+@check.proce_lock
+def zabbix_disk_network():
+    def get_zabbix(infos):
+        disk_paths = []
+        networks = []
+        results = zabi.zapi.host.get(filter={"host": [infos[-1]]})
+        if not results:
+            results = zabi.zapi.host.get(filter={"host": [infos[0]]})
+        if results:
+            hostid = results[0]['hostid']
+            results = zabi.zapi.item.get(hostids=hostid, output=["itemids", 'key_'])
+            if results:
+                for result in results:
+                    itemid = result['itemid']
+                    for history in (0, 1, 2, 3, 4):
+                        vals = zabi.zapi.history.get(history=history, itemids=itemid, limit=1, sortfield='clock',sortorder="DESC")
+                        if vals:
+                            if 'vfs.fs.size' in result['key_'] and ',pfree]' in result['key_']:
+                                disk_path = result['key_'].split('[')[-1].split(',')[0]
+                                disk_paths.append(disk_path)
+                            if 'net.if.in' in result['key_']:
+                                networks.append(result['key_'].split('[')[-1].replace(']', ''))
+                            if 'net.if.out' in result['key_']:
+                                networks.append(result['key_'].split('[')[-1].replace(']', ''))
+        if disk_paths and networks:
+            disk_path = ','.join(set(disk_paths))
+            network = ','.join(set(networks))
+            # 修改数据库表数据
+            db_zabbix.query.filter(and_(db_zabbix.ip == infos[0], db_zabbix.ssh_port == infos[1], db_zabbix.hostname == infos[2])).update(
+                    {db_zabbix.network: network, db_zabbix.disk_path: disk_path})
+            db_idc.DB.session.commit()
+    try:
+        zabi = tools.zabbix_api()
+        db_zabbix = db_idc.zabbix_info
+        host_infos = db_zabbix.query.with_entities(db_zabbix.ip,db_zabbix.ssh_port,db_zabbix.hostname).all()
+        if host_infos:
+            pool = ThreadPool(3)
+            pool.map(get_zabbix,host_infos)
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        zabi.zabbix_logout()
+        db_idc.DB.session.remove()
+
+@check.proce_lock
+def es_get_log_status():
+    lte_date = datetime.datetime.now()
+    gte_date = lte_date - datetime.timedelta(minutes=1)
+    lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    try:
+        #获取es当前1分钟的数据
+        res = helpers.scan(es, index='logstash-nginx-log-*', query={"query": {
+            "bool": {
+                "must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}}],
+                "must_not": [{"terms": {"status": [200, 301, 302, 304]}}]}}})
+        for info in res:
+            try:
+                if info['_source']:
+                    info = info['_source']
+                    if 'time_iso8601' in info:
+                        try:
+                            time_d, time_t = tools.time_format(info['time_iso8601'])
+                        except Exception as e:
+                            logging.error(e)
+                        else:
+                            if 'upstream_addr' not in info:
+                                info['upstream_addr'] = '-'
+                            vals = [info[k] for k in ('remote_addr','status','host','uri','upstream_addr','upstream_response_time') if k in info]
+                            vals.append(time_t)
+                            counts_logs(vals)
+            except Exception as e:
+                logging.error(e)
+                continue
+    except Exception as e:
+        logging.error(e)
+
+@check.proce_lock
+def es_get_log_time():
+    lte_date = datetime.datetime.now()
+    gte_date = lte_date - datetime.timedelta(minutes=1)
+    lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    try:
+        #响应时间大于1秒的日志
+        res = helpers.scan(es, index='logstash-nginx-log-*', query={"query": {"bool": {"must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                            {"terms": {"status": [200, 301, 302, 304]}},{"range": {"upstream_response_time": {"gte": 1}}}]},}})
+        for info in res:
+            try:
+                if info['_source']:
+                    info = info['_source']
+                    if 'time_iso8601' in info:
+                        try:
+                            time_d, time_t = tools.time_format(info['time_iso8601'])
+                        except Exception as e:
+                            logging.error(e)
+                        else:
+                            if 'upstream_addr' not in info:
+                                info['upstream_addr'] = '-'
+                            vals = [info[k] for k in ('remote_addr','status','host','uri','upstream_addr','upstream_response_time')]
+                            vals.append(time_t)
+                            counts_logs(vals)
+            except Exception as e:
+                logging.error(e)
+                continue
+    except Exception as e:
+        logging.error(e)
+
+@check.proce_lock
+def cron_run_task():
+    loging.write("start run %s ......" %cron_run_task.__name__)
+    try:
+        # 清理资产资源表残留信息
+        MY_SQL = Mysql.MYSQL(db='mysql')
+        cmds = ("delete FROM op.project_third where project not in (select DISTINCT(project)from op.project_list);",
+                "delete FROM op.project_other where server_id not in (select id from idc.servers);",
+                "delete FROM op.project_third where third_id not in (select id from idc.third_resource);",
+                "delete FROM idc.crontabs where server_id not in (select id from idc.servers);",
+                "delete FROM idc.hosts where server_id not in (select id from idc.servers);",
+                )
+        for cmd in cmds:
+            MY_SQL.Run(cmd)
+        cmd = "select ip,ssh_port from idc.third_resource;"
+        values = MY_SQL.Run(cmd)
+        for vals in values:
+            ip,ssh_port = vals
+            cmd = "select id from idc.servers where ip='%s' and ssh_port=%i" %(ip,ssh_port)
+            if not MY_SQL.Run(cmd):
+                cmd = "delete from idc.third_resource where ip='%s' and ssh_port=%i" %(ip,ssh_port)
+                MY_SQL.Run(cmd)
+        cmd = "select ip,ssh_port from op.project_list;"
+        values = MY_SQL.Run(cmd)
+        for vals in values:
+            ip, ssh_port = vals
+            cmd = "select id from idc.servers where ip='%s' and ssh_port=%i" % (ip, ssh_port)
+            if not MY_SQL.Run(cmd):
+                cmd = "delete from op.project_list where ip='%s' and ssh_port=%i" % (ip, ssh_port)
+                MY_SQL.Run(cmd)
+        #清理mysql表相关信息
+        cmd = "select ip,port from idc.mysqldb;"
+        values = MY_SQL.Run(cmd)
+        for vals in values:
+            ip, app_port = vals
+            cmd = "select id from idc.third_resource where ip='%s' and app_port=%i" % (ip, app_port)
+            if not MY_SQL.Run(cmd):
+                cmd = "delete from idc.mysqldb where ip='%s' and port=%i" % (ip, app_port)
+                MY_SQL.Run(cmd)
+        cmd = "select ip,port from idc.tableinfo;"
+        values = MY_SQL.Run(cmd)
+        for vals in values:
+            ip, port = vals
+            cmd = "select id from idc.mysqldb where ip='%s' and port=%i" % (ip,port)
+            if not MY_SQL.Run(cmd):
+                cmd = "delete from idc.tableinfo where ip='%s' and port=%i" % (ip,port)
+                MY_SQL.Run(cmd)
+        #清理zabbix信息表
+        cmd = "delete FROM idc.zabbix_info where update_time not like '{0} %';".format(time.strftime('%Y-%m-%d'),time.localtime())
+        MY_SQL.Run(cmd)
+        #清理redis信息表
+        db_third = db_idc.third_resource
+        db_servers = db_idc.idc_servers
+        db_redis = db_idc.redis_info
+        vals = db_third.query.with_entities(distinct(db_third.ip)).filter(db_third.resource_type=='redis').all()
+        vals = tuple([val[0] for val in vals])
+        ids = db_servers.query.with_entities(db_servers.id).filter(db_servers.ip.in_(vals)).all()
+        ids = tuple([int(id[0]) for id in ids])
+        v = db_redis.query.filter(~ db_redis.server_id.in_(ids)).all()
+        for c in v:
+            db_idc.DB.session.delete(c)
+            db_idc.DB.session.commit()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        loging.write("complete %s !" % cron_run_task.__name__)
+        MY_SQL.Close()
+        db_idc.DB.session.remove()
+
+def Get_project_lists():
+    #动态更新项目域名接口列表
+    try:
+        db_project = db_op.project_list
+        dt = time.strftime('%Y-%m-%d', time.localtime())
+        url = "http://172.16.21.39:8080/v1/app?limit=0"
+        f = requests.get(url)
+        for info in f.json():
+            try:
+                Key = 'api_domain_lists_%s' % dt
+                RC_CLUSTER.sadd(Key,info['domain'])
+                RC_CLUSTER.expire(Key,86400)
+                Key = 'api_uri_lists_%s_%s' % (info['domain'], dt)
+                RC_CLUSTER.sadd(Key, info['interface'])
+                RC_CLUSTER.expire(Key,86400)
+                #更新项目对应域名列表
+                RC_CLUSTER.sadd('get_api_projects_%s'%dt, info['name'])
+                RC_CLUSTER.expire('get_api_projects_%s'%dt,86400)
+                RC_CLUSTER.sadd("get_api_%s_%s" %(info['name'],dt), info['domain'])
+                RC_CLUSTER.expire("get_api_%s_%s" % (info['name'], dt),86400)
+            except Exception as e:
+                logging.error(e)
+        for project in RC_CLUSTER.smembers('get_api_projects_%s'%dt):
+            try:
+                domains = RC_CLUSTER.smembers("get_api_%s_%s" % (project,dt))
+                if domains:
+                    domains = '%s,'%','.join(domains)
+                values = db_project.query.filter(db_project==project).all()
+                if values:
+                    db_project.query.filter(db_project==project).update({db_project.domain:domains})
+                    db_op.DB.session.commit()
+            except Exception as e:
+                logging.error(e)
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_op.DB.session.remove()
+
+@check.proce_lock
+def check_host_exist():
+    #探测应用服务及服务器是否存活
+    try:
+        dt = time.strftime('%Y-%m-%d', time.localtime())
+        db_idc_id = db_idc.idc_id
+        db_server = db_idc.idc_servers
+        aid = db_idc_id.query.with_entities(db_idc_id.id,db_idc_id.aid).all()
+        aid = {info[0]:info[1] for info in aid}
+        server_ensure = []
+        if RC.exists('server_ensure'):
+            for info in RC.smembers('server_ensure'):
+                login_fault = RC.hkeys('ssh_login_fault_%s'%dt)
+                port_fault = RC.hkeys('ssh_port_fault_%s'%dt)
+                if info not in login_fault and info not in port_fault:
+                    RC.srem('server_ensure',info)
+            server_ensure = RC.smembers('server_ensure')
+        server_val = db_server.query.with_entities(db_server.ip, db_server.ssh_port,db_server.idc_id).filter(and_(db_server.status != '维护中', db_server.comment != '跳过')).all()
+        for info in server_val:
+            ip,ssh_port,idc_id = info
+            if tcpping(host=ip, port=ssh_port, timeout=3):
+                RC.hdel('ssh_port_fault_%s'%dt, '%s:%s' % (ip, ssh_port))
+                try:
+                    Ssh = SSH.ssh(ip=ip, ssh_port=ssh_port)
+                    Ssh.Run('whoami')
+                    Ssh.Close()
+                except:
+                    if '%s:%s' % (ip, ssh_port) not in server_ensure:
+                        RC.hset('ssh_login_fault_%s'%dt, '%s:%s' % (ip, ssh_port), aid[idc_id])
+                else:
+                    RC.hdel('ssh_login_fault_%s'%dt, '%s:%s' % (ip, ssh_port))
+                    RC.hdel('ssh_port_fault_%s'%dt, '%s:%s' % (ip, ssh_port))
+            else:
+                if '%s:%s' % (ip, ssh_port) not in server_ensure:
+                    RC.hset('ssh_port_fault_%s'%dt, '%s:%s' % (ip, ssh_port), aid[idc_id])
+    except Exception as e:
+        logging.error(e)
     finally:
         db_idc.DB.session.remove()
+
+@check.proce_lock
+def business_alarm():
+    #获取业务接口性能数据
+    loging.write("start %s ......" %business_alarm.__name__)
+    try:
+        try:
+            db_influxdb_alarm = db_idc.influxdb_alarm
+            Keys = ('avg_resp','status_5xx', 'status_4xx', 'resp_1000','pv')
+            Dbs = {'avg_resp':db_influxdb_alarm.avg_resp,
+                   'status_5xx':db_influxdb_alarm.status_5xx,
+                   'status_4xx':db_influxdb_alarm.status_4xx,
+                   'resp_1000':db_influxdb_alarm.resp_1000}
+            dd = time.strftime('%Y-%m-%d', time.localtime())
+            dt = datetime.datetime.now()
+            nt = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+            #采样时间段
+            t = 3
+            # 环比时间
+            tt = dt - datetime.timedelta(minutes=t)
+            ot = dt - datetime.timedelta(minutes=t * 2)
+            tt = tt.strftime('%Y-%m-%dT%H:%M:%SZ')
+            ot = ot.strftime('%Y-%m-%dT%H:%M:%SZ')
+            # 同比时间
+            sdt = dt - datetime.timedelta(days=1)
+            stt = sdt - datetime.timedelta(minutes=t)
+            sot = sdt - datetime.timedelta(minutes=t * 2)
+            stt = stt.strftime('%Y-%m-%dT%H:%M:%SZ')
+            sot = sot.strftime('%Y-%m-%dT%H:%M:%SZ')
+            #获取指定域名列表
+            Key = 'api_domain_lists_%s' % dd
+            hosts = RC_CLUSTER.smembers(Key)
+            # 获取当前时间段域名接口列表
+            cmd = "select host,uri,avg_resp from analysis_logs WHERE time >= '%s' and time <='%s'" % (tt, nt)
+            result = Influx_cli.query(cmd)
+        except Exception as e:
+            logging.error(e)
+        else:
+            try:
+                host_key = 'influx_hosts_%s' % nt
+                for infos in result.get_points():
+                    host = infos['host'].replace("'", '')
+                    if host in hosts:
+                        uri = infos['uri'].replace("'", '')
+                        # 获取指定域名接口列表
+                        Key = 'api_uri_lists_%s_%s' % (host, dd)
+                        uris = RC_CLUSTER.smembers(Key)
+                        if uri in uris:
+                            uri_key = 'influx_%s_%s' % (host, nt)
+                            RC.sadd(host_key, host)
+                            RC.expire(host_key,3600)
+                            RC.sadd(uri_key, uri)
+                            RC.expire(uri_key, 3600)
+            except Exception as e:
+                logging.error(e)
+            else:
+                for host in RC.smembers(host_key):
+                    uri_key = 'influx_%s_%s' % (host, nt)
+                    for uri in RC.smembers(uri_key):
+                        try:
+                            now_infos = defaultdict()
+                            old_infos = defaultdict()
+                            bef_infos = defaultdict()
+                            try:
+                                #获取当前数据
+                                cmd = "select mean(*) from analysis_logs WHERE time >= '%s' and time <='%s' and host='%s' and uri='%s'" % (
+                                tt, nt, host, uri)
+                                result = Influx_cli.query(cmd)
+                                for infos in result.get_points():
+                                    now_infos = infos
+                            except Exception as e:
+                                logging.error(e)
+                            try:
+                                #获取环比数据
+                                cmd = "select mean(*) from analysis_logs WHERE time >= '%s' and time <='%s' and host='%s' and uri='%s'" % (
+                                ot, tt, host, uri)
+                                result = Influx_cli.query(cmd)
+                                for infos in result.get_points():
+                                    old_infos = infos
+                            except Exception as e:
+                                logging.error(e)
+                            try:
+                                #获取同比数据
+                                cmd = "select mean(*) from analysis_logs WHERE time >= '%s' and time <='%s' and host='%s' and uri='%s'" % (
+                                    sot, stt, host, uri)
+                                result = Influx_cli.query(cmd)
+                                for infos in result.get_points():
+                                    bef_infos = infos
+                            except Exception as e:
+                                logging.error(e)
+
+                            if now_infos and old_infos and bef_infos:
+                                values = defaultdict()
+                                #获取接口指标列表
+                                for k in Keys:
+                                    try:
+                                        key = 'mean_%s' % k
+                                        alart_old = 0.0
+                                        alart_bef = 0.0
+                                        old_val = 0.0
+                                        bef_val = 0.0
+                                        now_val = 0.0
+                                        try:
+                                            #获取报警阀值
+                                            if key != 'mean_pv':
+                                                alarm_arg = db_influxdb_alarm.query.with_entities(func.avg(Dbs[k])).filter(and_(db_influxdb_alarm.host == host, db_influxdb_alarm.uri == uri)).all()
+                                                if alarm_arg[0][0]:
+                                                    alarm_arg = float('%.3f' %alarm_arg[0][0])*0.9
+                                                else:
+                                                    alarm_arg = 0.0
+                                        except Exception as e:
+                                            logging.error(e)
+                                        else:
+                                            #对数据进行清洗和计算
+                                            if now_infos[key] and old_infos[key] and bef_infos[key]:
+                                                if now_infos[key] > 0 and old_infos[key] > 0 and bef_infos[key] > 0:
+                                                    if key == 'mean_avg_resp':
+                                                        try:
+                                                            if now_infos[key] > alarm_arg and now_infos[key]>1:
+                                                                #当前值
+                                                                now_val = float(now_infos[key])
+                                                                old_val = float(old_infos[key])
+                                                                bef_val = float(bef_infos[key])
+                                                                # 环比数据
+                                                                alart_old = float(now_val - old_val) / old_val
+                                                                # 同比数据
+                                                                alart_bef = float(now_val - bef_val) / bef_val
+                                                        except Exception as e:
+                                                            logging.error(e)
+                                                    elif key == 'mean_pv':
+                                                        try:
+                                                            if now_infos[key] >15000 or (old_infos[key]-now_infos[key]) < -15000:
+                                                                #当前值
+                                                                now_val = int(now_infos[key])*t
+                                                                old_val = int(old_infos[key])*t
+                                                                bef_val = int(bef_infos[key])*t
+                                                                # 环比数据
+                                                                alart_old = float(now_val - old_val) /old_val
+                                                                # 同比数据
+                                                                alart_bef = float(now_val - bef_val) /bef_val
+                                                        except Exception as e:
+                                                            logging.error(e)
+                                                    else:
+                                                        try:
+                                                            alart_now = float(now_infos[key])/float(now_infos['mean_pv'])
+                                                            alarm_old = float(old_infos[key])/float(old_infos['mean_pv'])
+                                                            alarm_bef = float(bef_infos[key])/float(bef_infos['mean_pv'])
+                                                            if alart_now > alarm_arg and alart_now >0.01:
+                                                                # 当前值
+                                                                now_val = alart_now*100
+                                                                old_val = alarm_old*100
+                                                                bef_val = alarm_bef*100
+                                                                # 环比数据
+                                                                alart_old = float(alart_now - alarm_old) / alarm_old
+                                                                # 同比数据
+                                                                alart_bef = float(alart_now - alarm_bef) / alarm_bef
+                                                        except Exception as e:
+                                                            logging.error(e)
+                                                    try:
+                                                        #环比大于40%以上或者同比大于40%以上
+                                                        if alart_old > 0.5 or alart_bef > 0.5:
+                                                            values[key] = {
+                                                                            'old': float('%.3f' % alart_old),
+                                                                            'old_val': float('%.3f' % old_val),
+                                                                            'bef': float('%.3f' % alart_bef),
+                                                                            'bef_val': float('%.3f' % bef_val),
+                                                                            'now': float('%.3f' % now_val),
+                                                                            'sample': t
+                                                                           }
+                                                    except Exception as e:
+                                                        logging.error(e)
+                                                    try:
+                                                        #环比减少50%以上，同比减少50%以上
+                                                        if alart_old < -0.5 and alart_bef < -0.5:
+                                                            values[key] = {
+                                                                           'old':float('%.3f' % alart_old),
+                                                                           'old_val':float('%.3f' % old_val) ,
+                                                                           'bef':float('%.3f' % alart_bef),
+                                                                           'bef_val': float('%.3f' %bef_val),
+                                                                           'now':float('%.3f' %now_val),
+                                                                           'sample':t
+                                                                           }
+                                                    except Exception as e:
+                                                        logging.error(e)
+                                    except Exception as e:
+                                        logging.error(e)
+                                        continue
+                                if values:
+                                    incr_key = "influxdb_incr_http://%s%s" % (host, uri)
+                                    RC.incr(incr_key)
+                                    #计数过期时间
+                                    RC.expire(incr_key,180)
+                                    RC.hset('influxdb_mean_%s'%dd,"http://%s%s" % (host, uri),values)
+                                    RC.expire('influxdb_mean_%s' % dd,86400)
+                        except Exception as e:
+                            logging.error(e)
+                            continue
+    finally:
+        db_idc.DB.session.remove()
+
+    #业务接口性能报警
+    try:
+        alarm_values = defaultdict()
+        db_project = db_op.project_list
+        db_business = db_op.business
+        dd = time.strftime('%Y-%m-%d', time.localtime())
+        url_busi_key = 'interface_url_business_%s' %dd
+        alarm_key = 'interface_alarm_%s' % dd
+        mean_key = 'influxdb_mean_%s' % (dd)
+        alarm_lists = 'interface_list_%s' % dd
+        if RC.exists(mean_key):
+            values = RC.hgetall(mean_key)
+            values = {key: eval(values[key]) for key in values}
+            for url in values:
+                try:
+                    incr_key = "influxdb_incr_%s" % url
+                    if RC.exists(incr_key):
+                        incr = int(RC.get(incr_key))
+                        if incr > 1:
+                            business = '未知'
+                            domain = url.split('/')[2]
+                            #获取接口对应的业务信息
+                            business_id = db_project.query.with_entities(distinct(db_project.business_id)).filter(
+                                db_project.domain.like('%{0},%'.format(domain))).all()
+                            if business_id:
+                                business_id = business_id[0][0]
+                                business = db_business.query.with_entities(db_business.business).filter(
+                                    db_business.id == business_id).all()
+                                business = business[0][0]
+                            values[url]['incr'] = incr
+                            values[url]['business'] = business
+                            RC.hset(alarm_key, url, values[url])
+                            RC.expire(alarm_key,180)
+                except Exception as e:
+                    logging.error(e)
+                    continue
+            if RC.exists(alarm_key):
+                Keys = {'mean_avg_resp': '平均响应时间',
+                        'mean_status_5xx': '5xx状态码',
+                        'mean_status_4xx': '4xx状态码',
+                        'mean_resp_1000': '响应时间大于1s',
+                        'mean_pv':'pv访问量'}
+                alarm_values = RC.hgetall(alarm_key)
+                alarm_values = {key: eval(alarm_values[key]) for key in alarm_values}
+                for url in alarm_values:
+                    try:
+                        #收集业务名称信息
+                        RC.hset(url_busi_key, url, alarm_values[url]['business'])
+                        #报警条件判断
+                        if int(alarm_values[url]['incr']) >3:
+                            RC.sadd(alarm_lists,url)
+                            for key in alarm_values[url]:
+                                if key in Keys:
+                                    vals = alarm_values[url][key]
+                                    if key == 'mean_avg_resp':
+                                        info = '当前数值:%ss' % vals['now']
+                                    elif key  == 'mean_pv':
+                                        info = '当前pv:{0}'.format(vals['now'])
+                                    else:
+                                        info = '当前占比:{0}%'.format(vals['now'])
+                                    if float(vals['bef']) >=0:
+                                        if key =='mean_avg_resp':
+                                            bef_info = '同比增长:{0}%(昨天数值:{1}s)'.format(float(vals['bef']) * 100,vals['bef_val'])
+                                        elif key =='mean_pv':
+                                            bef_info = '同比增长:{0}%(昨天pv:{1})'.format(float(vals['bef']) * 100,int(vals['bef_val']))
+                                        else:
+                                            bef_info = '同比增长:{0}%(昨天占比:{1}%)'.format(float(vals['bef']) * 100,vals['bef_val'])
+                                    else:
+                                        if key =='mean_avg_resp':
+                                            bef_info = '同比减少:{0}%(昨天数值:{1}s)'.format(float(vals['bef']) * 100,vals['bef_val'])
+                                        elif key =='mean_pv':
+                                            bef_info = '同比减少:{0}%(昨天pv:{1})'.format(float(vals['bef']) * 100,int(vals['bef_val']))
+                                        else:
+                                            bef_info = '同比减少:{0}%(昨天占比:{1}%)'.format(float(vals['bef']) * 100,vals['bef_val'])
+                                    if float(vals['old']) >=0:
+                                        if key =='mean_avg_resp':
+                                            old_info = '环比增长:{0}%(三分钟前数值:{1}s)'.format(float(vals['old']) * 100,vals['old_val'])
+                                        elif key == 'mean_pv':
+                                            old_info = '环比增长:{0}%(三分钟前pv:{1})'.format(float(vals['old']) * 100,int(vals['old_val']))
+                                        else:
+                                            old_info = '环比增长:{0}%(三分钟前占比:{1}%)'.format(float(vals['old']) * 100,vals['old_val'])
+                                    else:
+                                        if key == 'mean_avg_resp':
+                                            old_info = '环比减少:{0}%(三分钟前数值:{1}s)'.format(float(vals['old']) * 100,vals['old_val'])
+                                        elif key == 'mean_pv':
+                                            old_info = '环比减少:{0}%(三分钟前pv:{1})'.format(float(vals['old']) * 100,int(vals['old_val']))
+                                        else:
+                                            old_info = '环比减少:{0}%(三分钟前占比:{1}%)'.format(float(vals['old']) * 100,vals['old_val'])
+                                    text = ['**线上业务:%s**' % alarm_values[url]['business'],"业务接口:%s" % url,'**详情:**',
+                                            '性能指标:%s,%s' %(Keys[key],info),bef_info,old_info
+                                            ,'采样数据:{0}分钟,持续时间:{1}分钟'.format(vals['sample'],int(alarm_values[url]['incr'])*3),
+                                            '**接口性能异常!**']
+                                    if str(alarm_values[url]['business']) not in ['web']:
+                                        tools.dingding_msg(text)
+                                        #统计业务接口报警次数
+                                        alarm_count_key = 'op_business_alarm_count_%s' %dd
+                                        RC_CLUSTER.hincrby(alarm_count_key,url,1)
+                                        alarm_busi_key = 'op_business_alarm_busi_%s' %dd
+                                        RC_CLUSTER.hincrby(alarm_busi_key,alarm_values[url]['business'],1)
+                                        alarm_perf_key = 'op_business_alarm_perf_%s' %dd
+                                        RC_CLUSTER.hincrby(alarm_perf_key,Keys[key],1)
+                                        RC_CLUSTER.expire(alarm_count_key,604800)
+                                        RC_CLUSTER.expire(alarm_busi_key,604800)
+                                        RC_CLUSTER.expire(alarm_perf_key,604800)
+                                        time.sleep(1)
+                    except Exception as e:
+                        logging.error(e)
+                        continue
+    except Exception as e:
+        logging.error(e)
+    finally:
+        # 接口性能恢复通知
+        if alarm_values and RC.exists(alarm_lists):
+            url_lists = RC.smembers(alarm_lists)
+            alarms = [url for url in alarm_values if int(alarm_values[url]['incr']) >2]
+            for url in url_lists:
+                if url not in alarms:
+                    business = RC.hget(url_busi_key, url)
+                    text = ['**线上业务:%s**' %business, "业务接口:%s" % url, '**接口性能恢复正常!**']
+                    RC.srem(alarm_lists, url)
+                    #发送报警恢复信息
+                    if business not in ['web']:
+                        tools.dingding_msg(text)
+        RC.expire(alarm_lists,86400)
+        RC.expire(url_busi_key, 86400)
+        db_op.DB.session.remove()
+        loging.write("complete %s !" % business_alarm.__name__)
+
+@check.proce_lock
+def reboot_tomcat():
+    try:
+        loging.write("start %s ......" %reboot_tomcat.__name__)
+        lte_date = datetime.datetime.now()
+        gte_date = lte_date - datetime.timedelta(minutes=15)
+        lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+        gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+        db_project = db_op.project_list
+        def action(reboot_lists, text, reboot=False):
+            try:
+                cmds = {6695: "tomcat-w5", 6696: "tomcat-w6", 5661: "tomcat-L1", 5662: "tomcat-L2"}
+                # 判断ip是否在自有服务列表
+                for host, app_port in reboot_lists:
+                    if host and app_port:
+                        project = '未知项目'
+                        #判断服务器的真实ip
+                        host = tools.real_ip(host)
+                        #获取服务器ssh端口
+                        vals = db_project.query.with_entities(db_project.ssh_port, db_project.project).filter(
+                            and_(db_project.ip == host, db_project.app_port == app_port)).all()
+                        if vals and host not in ('192.168.1.15', '192.168.1.16'):
+                            if len(vals[0]) == 2:
+                                ssh_port, project = vals[0]
+                                if reboot:
+                                    try:
+                                        # 远程进行tomcat重启操作
+                                        Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
+                                        Ssh.Run("supervisorctl  restart  {0}".format(cmds[int(app_port)]))
+                                        Ssh.Close()
+                                        time.sleep(15)
+                                    except Exception as e:
+                                        logging.error(e)
+                                        continue
+                                    else:
+                                        text.append("%s   %s   %s " % (host, app_port, project))
+                        if not reboot:
+                            text.append("%s   %s   %s " % (host, app_port, project))
+            except Exception as e:
+                logging.error(e)
+            finally:
+                return text
+
+        #499状态码
+        try:
+            Msg = []
+            body = {"size": 0, "query": {"bool": {"must": [{"query_string": {"query": "status:499",}},{"range": {"time_iso8601": {
+                                "gte": gte_date,"lte": lte_date}}}]}},"aggs": {"hosts": {"terms": {"field": "upstream_addr.keyword",
+                                "size": 5,"order": {"_count": "desc"}}}}}
+            #indexs = ('logstash-nginx-log-whv3*','logstash-nginx-log-lbs*')
+            indexs = ('logstash-nginx-log-whv3*',)
+            text = ["**自动重启tomcat以下实例:**"]
+            for index in indexs:
+                res = es.search(index=index, body=body)
+                reboot_lists = [info['key'].split(':') for info in res['aggregations']['hosts']['buckets'] if info['doc_count'] > 100 if len(info['key'].split(':'))==2]
+            if reboot_lists:
+                text = action(reboot_lists, text, reboot=True)
+            Msg.append(text)
+        except Exception as e:
+            logging.error(e)
+        #响应超时
+        try:
+            text = ["**第三方接口业务tomcat响应超时:**"]
+            body = {"size": 0,
+                    "query": {
+                        "bool": {
+                            "filter": [{
+                                "range": {
+                                    "time_iso8601": {
+                                        "gte":gte_date,
+                                        "lte":lte_date
+                                    }
+                                }
+                            }, {
+                                "query_string": {
+                                    "query": "host:(\"coapi.moji.com\" OR \"ele.coapi.moji.com\" OR \"gaode.coapi.moji.com\" OR \"hw\\-p1.api.moji.com\" OR \"meizu.coapi.moji.com\" OR \"vw.coapi.moji.com\" OR \"wdj.mojichina.com\")"
+                                }
+                            }]
+                        }
+                    },
+                    "aggs": {
+                        "3": {
+                            "terms": {
+                                "field": "upstream_addr.keyword",
+                                "size": 100,
+                                "order": {
+                                    "rt": "desc"
+                                }
+                            },
+                            "aggs": {
+                                "rt": {
+                                    "avg": {
+                                        "field": "request_time"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    }
+            res = es.search(index='logstash-nginx-log-coapi*', body=body)
+            for info in res['aggregations']['3']['buckets']:
+                rt = int(float(info['rt']['value']) * 1000)
+                if rt > 200 and int(info['doc_count']) > 10000:
+                    if ',' in info['key']:
+                        for val in info['key'].split(','):
+                            host,app_port = val.split(':')
+                            # 判断服务器的真实ip
+                            host = tools.real_ip(host)
+                            text.append("%s   %s   coapi " %(host, app_port))
+                        else:
+                            host, app_port = info['key'].split(':')
+                            # 判断服务器的真实ip
+                            host = tools.real_ip(host)
+                            text.append("%s   %s   coapi " %(host, app_port))
+            Msg.append(text)
+        except Exception as e:
+            logging.error(e)
+        #5xx状态码
+        try:
+            body = {"size": 0,
+                    "query": {"bool": {"must": [{"range": {"status": {"gte": 500, "lte": 599}}}, {"range": {"time_iso8601": {
+                        "gte": gte_date, "lte": lte_date}}}]}},
+                    "aggs": {"hosts": {"terms": {"field": "upstream_addr.keyword",
+                                                 "size": 10, "order": {"_count": "desc"}}}}}
+            indexs = ('logstash-nginx-log-*',)
+            text = ["**tomcat服务5xx状态码实例:**"]
+            for index in indexs:
+                res = es.search(index=index, body=body)
+                reboot_lists = [info['key'].split(':') for info in res['aggregations']['hosts']['buckets'] if
+                                info['doc_count'] > 100 if len(info['key'].split(':'))==2]
+            if reboot_lists:
+                text = action(reboot_lists, text, reboot=False)
+            Msg.append(text)
+            #发送钉钉群消息
+            for msg in Msg:
+                if len(msg) >1:
+                    tools.dingding_msg(msg)
+        except Exception as e:
+            logging.error(e)
+    except Exception as e:
+        logging.error(e)
+    finally:
+        loging.write("complete %s !" % reboot_tomcat.__name__)
+        db_op.DB.session.remove()
+
+@check.proce_lock
+def business_monitor(check_url=None):
+    def alarm():
+        # 记录故障次数
+        RC.incr(error_alarm)
+        RC.expire(error_alarm,300)
+        # 判断触发报警条件
+        if int(RC.get(error_alarm)) > 3:
+            try:
+                if int(lock) == 0:
+                    tools.dingding_msg(text,alart_token)
+                    db_busi_m.query.filter(db_busi_m.url == URL).update({db_busi_m.update_time:td,
+                                                                         db_busi_m.alarm_time: td,
+                                                                         db_busi_m.code: 1,
+                                                                         db_busi_m.error_ip: ip})
+                    db_op.DB.session.commit()
+            except Exception as e:
+                logging.error(e)
+            else:
+                RC.delete(recovery_alarm)
+                RC.delete(error_alarm)
+                #标记恢复通知
+                RC.incr(recovery_alarm)
+    td = time.strftime("%Y-%m-%d %H:%M:00", time.localtime())
+    checks = []
+    try:
+        db_busi_m = db_op.business_monitor
+        values = db_busi_m.query.with_entities(db_busi_m.url,db_busi_m.method,db_busi_m.project,db_busi_m.version,db_busi_m.lock,db_busi_m.alart_token).all()
+        if check_url:
+            values = db_busi_m.query.with_entities(db_busi_m.url,db_busi_m.method,db_busi_m.project,db_busi_m.version,db_busi_m.lock,db_busi_m.alart_token).filter(db_busi_m.url==check_url).all()
+        for val in values:
+            try:
+                URL,method,project,version,lock,alart_token = val
+                domain = URL.split('/')[2]
+                if ':' in domain:
+                    domain = domain.split(':')[0]
+                headers = {'Host':domain}
+                if URL.count(':') >1:
+                    ipaddress = [domain]
+                else:
+                    ipaddress = tools.dig(domain)
+                if ipaddress:
+                    for ip in set(ipaddress):
+                        try:
+                            isp = ip_adress.Search(ip)
+                            if isp:
+                                isp = isp.split(',')[-1]
+                            url = URL.split('/')
+                            url[2]= ip
+                            url = '/'.join(url)
+                            error_alarm = 'error_%s_%s'%(project,ip)
+                            recovery_alarm = 'recovery_%s_%s' % (project, ip)
+                            text = ['项目:%s' % project, "线上版本:%s" % version,'监控接口:%s' % URL,'解析IP:%s' % ip, 'ISP线路:%s' % isp,'**健康检测失败!**']
+                            if method == 'post':
+                                resp = requests.post(url, data={'src': 1}, headers=headers)
+                            else:
+                                resp = requests.get(url,headers=headers)
+                        except:
+                            if check_url:
+                                checks.append(ip)
+                            else:
+                                text.insert(5,"故障原因:request time out")
+                                alarm()
+                        else:
+                            try:
+                                if int(resp.status_code) in (200,301,302,304):
+                                    result = resp.json()
+                                    ver = ''
+                                    proj = ''
+                                    if 'rc' in result:
+                                        if 'ver' in result['rc']:
+                                            ver = result['rc']['ver']
+                                        if 'proj' in result['rc']:
+                                            proj = result['rc']['proj']
+                                    db_busi_m.query.filter(db_busi_m.url == URL).update({db_busi_m.version:ver,
+                                                                                     db_busi_m.project:proj,
+                                                                                    db_busi_m.code: 0,
+                                                                                     db_busi_m.update_time:td})
+                                    db_op.DB.session.commit()
+                                    #故障恢复通知条件判断
+                                    if RC.exists(recovery_alarm):
+                                        RC.incr(recovery_alarm)
+                                        RC.expire(recovery_alarm,300)
+                                        if int(RC.get(recovery_alarm)) >2:
+                                            text = ['项目:%s' % project, "线上版本:%s" % version, '监控接口:%s' % URL,
+                                            '解析IP:%s' % ip, 'ISP线路:%s' % isp, '**服务恢复正常!**']
+                                            try:
+                                                tools.dingding_msg(text,alart_token)
+                                                #自动解除报警锁定及故障状态
+                                                RC.delete(recovery_alarm)
+                                                RC.delete(error_alarm)
+                                                db_busi_m.query.filter(and_(db_busi_m.url == URL)).update({db_busi_m.lock:0,
+                                                                                                           db_busi_m.code:0,
+                                                                                                           db_busi_m.error_ip:''})
+                                                db_op.DB.session.commit()
+                                            except Exception as e:
+                                                logging.error(e)
+                                else:
+                                    if check_url:
+                                        checks.append(ip)
+                                    else:
+                                        text.insert(5,'故障原因:status code %s' % int(resp.status_code))
+                                        alarm()
+                            except Exception as e:
+                                logging.error(e)
+            except Exception as e:
+                logging.error(e)
+                continue
+        if check_url:
+            return checks
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_op.DB.session.remove()
+
+@check.proce_lock
+def es_get_data():
+    tm = datetime.datetime.now()
+    tt = tm.strftime('%H:%M')
+    td = time.strftime("%Y-%m-%d", time.localtime())
+    web_key = 'internet_access_%s' % td
+    lte_date = datetime.datetime.now()
+    gte_date = lte_date - datetime.timedelta(minutes=1)
+    lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    # 获取网站并发数据
+    try:
+        body = {"query":{"range":{"time_iso8601": {"gte": "%s" % gte_date,"lte": "%s" % lte_date}}}}
+        res = es.search(index='logstash-nginx-log-*', body=body)
+        if res['hits']['total']:
+            RC.rpush(web_key, [tt,int(res['hits']['total'])])
+            RC.expire(web_key,864000)
+    except Exception as e:
+        logging.error(e)
+    try:
+        #获取错误状态码数据
+        err_4xx = 'error_4xx_%s' % td
+        err_5xx = 'error_5xx_%s' % td
+        body = {'size': 0, "query": {"bool": {"must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                                                       {"range": {"status": {"gte": 400, "lte": 499}}}]}, }}
+        res = es.search(index='logstash-nginx-log-*', body=body)
+        if res:
+            RC.rpush(err_4xx, [tt, int(res['hits']['total'])])
+            RC.expire(err_4xx, 86400)
+        body = {'size': 0, "query": {"bool": {"must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                                                       {"range": {"status": {"gte": 500, "lte": 599}}}]}, }}
+        res = es.search(index='logstash-nginx-log-*', body=body)
+        if res:
+            RC.rpush(err_5xx, [tt, int(res['hits']['total'])])
+            RC.expire(err_5xx, 86400)
+    except Exception as e:
+        logging.error(e)
+    #获取响应时间段数据
+    try:
+        upstream = {'0-100':(0,0.1),'100-200':(0.1,0.2),'200-500':(0.2,0.5),'500-1000':(0.5,1),'1000-3000':(1,3),'3000+':(3,60)}
+        for k in upstream:
+            Key = 'es_get_time_%s_%s' %(k,td)
+            res = es.search(index='logstash-nginx-log-*', body={"query": {
+                "bool": {
+                    "must": [{"range": {"time_iso8601": {"gte": gte_date, "lte": lte_date}}},
+                             {"range": {"upstream_response_time": {"gte": upstream[k][0], "lte": upstream[k][1]}}}]
+                },
+            },
+                "aggs": {
+                    "avg_resp": {
+                        "avg": {"field": "upstream_response_time"}
+                    }
+                }
+            })
+            val = [int(res['hits']['total']),int(float(res['aggregations']['avg_resp']['value'])*1000)]
+            RC.hset(Key,'%s_%s'%(k,tt),val)
+            RC.expire(Key,86400)
+    except Exception as e:
+        logging.error(e)
+
+@check.proce_lock
+def influxdb_counts():
+    dt = datetime.datetime.now()
+    tt = dt - datetime.timedelta(hours=1)
+    nt = dt.strftime('%Y-%m-%dT%H:00:00Z')
+    tt = tt.strftime('%Y-%m-%dT%H:00:00Z')
+    Influx_wri = InfluxDBClient(influxdb_host,influxdb_port,influxdb_user,influxdb_pw, 'analysis_logs')
+    cmd = "select host,uri,avg_resp from analysis_logs WHERE time >= '%s' and time <'%s'" % (tt,nt)
+    result = Influx_cli.query(cmd)
+    if result:
+        for infos in result.get_points():
+            try:
+                host = infos['host'].replace("'", '')
+                RC.sadd('influx_hosts_%s' % nt, host)
+                uri = infos['uri'].replace("'", '')
+                RC.sadd('influx_%s_%s' % (host, nt), uri)
+            except Exception as e:
+                logging.error(e)
+                continue
+    for host in RC.smembers('influx_hosts_%s' % nt):
+        for uri in RC.smembers('influx_%s_%s' % (host, nt)):
+            try:
+                cmd = "select mean(*) from analysis_logs WHERE time >= '%s' and time <'%s' and host='%s' and uri='%s'" % (tt,nt, host, uri)
+                result = Influx_cli.query(cmd)
+                if result:
+                    for infos in result.get_points():
+                        del infos['time']
+                        infos = {info:float(infos[info]) for info in infos}
+                        json_body = [{"measurement": "analysis%s" % tt.split('T')[0].split('-')[0], "tags": {"host": host, "uri": uri},
+                             "fields": infos, 'time': nt}]
+                        Influx_wri.write_points(json_body)
+            except Exception as e:
+                logging.error(e)
+                continue
+
+@check.proce_lock
+def influxdb_alarm():
+    dt = datetime.datetime.now()
+    tt = dt - datetime.timedelta(days=1)
+    nt = dt.strftime('%Y-%m-%dT00:00:00Z')
+    dd = tt.strftime('%Y-%m-%d')
+    tt = tt.strftime('%Y-%m-%dT00:00:00Z')
+    Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw,'analysis_logs')
+    db_influxdb_alarm = db_idc.influxdb_alarm
+    Key = 'api_domain_lists_%s' % dd
+    hosts = RC_CLUSTER.smembers(Key)
+    try:
+        for host in hosts:
+            Key = 'api_uri_lists_%s_%s' % (host, dd)
+            uris = RC_CLUSTER.smembers(Key)
+            for uri in uris:
+                try:
+                    infos = None
+                    cmd = "select max(*) from " + 'analysis%s' %time.strftime('%Y',time.localtime()) + " WHERE time >= '%s' and time <='%s' and host='%s' and uri='%s'" % (
+                    tt, nt, host, uri)
+                    result = Influx_cli.query(cmd)
+                    if result:
+                        for infos in result.get_points():
+                            infos = infos
+                        if infos:
+                            c = db_influxdb_alarm(host=host,uri=uri,avg_resp=infos['max_mean_avg_resp'],resp_100=infos['max_mean_resp_100']/infos['max_mean_pv'],
+                                                  resp_200=infos['max_mean_resp_200']/infos['max_mean_pv'],resp_500=infos['max_mean_resp_500']/infos['max_mean_pv'],
+                                                  resp_1000=infos['max_mean_resp_1000']/infos['max_mean_pv'],status_4xx=infos['max_mean_status_4xx']/infos['max_mean_pv'],
+                                                  status_5xx=infos['max_mean_status_5xx']/infos['max_mean_pv'],year=dd)
+                            db_idc.DB.session.add(c)
+                            db_idc.DB.session.commit()
+                except Exception as e:
+                    logging.error(e)
+                    continue
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_idc.DB.session.remove()
+
+@check.proce_lock
+def zabbix_counts():
+    dict_load = defaultdict()
+    dict_mem = defaultdict()
+    dict_openfile = defaultdict()
+    free_load = []
+    free_mem = []
+    free_openfile = []
+    now_time = datetime.datetime.now()
+    dt = now_time - datetime.timedelta(days=3)
+    dt = dt.strftime('%Y-%m-%dT00:00:00Z')
+    Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw, 'zabbix_infos')
+    cmd = "select max(*) from server_infos where time >='%s' group by hostname" % dt
+    try:
+        results = Influx_cli.query(cmd)
+        if results:
+            for key in results.keys():
+                hostname = key[-1]['hostname']
+                for infos in results[key]:
+                    if infos['max_cpu_load'] >= 0:
+                        dict_load[hostname] = infos['max_cpu_load']
+                    if infos['max_mem_use'] >=0:
+                        dict_mem[hostname] = infos['max_mem_use']
+                    if infos['max_openfile'] >=0:
+                        dict_openfile[hostname] = infos['max_openfile']
+    except Exception as e:
+        logging.error(e)
+    try:
+        if dict_load:
+            loads = sorted(dict_load.items(), key=lambda item: int(item[1]), reverse=True)
+            RC_CLUSTER.set('op_zabbix_server_load_top',loads[:20])
+            free_load = [info[0] for info in loads if int(info[-1]) <=3]
+        if dict_mem:
+            mems = sorted(dict_mem.items(), key=lambda item: int(item[1]), reverse=True)
+
+            RC_CLUSTER.set('op_zabbix_server_mem_top', mems[:20])
+            free_mem = [info[0] for info in mems if int(info[-1]) <= 5]
+        if dict_openfile:
+            openfiles = sorted(dict_openfile.items(), key=lambda item: int(item[1]), reverse=True)
+            RC_CLUSTER.set('op_zabbix_server_openfile_top', openfiles[:20])
+            free_openfile = [info[0] for info in openfiles if int(info[-1]) <= 1024]
+        if free_load and free_mem and free_openfile:
+            RC_CLUSTER.set('op_zabbix_free_servers',set(free_load)&set(free_mem)&set(free_openfile))
+    except Exception as e:
+        logging.error(e)

@@ -1,28 +1,27 @@
 #-*- coding: utf-8 -*-
 import hashlib
-from Crypto.Cipher import AES
-from binascii import b2a_hex, a2b_hex
-def Md5_make(ID):
-    m = hashlib.md5()
-    m.update(ID)
-    v = m.hexdigest()
-    return v
+import io
+from Modules import loging
+logging = loging.Error()
+def Md5_make(string):
+    try:
+        m = hashlib.md5()
+        m.update(str(string).encode('utf-8'))
+        md5value = m.hexdigest()
+    except Exception as e:
+        logging.error(e)
+    return md5value
 
-class crypto():
-    def __init__(self, key):
-        self.key = key
-        self.mode = AES.MODE_CBC
-    #加密
-    def encrypt(self, text):
-        text = str(text)
-        cryptor = AES.new(self.key, self.mode, self.key)
-        x = len(text) % 16
-        if x != 0:
-            text = text + '.' * (16 - x)
-        self.ciphertext = cryptor.encrypt(text)
-        return b2a_hex(self.ciphertext)
-    #解密
-    def decrypt(self, text):
-        cryptor = AES.new(self.key, self.mode, self.key)
-        plain_text = cryptor.decrypt(a2b_hex(text))
-        return plain_text.rstrip('.')
+def Md5_file(path):
+    try:
+        m = hashlib.md5()
+        file = io.FileIO(path, 'r')
+        bytes = file.read(1024)
+        while (bytes != b''):
+            m.update(bytes)
+            bytes = file.read(1024)
+        file.close()
+        md5value = m.hexdigest()
+    except Exception as e:
+        logging.error(e)
+    return md5value
