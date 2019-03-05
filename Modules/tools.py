@@ -157,7 +157,7 @@ def get_server_list():
             "Authorization": "%s %s" % ("Bearer ", res["token"])
         }
         res  = requests.get(assetsUrl, headers=headers,timeout=30)
-        idcs = requests.get("https://jps.moji.com/api/assets/v1/labels", headers=headers, timeout=30)
+        idcs = requests.get("https://xxx.xxx.com/api/assets/v1/labels", headers=headers, timeout=30)
         idcs = {info['id']:info['value'] for info in idcs.json()}
         for info in res.json():
             idc = idcs[info['labels'][0]]
