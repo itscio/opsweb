@@ -1,13 +1,16 @@
 #-*- coding: utf-8 -*-
 from sqlalchemy import and_
 from flask import Blueprint,render_template,g,flash,request
-from Modules import MyForm,db_op,produce,check ,main_info
+from Modules import MyForm,db_op,produce,check
 import re
-import __init__
-app = __init__.app
+from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
+app = Flask(__name__)
+app.config.from_pyfile('../conf/sql.conf')
+DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 page_dns_conf = Blueprint('dns_conf',__name__)
 @page_dns_conf.route('/dns_conf',methods = ['GET', 'POST'])
-@main_info.main_info
 def dns_conf():
     form = MyForm.MyForm_dns_conf()
     if form.submit.data:
@@ -20,12 +23,12 @@ def dns_conf():
             ip = form.ip.data.strip()
             db = db_op.dns_innr
             if field:
-                if  field.endswith('.baihe.com') or field.endswith('.ibaihe.com') or field.endswith('.service.baihe') or field.endswith('.sql.baihe'):
+                if  field.endswith('.moji.com') or field.endswith('.service.moji') or field.endswith('.sql.moji'):
                     raise flash("二级域名格式错误!")
                 value = db.query.with_entities(db.ip).filter(and_(db.domain == domain, db.Type == Type, db.field == field,db.system == system)).all()
                 if action == 'add':
-                    if system == 'cw' and domain != 'baihe.com':
-                        raise flash('测外只可以操作baihe.com域名!')
+                    if system == 'cw' and domain != 'moji.com':
+                        raise flash('测外只可以操作moji.com域名!')
                     if value:
                             raise flash('%s  IN  %s  %s 该DNS记录已存在' % (field, Type,str(value[0][0])))
                     if ip:
@@ -67,11 +70,11 @@ def dns_conf():
         except Exception as e:
             if 'old-style' not in str(e):
                 flash(e)
-    return render_template('dns_conf.html',Main_Infos=g.main_infos,form=form)
+    return render_template('dns_conf.html',form=form)
 @page_dns_conf.before_request
-@check.login_required(grade=0)
-def check_login(error=None):
+@check.login_required(grade=1)
+def check_login(exception = None):
     produce.Async_log(g.user, request.url)
 @page_dns_conf.teardown_request
-def db_remove(error=None):
+def db_remove(exception):
     db_op.DB.session.remove()

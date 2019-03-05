@@ -1,278 +1,181 @@
 #-*- coding: utf-8 -*-
-from imp import reload
+import importlib
 from flask import Blueprint,render_template,g,flash,request
-from Modules import check,MyForm,SSH,db_op,produce,db_idc,Md5,main_info
+from Modules import check,MyForm,loging,db_op,produce,db_idc
 from sqlalchemy import and_
-import requests
-import os
-from random import choice
-import __init__
-app = __init__.app
-limiter = __init__.limiter
-crypto_key = app.config.get('CRYPTO_KEY')
+from flask import Flask
+import time
+import json
+from flask_sqlalchemy import SQLAlchemy
+app = Flask(__name__)
+app.config.from_pyfile('../conf/sql.conf')
+DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+logging = loging.Error()
 page_deploy = Blueprint('deploy',__name__)
-page_haproxy_reload = Blueprint('haproxy_reload',__name__)
-@page_deploy.route('/deploy_jboss',methods = ['GET', 'POST'])
-@main_info.main_info
-def deploy_jboss():
-    reload(MyForm)
-    form = MyForm.MyForm_deploy_jboss()
-    try:
-        if form.submit_produce.data and form.input_produce.data:
-            Warname = form.input_produce.data.strip()
-            Infos = form.select_produce.data
-            Type = '1'
-            project_level = form.select_level.data
-        elif form.submit_test.data and form.input_test.data:
-            Warname = form.input_test.data.strip()
-            Infos = form.select_test.data
-            Type = '2'
-        else:
-            return render_template('deploy_jboss.html',Main_Infos=g.main_infos, form=form)
-        assert Infos,'服务器选择不能为空!'
-        assert Warname.endswith('.war') ,'war包名称应以.war结尾'
-        #判断测外环境
-        if Type == '2':
-            assert form.input_domain.data,'项目域名不能为空!'
-            Domain = form.input_domain.data.strip()
-            if not form.haproxy.data and not form.haproxy_intranet.data:
-                raise AssertionError('HAPROXY选择不能为空!')
-        for Info in Infos:
-            Info = Info.split(':')
-            user = Info[1]
-            ip = Info[0]
-            db = db_op.java_list
-            project_db = db_op.project_level
-            val = db.query.filter(and_(db.project == Warname,db.ip == ip,db.user == user, db.type == Type)).all()
-            if val:
-                flash('{0}在{1}的{2}环境已存在!'.format(Warname,ip,user))
-            else:
-                Ssh = SSH.ssh(user,ip)
-                os.system('/usr/bin/wget -P /tmp/ http://172.16.4.138/software/jboss/{0}.zip'.format(user))
-                Ssh.Scp('/tmp/{0}.zip'.format(user),'/home/{0}/{0}.zip'.format(user))
-                os.system('/bin/rm -f /tmp/{0}.zip'.format(user))
-                cmds = ['cd /home/{0} && /usr/bin/unzip -qo {0}.zip && /bin/rm -f {0}.zip'.format(user),
-                        '/bin/rm -f /home/{0}/{0}.zip'.format(user),
-                        'mkdir -p /home/{0}/jboss-baihe/server/default/deploy/{1}'.format(user,Warname),
-                        '/usr/bin/pkill -9 java',
-                        'source ~/.bash_profile && /bin/bash /home/{0}/startJboss.sh'.format(user)]
-                for cmd in cmds:
-                    Ssh.Run(cmd)
-                Ssh.Close()
-                c = db(project=Warname, user=user, ip=ip, type=Type, Gray='0',operation = 'baihe')
-                db_op.DB.session.add(c)
-                db_op.DB.session.commit()
-                # 修改资源池表
-                db = db_op.server_pool
-                db.query.filter(and_(db.user == user,db.ip == ip)).update({db.status:'1'})
-                db_op.DB.session.commit()
-                flash('{0} 在{1}的{2}环境部署成功!'.format(Warname, ip, user))
-                # 测外发布
-                if Type == '2':
-                    # 调取api接口生成haproxy配置文件
-                    Type = 'cw'
-                    ports = {'java': '18080', 'java2': '28080', 'java3': '38080', 'java4': '48080'}
-                    def _CURL_API(Domain,internet=None):
-                        Domains = [Domain]
-                        if ',' in Domain:
-                            Domains = Domain.split(',')
-                        for Domain in Domains:
-                            # 修改应用部署表
-                            dbidc = db_idc.idc_app
-                            c = dbidc(ip=ip, user=user,appName=Warname,domainName=Domain)
-                            db_idc.DB.session.add(c)
-                            db_idc.DB.session.commit()
-                            # 调用haproxy APi接口
-                            URL = app.config.get('HAPROXY_API')
-                            Params = {'type':Type, 'ip':'{0}:{1}'.format(ip,ports[user]),'domain':Domain}
-                            if internet:
-                                Params['intranet'] = 'True'
-                                Arg = '内部'
-                            else:
-                                Arg = '外部'
-                            f = requests.request('get', URL,params=Params, timeout=10,verify=False)
-                            if 'result' in f.json():
-                                flash('信息:{0} {1}HAPROXY配置{2}'.format(Domain,Arg,f.json()['result']))
-                    if form.haproxy_intranet.data:
-                        _CURL_API(Domain,internet=True)
-                    if form.haproxy.data:
-                        _CURL_API(Domain)
-        if Type == '1':
-            p = project_db(project=Warname, level=project_level)
-            db_op.DB.session.add(p)
-            db_op.DB.session.commit()
-        flash('内部需要配置DNS,进行一次项目上线操作后方可正常访问!')
-    except Exception as e:
-        flash(e)
-    return render_template('deploy_jboss.html',form=form,Main_Infos=g.main_infos)
-@page_deploy.route('/deploy_nginx',methods = ['GET', 'POST'])
-@main_info.main_info
-def deploy_nginx():
-    form = MyForm.MyForm_deploy_nginx()
+@page_deploy.route('/deploy',methods = ['GET', 'POST'])
+def deploy():
+    db_project = db_op.project_list
+    form = MyForm.MyForm_deploy()
+    #判断自有资源
     if form.submit.data:
-        try:
-            Type = int(form.select.data)
-            assert form.input_domain.data,'项目域名不能为空!'
-            domains = form.input_domain.data.strip()
-            assert form.input_root.data,'项目路径不能为空!'
-            project_level = form.select_level.data
-            project_type = form.select_project.data
-            root_path = form.input_root.data.strip()
-            project = root_path.split('/')
-            if len(project) < 5:
-                raise ImportError('非法项目路径!')
-            else:
-                project = project[4]
-            assert form.ip.data,'服务器IP不能为空!'
-            ips = form.ip.data.strip()
-            if not form.haproxy.data and not form.haproxy_intranet.data and Type == 2:
-                raise AssertionError('HAPROXY选择不能为空!')
-            for ip in ips.splitlines():
-                if g.grade == 2 and '172.16.9.' not in ip:
-                    flash('非法IP地址,请确认测外服务器IP!')
-                else:
-                    db = db_op.php_list
-                    project_db = db_op.project_level
-                    val = db.query.filter(and_(db.ip == ip, db.project == project, db.type == Type)).all()
+        project = form.project.data
+        domain = form.domain.data
+        business_id = form.select_busi.data
+        resource = form.select_resource.data
+        dev = form.select_dev.data
+        if project and resource and domain:
+            try:
+                    val = db_project.query.filter(db_project.project == project.strip()).all()
                     if val:
-                        flash('{0} {1}项目 nginx虚拟主机配置文件已存在!'.format(ip,project))
+                        raise flash("%s项目已存在，如需修改项目部署列表，请在'资源变更'菜单下操作." %project, 'error')
                     else:
-                        ssh = SSH.ssh('work',ip)
-                        try:
-                            # 生成配置文件
-                            for domain in domains.strip().split(','):
-                                # 修改应用部署表
-                                dbidc = db_idc.idc_app
-                                c = dbidc(ip=ip, user='work', appName=project, domainName=domain)
-                                db_idc.DB.session.add(c)
-                                db_idc.DB.session.commit()
-                                # 调用haproxy APi接口
-                                Dst_path = '/tmp/{0}'.format(domain)
-                                mod_path = "{0}/../conf/nginx_template.cfg".format(page_deploy.root_path)
-                                if os.path.exists(Dst_path):
-                                    os.remove(Dst_path)
-                                with open(mod_path, 'r') as f:
-                                    for line in f:
-                                        line = line.strip().replace('DOMAIN', domain).replace('ROOT_PATH', root_path)
-                                        with open(Dst_path, 'a+') as F:
-                                            F.write('{0}\n'.format(line))
-                                ssh.Scp(Dst_path,'/home/work/local/nginx/conf/servers/{0}'.format(domain))
-                                flash('{0} {1} nginx虚拟主机部署完毕!'.format(ip, domain))
-                        except Exception as e:
-                            flash(e)
+                        for source in resource:
+                            #修改自有资源表
+                            source = source.split(':')
+                            db_project.query.filter(and_(db_project.resource==source[0],db_project.ip==source[1],db_project.ssh_port==source[2],db_project.app_port==source[3])).update({
+                                db_project.project:project.strip(),db_project.domain:domain.strip(),db_project.business_id:int(business_id),db_project.sys_args:dev,db_project.env:'生产',db_project.gray:'0',db_project.status:'使用中',
+                            db_project.update_date:time.strftime('%Y-%m-%d',time.localtime())})
+                            db_op.DB.session.commit()
+                            # 开始部署环境
+                            # 配置负载均衡
+                            # 配置dns解析
+                            flash('%s:%s:%s:%s添加到项目部署列表成功!' % tuple(source))
+            except Exception as e:
+                flash(e)
+        else:
+            flash('所有输入框均为必填项!')
+        return render_template('Message.html')
+    #判断第三方资源
+    if form.submit_third.data:
+        db_third = db_idc.third_resource
+        department = form.department.data
+        person = form.person.data
+        contact = form.contact.data
+        thirds = form.select_third.data
+        if thirds and department and contact and person:
+            department = department.strip()
+            contact = contact.strip()
+            person = person.strip()
+            for third in thirds:
+                third = third.split(':')
+                try:
+                    #写入第三方资源表
+                    db_third.query.filter(and_(db_third.resource_type==third[0],db_third.ip==third[1],db_third.ssh_port==third[2],db_third.app_port==third[3])).update({db_third.cluster_type:'',db_third.department:department,db_third.person:person,
+                                                                                                                                                                        db_third.contact:contact,db_third.status:'使用中',db_third.busi_id:0,
+                                                                                                                                                                        db_third.update_date:time.strftime('%Y-%m-%d',time.localtime())})
+                    db_idc.DB.session.commit()
+                except Exception as e:
+                    logging.error(e)
+                else:
+                    flash('%s:%s:%s:%s环境分配录入完成' % tuple(third))
+    importlib.reload(MyForm)
+    form = MyForm.MyForm_deploy()
+    return render_template('deploy.html',form=form)
+
+@page_deploy.route('/new_business',methods = ['GET', 'POST'])
+def new_business():
+    db_business = db_op.business
+    db_project = db_op.project_list
+    db_project_other = db_op.project_other
+    db_servers = db_idc.idc_servers
+    form = MyForm.MyForm_deploy()
+    Error = []
+    Info = []
+    BUSI = db_business.query.with_entities(db_business.id,db_business.business).all()
+    BUSI = json.dumps([{"id": str(info[0]), "text": str(info[1])} for info in BUSI])
+    if form.submit.data:
+        business = form.business.data
+        describe = form.describe.data
+        person = form.person.data
+        contact = form.contact.data
+        resource = form.area_resource.data
+        dev_type = form.select_dev.data
+        project = form.project.data
+        domain = form.domain.data
+        try:
+            if not business:
+                raise Error.append("业务信息为不能为空!")
+            business_id = db_business.query.with_entities(db_business.id).filter(db_business.business == business.strip()).all()
+            if not business_id:
+                if project:
+                   if not project.endswith('.jar'):
+                       if not resource or not describe:
+                           raise Error.append("带*输入框均为必填项!")
+                else:
+                    raise Error.append("项目名称为不能为空!")
+            #判断主机信息输入格式
+            if ',' in  resource:
+                infos = resource.split(',')
+            else:
+                infos = resource.splitlines()
+            for info in infos:
+                #判断是否带应用端口
+                if ':' in info:
+                    host,app_port = info.split(':')
+                else:
+                    host = info
+                    app_port = None
+                #判断是ip还是hostname
+                if len(host.split('.')) > 3:
+                    ips = db_servers.query.with_entities(db_servers.id,db_servers.ip, db_servers.ssh_port).filter(
+                        db_servers.ip == host).all()
+                else:
+                    ips = db_servers.query.with_entities(db_servers.id,db_servers.ip, db_servers.ssh_port).filter(
+                    db_servers.hostname == host).all()
+                if ips:
+                    server_id,ip, ssh_port = ips[0]
+                    if not business_id:
+                        #写入业务信息
+                        c = db_business(business=business.strip(), describe=describe.strip(), person=person,contact=contact)
+                        db_op.DB.session.add(c)
+                        db_op.DB.session.commit()
+                    #查询业务ID
+                    new_id = db_business.query.with_entities(db_business.id).filter(db_business.business == business.strip()).all()
+                    new_id = new_id[0][0]
+                    update_date = time.strftime('%Y-%m-%d', time.localtime())
+                    #判断是否正式项目
+                    if app_port:
+                        if dev_type == 'java':
+                            sys_args = dev_type
+                            dev_type = 'tomcat'
+                        #写入正式项目数据库
+                        exist_project = db_project.query.filter(db_project.project==project).all()
+                        if exist_project:
+                            Error.append("%s项目信息已存在!" %project)
                         else:
-                            cmds = ["[ -z $(/bin/netstat -lntp|grep nginx|awk '{print $1}') ] && /home/work/local/nginx/sbin/nginx","/home/work/local/nginx/sbin/nginx -s reload"]
-                            for cmd in cmds:
-                                ssh.Run(cmd)
-                            #在上线配置表中插入数据
-                            c = db(project=project,user='work',ip=ip,type=Type,Gray='0',operation = project_type)
+                            #判断域名信息
+                            if domain:
+                                c = db_project(resource=dev_type, project=project, domain=domain, ip=ip, ssh_port=ssh_port,
+                                               app_port=app_port, business_id=new_id, sys_args=sys_args, env='生产', gray=0,
+                                               status='使用中', update_date=update_date)
+                                db_op.DB.session.add(c)
+                                db_op.DB.session.commit
+                            else:
+                                Error.append("%s新项目需提供域名信息!" % project)
+                    else:
+                        exist_other = db_project_other.query.filter(db_project_other.project==project).all()
+                        if exist_other:
+                            db_project_other.query.filter(db_project_other.project==project).update({db_project_other.business_id:new_id})
+                            db_op.DB.session.commit()
+                        else:
+                            #写入非正式项目数据库
+                            c = db_project_other(lable=dev_type,project=project,server_id=server_id,business_id=new_id,update_time=update_date)
                             db_op.DB.session.add(c)
                             db_op.DB.session.commit()
-                            if Type == 2:
-                                # 调取api接口生成haproxy配置文件
-                                Type = 'cw'
-                                def _CURL_API(Domain, internet=None):
-                                    Domains = [Domain]
-                                    if ',' in Domain:
-                                        Domains = Domain.split(',')
-                                    for Domain in Domains:
-                                        URL = app.config.get('HAPROXY_API')
-                                        Params = {'type': Type, 'ip': '{0}:80'.format(ip),'domain': Domain}
-                                        if internet:
-                                            Params['intranet'] = 'True'
-                                            Arg = '内部'
-                                        else:
-                                            Arg = '外部'
-                                        f = requests.request('get', URL,params=Params,timeout=10,verify=False)
-                                        if 'result' in f.json():
-                                            flash('信息:{0} {1}HAPROXY配置{2}'.format(Domain, Arg, f.json()['result']))
-                                if form.haproxy_intranet.data:
-                                    _CURL_API(domain, internet=True)
-                                if form.haproxy.data:
-                                    _CURL_API(domain)
-            if Type == 1:
-                p = project_db(project=project, level=project_level)
-                db_op.DB.session.add(p)
-                db_op.DB.session.commit()
+                else:
+                    Error.append("%s主机信息没有找到!" %host)
         except Exception as e:
-            flash(e)
-    return render_template('deploy_nginx.html', form=form,Main_Infos=g.main_infos)
-@page_deploy.route('/deploy_php',methods = ['GET', 'POST'])
-@main_info.main_info
-def deploy_php():
-    reload(MyForm)
-    form = MyForm.MyForm_deploy_php()
-    try:
-        if form.submit_produce.data:
-            Infos = form.select_produce.data
-            Ver = form.ver_produce.data.strip()
-            Type = '1'
-        elif form.submit_test.data:
-            Infos = form.select_test.data
-            Ver = form.ver_test.data.strip()
-            Type = '2'
+            if 'old-style' not in str(e):
+                logging.error(e)
         else:
-            return render_template('deploy_php.html', form=form,Main_Infos=g.main_infos)
-        assert Infos, '服务器选择不能为空!'
-        for Info in Infos:
-            Info = Info.split(':')
-            user = Info[1]
-            ip = Info[0]
-            db = db_op.php_list
-            val = db.query.filter(and_(db.ip == ip,db.type == Type)).all()
-            if val:
-                flash('{0}的PHP环境已存在!'.format(ip))
-            else:
-                os.system('/usr/bin/wget -P /tmp/ http://172.16.16.160/dw/lnmp/lnmp_{0}.tgz'.format(Ver))
-                Ssh = SSH.ssh(user, ip)
-                Ssh.Scp('/tmp/lnmp_{0}.tgz'.format(Ver),'/home/work/lnmp_{0}.tgz'.format(Ver))
-                os.system('/bin/rm -f /tmp/lnmp_{0}.tgz'.format(Ver))
-                cmds = ['/bin/rm -rf /home/work/local',
-                        'cd /home/work && /bin/tar -zxvf lnmp_{0}.tgz'.format(Ver),
-                        '/bin/rm -f /home/work/lnmp_{0}.tgz'.format(Ver),
-                        '/usr/bin/pkill -9 {php,nginx}',
-                        '/home/work/local/php/sbin/php-fpm',
-                        '/home/work/local/nginx/sbin/nginx']
-                for cmd in cmds:
-                    Ssh.Run(cmd)
-                Ssh.Close()
-                #修改资源池表
-                db = db_op.server_pool
-                db.query.filter(and_(db.user == user, db.ip == ip)).update({db.status: '1'})
-                db_op.DB.session.commit()
-        flash('PHP环境在{0}部署成功,NGINX虚拟主机部署后可正常访问!'.format(ip))
-    except Exception as e:
-        flash(e)
-    return render_template('deploy_php.html', form=form,Main_Infos=g.main_infos)
-@page_haproxy_reload.route('/haproxy_reload')
-@page_haproxy_reload.route('/haproxy_reload/<Type>')
-@main_info.main_info
-@limiter.limit("5/minute")
-def haproxy_reload(Type=None):
-    form = MyForm.MyForm_Submit()
-    crypto = Md5.crypto(crypto_key)
-    code = choice([x for x in range(100)])
-    internet = "/haproxy_reload/%s" %crypto.encrypt('internet|%i' %code)
-    intranet = "/haproxy_reload/%s" %crypto.encrypt('intranet|%i' %code)
-    URL = None
-    HA_API = app.config.get('HAPROXY_API')
-    if Type:
-        Type = crypto.decrypt(Type).split('|')[0]
-        if Type == 'internet':
-            URL = "%s?type=cw&ip=127.0.0.1:80&domain=test.baihe.com" %HA_API
-        if Type == 'intranet':
-            URL = "%s?type=cw&ip=127.0.0.1:80&domain=test.baihe.com&intranet=True" %HA_API
-        if URL:
-            f = requests.get(URL,timeout=10,verify=False)
-            Info = f.json()
-            if 'result' in f.json():
-                Info = f.json()['result']
-            return render_template('qrcode.html', INFO=Info)
-    return render_template('haproxy_reload.html',Main_Infos=g.main_infos,form=form,internet=internet,intranet=intranet)
+            Info.append("%s业务相关信息录入完成." % business.strip())
+    return render_template('new_business.html',form=form,Error=Error,Info=Info,BUSI=BUSI)
 @page_deploy.before_request
-@check.login_required(grade=0)
+@check.login_required(grade=1)
 def check_login(error=None):
     produce.Async_log(g.user, request.url)
+    importlib.reload(MyForm)
 @page_deploy.teardown_request
 def db_remove(error=None):
     db_op.DB.session.remove()
