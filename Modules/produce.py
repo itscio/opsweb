@@ -29,8 +29,8 @@ scheduler = BackgroundScheduler({'apscheduler.job_defaults.max_instances': '500'
 scheduler.configure(jobstores=jobstores,timezone=pytz.timezone('Asia/Shanghai'))
 def Async_log(user,url):
     db_op_log = db_op.op_log
-    url = url.replace('op_servers', 'op.moji.com')
-    if 'op.moji.com' in url and not url.endswith('/index'):
+    url = url.replace('op_servers', 'xx.xxxx.com')
+    if 'xx.xxxx.com' in url and not url.endswith('/index'):
         try:
             ip = session['remote_ip']
             v = db_op_log(date=time.strftime('%Y-%m-%d',time.localtime()),time = time.strftime('%H:%M:%S',time.localtime()),ip=ip,user=user,access=url)
