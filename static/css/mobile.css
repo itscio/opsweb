@@ -1,0 +1,169 @@
+html{
+
+font-size:100px;
+
+}
+
+body{
+
+background: rgb(239,239,239);
+
+}
+
+body,a,h3,span{
+
+padding:0;
+
+margin:0;
+
+text-decoration: none;
+
+}
+
+.header{
+
+background: #26A69A ;
+
+height: 0.44rem;
+
+font-size:0.14rem;
+
+color: white;
+
+padding-left:0.17rem;
+
+padding-right: 0.25rem;
+
+text-align: center;
+
+line-height: 0.44rem;
+
+
+}
+
+.header>a{
+
+color: white;
+
+float: left;
+
+}
+
+    .header>.btn{
+
+    float: right;
+
+    padding-top:0.1rem;
+
+    }
+
+.btn>span{
+
+border-radius: 100%;
+
+display: block;
+
+width: 0.04rem;
+
+height: 0.04rem;
+
+background: white;
+
+margin-top: 0.03rem;
+
+}
+
+.right{
+
+font-size:0.12rem;
+
+float: right;
+
+margin-top: 0.12rem;
+
+
+
+}
+
+.right>a{
+
+font-size: 0.12rem;
+
+}
+
+.right>.img,.right>.back{
+
+display: inline-block;
+
+vertical-align: middle;
+
+}
+
+.address,.safe,.shezhi,.secrt,.view,.other{
+
+    font-size: 0.14rem;
+
+    padding-left: 0.17rem;
+
+    border-bottom: 1px solid #E0E0E0 ;
+
+    height: 0.65rem;
+
+    line-height: 0.65rem;
+
+    padding-right: 0.12rem;
+
+    background: white;
+
+}
+
+.safe{
+
+margin-top:0.13rem;
+
+margin-bottom: 0.13rem;
+
+}
+
+.view{
+    font-weight: bold;
+    font-size: 0.2rem;
+    margin-bottom: 0.13rem;
+    text-align: center;
+}
+
+.content{
+    float: left;
+    font-size: 0.14rem;
+    color: black;
+}
+.content-link{
+    float: right;
+    font-weight: bold;
+    font-size: 0.2rem;
+    color: #0077b3;
+}
+
+.footer{
+
+margin-top: 0.2rem;
+
+height: 0.5rem;
+
+font-size: 0.16rem;
+
+border:1px solid red;
+
+border-radius: 0.05rem;
+
+width: 2.99rem;
+
+font-weight: bold;
+
+text-align: center;
+
+line-height: 0.5rem;
+
+margin-left: 0.35rem;
+
+}
