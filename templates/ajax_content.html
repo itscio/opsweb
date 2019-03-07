@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block page %}
+    <script>
+        $.ajax({
+                 url: "{{ url }}",
+                 cache: false,
+                 success: function(html){
+                     $("#content").html(html);
+                 }
+             });
+    </script>
+{% endblock page %}

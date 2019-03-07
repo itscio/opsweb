@@ -70,31 +70,69 @@
             <div style="clear:both;margin-top: 1%"></div>
             <div id="zabbix_infos">
                 {% if total_infos['zabbix_infos'] %}
-                    <div class="style_border" style="height:110px;margin-left: 1%;width:97.4%">
+                    <div class="style_border" style="height:125px;margin-left: 1%;width:97.4%">
                         {% if total_infos['zabbix_infos'][0] == 1 %}
-                            <div class="alert alert-success assets">zabbix监控正常</div>
+                            <div class="assets">
+                                <div class="counter green">
+                                    <div class="counter-content">
+                                        <span style="font-weight: bold">正常</span>
+                                    </div>
+                                    <h3 class="title">zabbix监控</h3>
+                                </div>
+                            </div>
                         {% else %}
-                            <div class="alert alert-danger assets">zabbix监控异常</div>
+                            <div class="assets">
+                                <div class="counter red">
+                                    <div class="counter-content">
+                                        <span style="font-weight: bold">异常</span>
+                                    </div>
+                                    <h3 class="title">zabbix监控</h3>
+                                </div>
+                            </div>
                         {% endif %}
-                        <div class="alert alert-info assets">CPU使用率:{{ total_infos['zabbix_infos'][1]}}%</div>
-                        {% if total_infos['zabbix_infos'][2] %}
-                            <div class="alert alert-info assets">内存使用率:{{ total_infos['zabbix_infos'][2]}}%</div>
-                        {% else %}
-                            <div class="alert alert-info assets">内存使用率:未知</div>
-                        {% endif %}
-                        <div class="alert alert-info assets">磁盘IO:{{ total_infos['zabbix_infos'][3]}}%</div>
-                        <div class="alert alert-info assets">OPENFILE:{{ total_infos['zabbix_infos'][-1]|int}}</div>
+                        <div class="assets">
+                            <div class="counter">
+                                <div class="counter-content">
+                                    <span class="counter-value">{{ total_infos['zabbix_infos'][1]|int}}</span>%
+                                </div>
+                                <h3 class="title">CPU使用率</h3>
+                            </div>
+                        </div>
+                        <div class="assets">
+                            <div class="counter tomato">
+                                <div class="counter-content">
+                                    <span class="counter-value">{{ total_infos['zabbix_infos'][2]|int}}</span>%
+                                </div>
+                                <h3 class="title">内存使用率</h3>
+                            </div>
+                        </div>
+                        <div class="assets">
+                            <div class="counter blue">
+                                <div class="counter-content">
+                                    <span class="counter-value">{{ total_infos['zabbix_infos'][3]|int}}</span>%
+                                </div>
+                                <h3 class="title">磁盘IO</h3>
+                            </div>
+                        </div>
+                        <div class="assets">
+                            <div class="counter purple">
+                                <div class="counter-content">
+                                    <span class="counter-value">{{ total_infos['zabbix_infos'][-1]|int}}</span>
+                                </div>
+                                <h3 class="title">OPENFILE</h3>
+                            </div>
+                        </div>
                     </div>
                 {% endif %}
                 <div style="clear: both"></div>
                 <div>
-                {% for bar in total_infos['bar_infos'] %}
-                    <div class="style_border" style="float: left;width: 48.1%;margin-left:1%;overflow: hidden;;height:250px">
-                        {{ echarts_js_dependencies(bar) }}
-                        {{ echarts_container(bar) }}
-                        {{ echarts_js_content(bar) }}
-                    </div>
-                {% endfor %}
+                    {% for bar in total_infos['bar_infos'] %}
+                        <div class="style_border" style="float: left;width: 48.15%;margin-left:1%;overflow: hidden;;height:250px">
+                            {{ echarts_js_dependencies(bar) }}
+                            {{ echarts_container(bar) }}
+                            {{ echarts_js_content(bar) }}
+                        </div>
+                    {% endfor %}
                 </div>
                 <div style="clear: both"></div>
             </div>
@@ -182,5 +220,20 @@
             </div>
         </div>
     </div>
+    <script>
+        $(document).ready(function(){
+        $('.counter-value').each(function(){
+            $(this).prop('Counter',0).animate({
+                Counter: $(this).text()
+            },{
+                duration: 3500,
+                easing: 'swing',
+                step: function (now){
+                    $(this).text(Math.ceil(now));
+                }
+            });
+        });
+        });
+    </script>
 {% endblock page %}
 

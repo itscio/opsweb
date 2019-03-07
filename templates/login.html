@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>运维综合管理平台</title>
+        <title>墨迹科技运维综合管理平台</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
         <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
         <link rel="stylesheet" href="/static/css/style.css" />
         <link rel="stylesheet" href="/static/css/spop.css">
@@ -24,7 +26,7 @@
             </div>
             <div style="clear:both"></div>
             <div style="padding-top: 10%" align="center">
-                <div class="panel" style="border: 1px solid #a6d3e8 ;width: 400px;height: 400px">
+                <div class="panel" style="border: 1px solid #a6d3e8 ;width: 25rem;height:25rem">
                     <div class="panel-heading  alert alert-info" >
                         <h3 class="panel-title" style="margin:0px;line-height: 15px">登陆</h3>
                     </div>
@@ -33,9 +35,9 @@
                     </div>
                 </div>
                 {% if ENV == 'dev' %}
-                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/">钉钉账户密码登陆>></a>
+                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/sns_authorize?appid=dingoa7wymhx6dbeffjels&response_type=code&scope=snsapi_login&state=STATE&redirect_uri=http://172.16.68.13/login">钉钉账户密码登陆>></a>
                 {% else %}
-                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/">钉钉账户密码登陆>></a>
+                    <span class="icon icon-hand-right"></span><a href="https://oapi.dingtalk.com/connect/oauth2/sns_authorize?appid=dingoadq3qon8zb34vzdff&response_type=code&scope=snsapi_login&state=STATE&redirect_uri=http://op.moji.com/login">钉钉账户密码登陆>></a>
                 {% endif %}
             </div>
             {% if ENV %}
@@ -47,7 +49,7 @@
     </body>
     <div style="clear:both"></div>
     <footer>
-            <p>xxxxxxxxxxxxxxxx|版权所有© 2009-{{ ym }} xxxx|运维邮箱:yw@xxxx.com</p>
+            <p>北京墨迹风云科技股份有限公司|版权所有© 2009-{{ ym }} 墨迹科技|运维邮箱:yw@moji.com</p>
     </footer>
     {% with messages = get_flashed_messages() %}
         {% if messages %}
