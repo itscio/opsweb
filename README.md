@@ -4,7 +4,7 @@
     - 代码上线，包含上线、灰度、回滚等功能并实时显示执行过程 
     - 生产环境包含php、java，项目环境及负载均衡配置一键部署 
     - k8s容器平台管理及一键式容器化服务上线
-    - redis慢查询、数据库表查询、应用部署查询、服务器资源查询
+    - 自动进行服务器资产、应用服务的信息及关联关系抓取
     - 资源汇总包含mysql、redis、kafka等基础信息
     - 实时大数据分析包含各个线上业务的并发量、流量、响应时间、业务访问占比、用户地区分布
     - 运维审查包括上线操作、申请记录、日志记录
@@ -17,6 +17,7 @@
     
 # 界面展示
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
-
+# 资产管理
+![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
 # 安装文档: #
 近期准备搞一个docker镜像、容器化后开箱即用。
