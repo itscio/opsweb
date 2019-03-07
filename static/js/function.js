@@ -25,7 +25,7 @@ function referrer_url() {
     if (document.referrer) {
         var url = document.referrer;
     } else {
-        var url = '/index';
+        var url = '/';
     }
     location.href = url;
 }
