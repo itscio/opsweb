@@ -19,5 +19,5 @@
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
 # 资产管理
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
-# 安装文档: #
-近期准备搞一个docker镜像、容器化后开箱即用。
+# 手机界面
+![show](https://github.com/wylok/opsweb/blob/master/static/images/03.jpg)
