@@ -555,7 +555,7 @@ def alarm_load():
         db_project = db_op.project_list
         zabi = tools.zabbix_api()
         redis_key = 'op_alarm_load_hosts'
-        token = "https://oapi.dingtalk.com/robot/send?access_token=052f18d93a62110bb5152785bfb1f473f829d183294fbbe6048bc5073ff22cd5"
+        token = ""
         host_infos = db_zabbix.query.with_entities(db_zabbix.ip, db_zabbix.ssh_port,db_zabbix.hostname,db_zabbix.update_time).filter(and_(db_zabbix.cpu_load > 100, db_zabbix.icmpping == 1)).all()
         #循环监控疑似问题服务器
         for infos in host_infos:
