@@ -1,0 +1,96 @@
+<div style="width:100%;margin-left:1%">
+    <div id="alarm_load" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
+        <strong style="font-size: smaller">服务器30分钟持续压力预警</strong>
+        {% if z_infos %}
+            {% if z_infos['cpu_load'] %}
+                {% for info in z_infos['cpu_load'] %}
+                    {% if info[1]|int >100 %}
+                        <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
+                            <a href="/assets_get?type=server&hostname={{ info[0] }}">{{ info[0] }}</a> CPU持续使用率{{ info[1]|int }}%
+                            {% if info[0] in whitelist %}
+                                <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')">取消知悉</a></span>
+                            {% else %}
+                                <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {% if z_infos['openfile'] %}
+                {% for info in z_infos['openfile'] %}
+                    {% if info[1]|int >300000 %}
+                        <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
+                            <a href="/assets_get?type=server&hostname={{ info[0] }}">{{ info[0] }}</a> openfile持续达到{{ info[1]|int }}
+                            {% if info[0] in whitelist %}
+                                <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')">取消知悉</a></span>
+                            {% else %}
+                                <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% else %}
+            <div class="radar_background">
+                <div class="radar">
+                    <a href="#">实时监测中</a>
+                </div>
+            </div>
+            <script>
+                $('#alarm_load').css('overflow','hidden');
+            </script>
+        {% endif %}
+    </div>
+    <div id="zabbix" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
+        <strong style="font-size: smaller">zabbix实时报警信息</strong>
+        {% if z_triggers %}
+            {% for tigger in z_triggers %}
+                <div class="alert alert-error" style="text-align: left;margin: 1%">
+                    {{ tigger[-1] }}
+                    <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/zb_ensure/{{ tigger[0] }}');ajax_alarm_show('/alarm_show','alarm_show')">确认知悉</a></span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="radar_background">
+                <div class="radar">
+                    <a href="#">实时监测中</a>
+                </div>
+            </div>
+            <script>
+                $('#zabbix').css('overflow','hidden');
+            </script>
+        {% endif %}
+    </div>
+    <div id="fault_server" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
+        <strong style="font-size: smaller">问题服务器信息</strong>
+        {% if fault_servers %}
+            {% for key in fault_servers %}
+                {% if fault_servers[key] %}
+                    {% for infos in fault_servers[key] %}
+                        {% if infos[0] != '王府井机房' %}
+                            <div class="alert alert-success" style="text-align: left;margin: 1%">
+                                {{ infos[0] }} <a href="/assets_get?type=server&ip={{ infos[1] }}&port={{ infos[2] }}"> {{ infos[1] }}:{{ infos[2] }}</a>
+                                {% if 'ssh_login_fault' in key %}
+                                    SSH登录验证失败
+                                {% endif %}
+                                {% if 'ssh_port_fault' in key %}
+                                    网络或SSH端口不通
+                                {% endif %}
+                                <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_host_ensure/{{ key }}/{{ infos[1] }}:{{ infos[2] }}');ajax_alarm_show('/alarm_show','alarm_show')">确认知悉</a></span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="radar_background">
+                <div class="radar">
+                    <a href="#">实时监测中</a>
+                </div>
+            </div>
+            <script>
+                $('#fault_server').css('overflow','hidden');
+            </script>
+        {% endif %}
+    </div>
+</div>

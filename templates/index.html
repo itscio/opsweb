@@ -1,86 +1,9 @@
 {% extends "base.html" %}
 {% block page %}
-    <div style="width:100%;margin-left:1%">
-        {% for key in gauge %}
-            <div id="{{ key }}" class="style_border" style="width:31%;overflow: hidden;float:left;margin-left: 1%;height:220px;">
-                {{ echarts_js_dependencies(gauge[key]) }}
-                {{ echarts_container(gauge[key]) }}
-                {{ echarts_js_content(gauge[key]) }}
-            </div>
-        {% endfor %}
-        {% if z_infos %}
-            <div id="zabbix" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
-                <strong style="font-size: smaller">服务器实时压力预警</strong>
-                {% if z_infos['cpu_load'] %}
-                    {% for info in z_infos['cpu_load'] %}
-                        <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
-                            <a href="/assets_get?type=server&ip={{ info[0] }}&port={{ info[1] }}">{{ info[0] }}</a> CPU使用率达到{{ info[2] }}%
-                            <span class="badge index_zabbix">关注</span>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-                {% if z_infos['disk_io'] %}
-                    {% for info in z_infos['disk_io'] %}
-                        <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
-                            <a href="/assets_get?type=server&ip={{ info[0] }}&port={{ info[1] }}">{{ info[0] }}</a> 磁盘IO达到{{ info[2] }}%
-                            <span class="badge index_zabbix">关注</span>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-                {% if z_infos['openfile'] %}
-                    {% for info in z_infos['openfile'] %}
-                        <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
-                            <a href="/assets_get?type=server&ip={{ info[0] }}&port={{ info[1] }}">{{ info[0] }}</a> 系统openfile达到{{ info[2]|int }}
-                            <span class="badge index_zabbix">关注</span>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            <script type="text/javascript">
-                $('#busi').hide();
-            </script>
-        {% endif %}
-        {% if z_triggers %}
-            <div id="zabbix" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
-                <strong style="font-size: smaller">zabbix实时报警信息</strong>
-                {% for tigger in z_triggers %}
-                    <div class="alert alert-error" style="text-align: left;margin: 1%">
-                        {{ tigger[-1] }}
-                        <span class="badge index_zabbix"><a href="/zb_ensure/{{ tigger[0] }}">确认</a></span>
-                    </div>
-                {% endfor %}
-            </div>
-            <script type="text/javascript">
-                $('#network').hide();
-            </script>
-        {% endif %}
-        {% if fault_servers %}
-            <div id="zabbix" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
-                <strong style="font-size: smaller">问题服务器信息</strong>
-                {% for key in fault_servers %}
-                    {% if fault_servers[key] %}
-                        {% for infos in fault_servers[key] %}
-                            {% if infos[0] != '王府井机房' %}
-                                <div class="alert alert-success" style="text-align: left;margin: 1%">
-                                    {{ infos[0] }} <a href="/assets_get?type=server&ip={{ infos[1] }}&port={{ infos[2] }}"> {{ infos[1] }}:{{ infos[2] }}</a>
-                                    {% if 'ssh_login_fault' in key %}
-                                        SSH登录验证失败
-                                    {% endif %}
-                                    {% if 'ssh_port_fault' in key %}
-                                        网络或SSH端口不通
-                                    {% endif %}
-                                    <span class="badge index_zabbix"><a href="/assets_manage?key={{ key }}&infos={{ infos[1] }}:{{ infos[2] }}">确认</a></span>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
-                {% endfor %}
-                <script type="text/javascript">
-                    $('#server').hide();
-                </script>
-            </div>
-        {% endif %}
-    </div>
+    <div id="alarm_show"></div>
+    <script>
+        ajax_alarm_show("/alarm_show","alarm_show");
+    </script>
     {% if BUSIS %}
         <div style="clear:both"></div>
         {% for busi in BUSIS %}
@@ -99,11 +22,4 @@
             {{ echarts_js_content(line) }}
         </div>
     </div>
-    <script language="JavaScript">
-        function myrefresh()
-        {
-           window.location.reload();
-        }
-        setTimeout('myrefresh()',60000); //指定60秒刷新一次
-        </script>
 {% endblock page %}
