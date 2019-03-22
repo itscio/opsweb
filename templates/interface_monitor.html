@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block page %}
-    <div class="div"><p>线上业务接口状态监控</p></div>
     {% if alarms %}
+        <div class="div">线上业务接口状态监控</div>
         {% for url,vals in alarms %}
             {% if vals['incr'] %}
                 <div class="panel" style="float:left;border: 1.5px solid #F2DEDF;border-radius:7px;width: 46%;margin-top: 1%;margin-left: 2%;background:aliceblue">
@@ -70,12 +70,9 @@
             {% endif %}
         {% endfor %}
     {% else %}
-        <div class="panel" style="border: 1.5px solid #468847;border-radius:7px;width: 50%;margin-top: 5%;margin-left: 25%;background:whitesmoke">
-            <div class="panel-heading alert alert-success" style="text-align: center;height:1em">
-                <h5 style="line-height: 10px;margin: -2px">线上业务接口性能全部正常</h5>
-            </div>
-            <div class="panel-body">
-                <i class="far fa-thumbs-up" style="color:#468847;font-size: 160px"></i>
+        <div class="radar_background">
+            <div class="radar" style="width:550px;height:550px;transform:translate(-50%, 0%)">
+                <a href="#">业务接口监测中</a>
             </div>
         </div>
     {% endif %}
