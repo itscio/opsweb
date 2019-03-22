@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 import os
-from flask import Flask,redirect,url_for,make_response,render_template,session,render_template_string
+from flask import Flask,make_response,render_template,session,render_template_string,request,g
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from api import ajax_api,assets_add,publish_code,assets_query,record_publish,deployment_deploy
@@ -8,11 +8,11 @@ import index,login,logout
 import socket
 import time
 from views import chart_center,publish,deploy,k8s,k8s_deploy
-from views import dns_conf,sch_list,app_service
+from views import sch_list,app_service
 from views import business_m,Error,report,influxdb_m
 from views import Assets,mysql_info,business,approval
 from admin import examine,assets_manage,resource_pool
-from Modules import init,produce
+from Modules import init,produce,check
 from flask_debugtoolbar import DebugToolbarExtension
 class MyFlask(Flask):
     jinja_environment = init.FlaskEchartsEnvironment
@@ -39,7 +39,6 @@ app.register_blueprint(publish.page_publish)
 app.register_blueprint(resource_pool.page_resource_pool)
 app.register_blueprint(chart_center.page_chart_center)
 app.register_blueprint(examine.page_examine)
-app.register_blueprint(dns_conf.page_dns_conf)
 app.register_blueprint(sch_list.page_sch_list)
 app.register_blueprint(ajax_api.page_ajax_api)
 app.register_blueprint(business_m.page_business_monitor)
@@ -67,11 +66,28 @@ task_run.Run()
 @limiter.exempt
 def main():
     session['Menu'] = {}
-    return redirect(url_for('index.index'))
+    return render_template('main.html')
+
+@app.route('/mobile')
+@limiter.exempt
+@check.login_required(grade=1)
+def mobile():
+    produce.Async_log(g.user, request.url)
+    return render_template('mobile/m_index.html')
+
+@app.route('/webssh')
+@limiter.exempt
+@check.login_required(grade=1)
+def webssh():
+    produce.Async_log(g.user, request.url)
+    url = "http://172.16.69.250:8000/"
+    return render_template('webssh.html',url=url)
+
 @app.errorhandler(404)
 def page_not_found(error):
      resp = make_response(render_template('404.html',ym=time.strftime('%Y',time.localtime())),404)
      return resp
+
 @app.errorhandler(405)
 def method_not_allowed(error):
      resp = make_response(render_template_string("Method Not Allowed: 405 The method is not allowed for the requested URL!"),405)

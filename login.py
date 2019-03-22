@@ -67,7 +67,7 @@ def login():
                     if val:
                         db_auth.query.filter(and_(db_auth.dingId == dingId, db_auth.openid == openid)).update({db_auth.token:token,db_auth.update_time:time.strftime('%Y-%m-%d %H:%M:%S',time.localtime())})
                         db_op.DB.session.commit()
-                        URL = url_for('index.index')
+                        URL = url_for('main')
                         timestamp = check.timestamp(7)
                     else:
                         #跳转至权限申请页
