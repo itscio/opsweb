@@ -43,9 +43,9 @@ def login():
             code = tools.http_args(request,'code')
             #获取token
             try:
-                url = "https://oapi.dingtalk.com/sns/gettoken?appid=dingoadq3qon8zb34vzdff&appsecret=Tu6IlXjTn1m4vqrOA580xLOt2VbOK26bVu3sBOtvp0MnqIp2zpcwkL3qVpqAT7rG"
+                url = "https://oapi.dingtalk.com/sns/gettoken?appid=&appsecret="
                 if ENV == 'dev':
-                    url = "https://oapi.dingtalk.com/sns/gettoken?appid=dingoa7wymhx6dbeffjels&appsecret=I-v3OXL1hFKYZlJ3b6pqABmoNGYREXePpdzQ5JaSK8DqJdQyn_1J3wEUYBTpdiE_"
+                    url = "https://oapi.dingtalk.com/sns/gettoken?appid=&appsecret="
                 r = requests.get(url)
                 access_token = r.json()['access_token']
                 r = requests.post("https://oapi.dingtalk.com/sns/get_persistent_code?access_token=%s" %access_token,data=json.dumps({"tmp_auth_code":code}))
