@@ -16,6 +16,7 @@
     — 新增运维工单系统
     
     目前已在多家互联网公司落地部署，平台功能也是根据不同公司实际情况进行了差异化定制开发。本平台适合具有python二次开发能力者或运维开发学习者。
+    开发合作(加微信请注明)：![show](https://github.com/wylok/opsweb/blob/master/static/images/me.png)
     
 # 界面展示
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
