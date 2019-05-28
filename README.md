@@ -15,12 +15,12 @@
     - 通过分布式全局锁,进程排它锁,实现多机多进程部署后台单任务运行
     — 新增运维工单系统
     
-    目前已在多家互联网公司落地部署，平台功能也是根据不同公司实际情况进行了差异化定制开发。本平台适合具有python二次开发能力者或运维开发学习者。
-开发合作(加微信请注明事由)：
-![show](https://github.com/wylok/opsweb/blob/master/static/images/me.jpg)    
+    目前已在多家互联网公司落地部署，平台功能也是根据不同公司实际情况进行了差异化定制开发。本平台适合具有python二次开发能力者或运维开发学习者。    
 # 界面展示
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
 # 资产管理
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
 # 工单系统
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/04.jpg)
+# 开发合作(加微信请注明事由)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/me.jpg)
