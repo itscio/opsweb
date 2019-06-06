@@ -22,5 +22,5 @@
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
 # 工单系统
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/04.jpg)
-# 开发合作(加微信请注明事由)
+加微信请注明事由
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/me.jpg)
