@@ -97,15 +97,6 @@ class MyFrom_third_resource(Form):
         hosts = TextAreaField(validators=[DataRequired()])
         submit_recucle = SubmitField('回收', id='submit')
 
-class MyForm_dns_conf(Form):
-    select_domain = SelectField(choices=[('moji.com','moji.com'),('service.moji','service.moji'),('sql.moji','sql.moji')])
-    select_type = SelectField(choices=[('A','A'),('CNAME','CNAME'),('MX','MX'),('TEXT','TEXT'),('NS','NS')])
-    select_action = SelectField(choices=[ ('query', '查询'),('add', '新增'), ('modify', '修改'), ('del', '删除')])
-    select_sys = SelectField(choices=[('cw', '测外'), ('xs', '线上')])
-    field = StringField('field', validators=[DataRequired(), Length(1,64)])
-    ip = StringField('ip', validators=[DataRequired(), Length(1, 64)])
-    submit = SubmitField('提交',id='btn1')
-
 class MyForm_assets_manage(Form):
     db_idc_id = db_idc.idc_id
     text = TextAreaField(validators=[DataRequired()])
