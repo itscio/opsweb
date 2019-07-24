@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><h5>{{ total }}</h5></div>
+    <div style="text-align: center;width:99%;margin-right:0.5%">
+        <table class="table table-hover table-striped table-condensed table-bordered" id="table">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <th style="text-align: center;vertical-align: middle">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            {% if work_orders %}
+                <tbody>
+                    {% for value in work_orders %}
+                        <tr>
+                            <td class="td_style" style="text-align: center">
+                                <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ value[0] }}</div>
+                            </td>
+                            {% for val in value[3:7] %}
+                                <td class="td_style" style="text-align: center">
+                                    <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ val }}</div>
+                                </td>
+                            {% endfor %}
+                            <td class="table_list" style="width:400px;text-align: left">{{ value[7] }}</td>
+                            {% for val in value[8:] %}
+                                <td class="td_style" style="text-align: center">
+                                    <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ val }}</div>
+                                </td>
+                            {% endfor %}
+                            <td class="td_style" style="text-align: center">
+                                <a href="#" onclick="work_details_iframe('/work_details/sql_execute/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
+                                    <i class="fas fa-align-left"></i>
+                                </a>
+                            </td>
+                            <td class="td_style" style="text-align: center">
+                                {% if value[2] in ['未受理','已拒绝','未审核','已退回'] %}
+                                    <a href="/sql_execute_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单申请"><i class="fas fa-redo"></i>可撤销</a>
+                                {% elif value[2] == '受理中' %}
+                                    <i class="fas fa-spinner fa-spin"></i>{{ value[2] }}
+                                {% else %}
+                                    {{ value[2] }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            {% endif %}
+        </table>
+    </div>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >工单详情
+            <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
+                <a href="javascript:hideDialog();" >关闭</a>
+            </span>
+        </div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
+    </div>
+    <script>
+        "use strict";
+        $(document).ready(table_order('table',1));
+        $("#iframe").load(function(){
+            var mainheight = $(this).contents().find("body").height()+30;
+            $(this).height(mainheight);
+            $('#dialogMove').height(mainheight+30);
+            });
+    </script>
+    {% if msg %}
+        <script>
+            "use strict";
+            js_msg('{{ msg|safe }}',3000,'info');
+            setTimeout(function () {
+                location.href='/sql_execute_list';
+            },4000);
+        </script>
+    {% endif %}
+{% endblock page %}

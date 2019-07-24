@@ -19,11 +19,6 @@
                         {% else %}
                             <td class="table_list" style="text-align: center">
                                 <a href="/assets_get?type=server&hostname={{ val[0] }}" style="float: left;margin-left: 40%">{{ val[0] }}</a>
-                                {% if val[6] == '否' %}
-                                    <a href="/redis_status/{{ val[0] }}/{{ val[1] }}" style="color:tomato;float: right ">
-                                        <i class="fas fa-chart-line"></i>
-                                    </a>
-                                {% endif %}
                             </td>
                         {% endif %}
                         <td class="table_list" style="text-align: center">{{ val[1] }}</td>

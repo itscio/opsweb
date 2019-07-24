@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>容器平台业务运行状态</p></div>
+    <div style="float:left;margin-left:0.5%;margin-bottom: -0.5%">选择域名:<select id="select" onchange="select_domain()"></select></div>
+    {% if charts %}
+        {% for chart in charts %}
+            <div style="margin-left:0.5%;margin-top: 1%;width:97.7%;float:left;border:1px solid gainsboro;overflow: hidden">
+                <div style="margin-left: -4%;">
+                    {{ echarts_js_dependencies(chart) }}
+                    {{ echarts_container(chart) }}
+                    {{ echarts_js_content(chart) }}
+                </div>
+             </div>
+        {% endfor %}
+    {% endif %}
+    <script>
+        $.each({{ domains_menu|safe }},
+            function(i,val){
+                var option = "<option value='"+val+"'>"+val+"</option>";
+                $('#select').append(option)}
+                );
+        function select_domain() {
+            var domain = $('#select').val();
+            location.href = '/chart_k8s_status/'+domain;
+        }
+        {% if domain %}
+            $('#select').val("{{ domain|safe }}");
+        {% endif %}
+    </script>
+{% endblock page %}

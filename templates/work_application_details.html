@@ -1,0 +1,28 @@
+{% if publish_info %}
+    <div style="font-size:14px">
+        <div style="text-align: center;font-weight: bold">----代码上线详情----</div>
+        <div style="text-align: left;margin-top: 1%"><strong>项目名称:</strong>{{ publish_info['task_records'][2] }}</div>
+        <div style="text-align: left;margin-top: 1%"><strong>版本:</strong>{{ publish_info['task_records'][3] }}</div>
+        <div style="text-align: left;margin-top: 1%"><strong>GIT地址:</strong>{{ publish_info['task_records'][4] }}</div>
+        <div style="text-align: left;margin-top: 1%"><strong>变更描述:</strong>{{ publish_info['task_records'][5] }}</div>
+        <div style="text-align: left;margin-top: 1%"><strong>备注说明:</strong>{{ publish_info['task_records'][6] }}</div>
+        {% if 'sql_execute' in publish_info %}
+            <div style="text-align: center;font-weight: bold;margin-top: 1%">----SQL执行详情----</div>
+            <div style="text-align: left;margin-top: 1%"><strong>服务器:</strong>{{ publish_info['sql_execute'][0] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>端口:</strong>{{ publish_info['sql_execute'][1] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>数据库:</strong>{{ publish_info['sql_execute'][2] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>文件地址:</strong>{{ publish_info['sql_execute'][3] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>文件MD5:</strong>{{ publish_info['sql_execute'][4] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>变更描述:</strong>{{ publish_info['sql_execute'][5] }}</div>
+        {% endif %}
+        <div style="text-align: center;font-weight: bold;margin-top: 1%">----申请人详情----</div>
+        <div style="text-align: left;margin-top: 1%"><strong>申请人:</strong>{{ publish_info['user_info'][0] }}
+            &nbsp;&nbsp;<strong>部门:</strong>{{ publish_info['user_info'][1] }}
+        </div>
+        {% if publish_info['reviewer'] %}
+            <div style="text-align: left;margin-top: 1%"><strong>审核人:</strong>{{ publish_info['reviewer'] }}</div>
+        {% endif %}
+        <div style="text-align: left;margin-top: 1%"><strong>申请时间:</strong>{{ publish_info['task_records'][0] }}&nbsp;{{ publish_info['task_records'][1] }}</div>
+        <div style="margin-bottom: 2%"></div>
+    </div>
+{% endif %}

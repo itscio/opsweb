@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block page %}
-    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #a6d3e8 ;float: left;width: 45%;margin-left: 25%;margin-top: 4%;">
-        <div class="panel-heading" style="background-color: #a6d3e8">
-            <h4 class="panel-title" style="margin:0px;color:#374b0b" >新业务信息录入</h4>
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;float: left;width: 45%;margin-left: 25%;margin-top: 4%;">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >新业务信息录入</h4>
         </div>
         <div class="panel-body" style="margin-top: 5%">
             <form action="/new_business" method="post">
@@ -11,9 +11,9 @@
                 <p>业务描述:<span style="color: red;font-size:large">*</span>{{ form.describe (style="width:295px",placeholder="业务简单描述",id='describe')}}</p>
                 <p>项目名称:<span style="color: red;font-size:large">*</span>{{ form.project (style="width:295px",id="project") }}</p>
                 <p>项目域名:&nbsp;&nbsp;{{ form.domain (style="width:295px",id='domain') }}</p>
-                <p>开发负责人:{{ form.person (style="width:105px",id='person') }}&nbsp;联系电话:{{ form.contact (style="width:105px",id='contact') }}</p>
-                <p>资源信息<span style="color: red;font-size:large">*</span>:{{ form.area_resource (style="width:295px;height:100px;resize:none",placeholder="主机:应用端口,如无端口只需填写主机名称或者ip即可.",id='hostname') }}</p>
-                <p>{{ form.submit (class="btn-sub") }}</p>
+                <p>开发负责人:{{ form.person (style="width:121px",id='person') }}&nbsp;联系电话:{{ form.contact (style="width:105px",id='contact') }}</p>
+                <p>{{ form.area_resource (style="width:362px;height:100px;resize:none",placeholder="主机:应用端口,如无端口只需填写主机名称或者ip即可.",id='hostname') }}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
             </form>
         </div>
     </div>
@@ -29,7 +29,7 @@
             var project = $('#project').val();
             if (project.indexOf('.jar') < 0){
                 $('#domain').removeAttr('readonly');
-            };
+            }
             $('#describe').removeAttr('readonly');
             $('#person').removeAttr('readonly');
             $('#contact').removeAttr('readonly');
@@ -58,7 +58,7 @@
             {% endfor %}
             if (url_referrer) {
                 setTimeout(function () {window.localStorage.clear();location.href = url_referrer;},3000);
-                };
+            }
         {% endif %}
         {% if Info %}
             {% for info in Info %}
@@ -69,7 +69,7 @@
                 setTimeout(function(){window.localStorage.clear();location.href=url_referrer;},1000);
                 } else{
                     setTimeout(function(){location.href='/new_business';},1000);
-                };
+            }
         {% endif %}
     </script>
 {% endblock page %}

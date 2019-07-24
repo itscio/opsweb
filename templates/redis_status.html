@@ -5,24 +5,8 @@
             <a href="/redis_info"style="float:left;margin-left: 1.5%">
                 <span class="icon-hand-left" ></span>返回
             </a>
-            {% if BARS %}
-                <span style="font-size: larger">redis实例({{ hostname }}:{{ app_port }})运行指标</span>
-            {% endif %}
         </div>
         <div class="style_hr" style="width:97.5%;margin-left:1%;"></div>
-        {% if BARS %}
-            <div id="redis_status">
-                {% for bar in BARS %}
-                    <div style="margin-left:1%;margin-top: 1%;width:48%;float:left;border:1px solid gainsboro;overflow: hidden">
-                        <div style="margin-left: 0%;">
-                            {{ echarts_js_dependencies(bar) }}
-                            {{ echarts_container(bar) }}
-                            {{ echarts_js_content(bar) }}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
         {% if tree %}
             {{ echarts_js_dependencies(tree) }}
             {{ echarts_container(tree) }}

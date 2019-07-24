@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:25%;margin-top: 4%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >自动水平伸缩资源配置</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/hpa_apply" method="post">
+                {{ form.csrf_token }}
+                <p>Deployment:&nbsp;{{ form.deployment (style="width:188px")}}</p>
+                <p>最大副本数:&nbsp;&nbsp;{{ form.max_replica (style="width:194px")}}</p>
+                <p>最小副本数:&nbsp;&nbsp;{{ form.min_replica (style="width:194px")}}</p>
+                <p>CPU预阀值:&nbsp;&nbsp;{{ form.cpu_value (style="width:194px")}}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
+            </form>
+        </div>
+    </div>
+{% endblock page %}

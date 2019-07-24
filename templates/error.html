@@ -1,16 +1,48 @@
-{% extends "base.html" %}
-{% block page %}
-    <div class="alert alert-danger" style="margin-top: 13%;display:inline-block;*display:inline;*zoom:1;">
-        {% if Error_info %}
-            <p>发现异常操作,{{ Error_info|safe }}</p>
-        {% else %}
-            <p>发生未知异常错误!</p>
-        {% endif %}
-        <strong><span id="jumpTo">5</span>秒后页面自动跳转到登陆页......</strong>
-    </div>
-    <script type="text/javascript">
-        var jumpTo = document.getElementById('jumpTo');
-        secs = jumpTo.innerHTML;
-        countDown(secs,'/logout');
-    </script>
-{% endblock page %}
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <!--[if lt IE 9]>
+    <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+    <title>墨迹运维综合管理平台</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/preloader.js"></script>
+    <link rel="stylesheet" href="/static/css/error_style.css">
+    <link href='http://fonts.googleapis.com/css?family=Finger+Paint' rel='stylesheet' type='text/css'>
+    <script type="text/javascript" src="/static/js/css_browser_selector.js"></script>
+    <script type="text/javascript" src="/static/js/plax.js"></script>
+    <script type="text/javascript" src="/static/js/jquery.spritely-0.6.1.js"></script>
+    <script type="text/javascript" src="/static/js/jquery-animate-css-rotate-scale.js"></script>
+    <script type="text/javascript" src="/static/js/script.js"></script>
+</head>
+<body >
+<div id="indicator"></div>
+<div class="wrapper">
+	<div class="sky init">
+	<div id="clouds" class="clouds init"> </div>
+	</div>
+	
+	<div class="convas init">
+		<div id="mountain" class="mountain"></div>
+		<div class="ground"></div>
+		<div class="holder">
+		<div class="rocks"></div>
+		<div class="work-sign"></div>
+		<div class="text-sign">
+			<div class="text font">
+					<a href="/logout" style="color:darkred;font-weight: bolder">出错啦!重新登录</a>
+			</div>
+		</div>
+		<div class="init hole">
+			<div class="sweat"></div>
+			<div class="worker swing "></div>
+			<div class="ground-bottom">
+				<div class="cleaner"></div>
+			</div>
+		</div>
+		</div>
+	</div>
+</div>
+</body>
+</html>
+

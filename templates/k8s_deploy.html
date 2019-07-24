@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block page %}
-    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #a6d3e8 ;width:750px;float:left;margin-left:23%;margin-top: 4%">
-        <div class="panel-heading" style="background-color: #a6d3e8">
-            <h4 class="panel-title" style="margin:0px;color:#374b0b" >项目容器化部署</h4>
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:23%;margin-top: 4%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >项目容器化部署</h4>
         </div>
         <div class="panel-body" style="margin-top: 5%">
             <form action="/deployment_create" method="post">
@@ -13,11 +13,11 @@
                 </p>
                 <p>代码包名:{{ form.object (style="width:200px")}}&nbsp;版本号:{{ form.version (style="width:144px")}}</p>
                 <p style="text-align: center;color: #11689e">>>>>>>>>>>>>以下为可选项-----以下为可选项<<<<<<<<<<<<</p>
-                <p>容器CPU核数:{{ form.request_cpu (style="width:64px") }}-{{ form.limit_cpu (style="width:64px")}}&nbsp;
-                    内存资源:{{ form.request_mem (style="width:64px",placeholder="默认GB")}}-{{ form.limit_mem (style="width:64px",placeholder="默认GB")}}
+                <p>容器CPU核数:{{ form.request_cpu (style="width:71px") }}-{{ form.limit_cpu (style="width:71px")}}&nbsp;
+                    内存资源:{{ form.request_mem (style="width:71px",placeholder="默认GB")}}-{{ form.limit_mem (style="width:71px",placeholder="默认GB")}}
                 </p>
                 <p>项目域名:{{ form.domain (style="width:256px",placeholder="对外提供http服务必填,多个以逗号分割")}} &nbsp;对外服务端口:{{ form.ingress_port (style="width:41px") }}</p>
-                <p>{{ form.submit (class="btn-sub") }}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
             </form>
         </div>
     </div>

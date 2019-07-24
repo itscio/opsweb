@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block page %}
-    <div class="div"><p>平台访问记录</p></div>
+    <div class="div"><p>运维平台用户访问记录</p></div>
     <div style="width: 99%">
         <table id="table_data" class="table table-striped table-bordered table-hover" width="100%">
         <thead>
@@ -11,10 +11,13 @@
             </tr>
         </thead>
         <tbody>
-            {% if values %}
-                 {% for value in values %}
+            {% if vals %}
+                 {% for val in vals %}
                     <tr>
-                        {% for va in value %}
+                        {% for va in val[-2:] %}
+                            <td>{{ va }}</td>
+                        {% endfor %}
+                        {% for va in val[:-2] %}
                             <td>{{ va }}</td>
                         {% endfor %}
                     </tr>

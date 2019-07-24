@@ -3,12 +3,12 @@
     <div class="div" style="margin-top: 1%"><p>后台任务cron执行时间轴</p></div>
     <hr style="width: 97%;margin-left: 1%;border: 0;height: 2px;background: #333;
         background-image: linear-gradient(to right, #ccc, #333, #ccc);">
-    <div class="fishBone" style="width: 97%;margin-left: 1%"></div>
+    <div class="fishBone" id="fishBone" style="width: 97%;margin-left: 1%"></div>
     <hr style="width: 97%;margin-left: 1%;border: 0;height: 2px;background: #333;
         background-image: linear-gradient(to right, #ccc, #333, #ccc);">
     <script>
         $(function() {
-            $(".fishBone").fishBone({{ values|safe }});
+            $("#fishBone").fishBone({{ values|safe }});
         });
     </script>
 {% endblock page %}

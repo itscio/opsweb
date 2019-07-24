@@ -4,13 +4,12 @@
         <form action="/chart_domain_status" method="post" style="margin:0px">
             {{ form.csrf_token }}
             <div style="display: inline">
-                <span class="icon-calendar icon-align-center" style="Float:left;vertical-align:middle;margin-top: 4%"></span>
-                {{ form.input (id='input',style="width:120px;Float:left",placeholder="选择时间点") }}
+                {{ form.input (id='input',style="width:120px;Float:left;margin-top: 4%",placeholder="选择时间点") }}
                 {{ form.submit(class="btn btn-link", value='查询',style="Float:left") }}
             </div>
         </form>
     </div>
-    <div style="clear:both"><hr style="float:right;width: 15%;margin: 0px;margin-right: 4%;background-color:lightsalmon;height:1px;border:none;"></div>
+    <div style="clear:both"><hr style="float:right;width: 10%;margin: 0px;margin-right: 4%;background-color:lightsalmon;height:1px;border:none;"></div>
     <div style="width: 99%">
         {% if bar_upstreams %}
             {% for bar in bar_upstreams %}

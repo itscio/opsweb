@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="clear:both;"></div>
+    <div class="div"><h5>已申请工单列表</h5></div>
+    <div style="text-align: center;width:98%;margin-left:1%">
+        <table class="table table-hover table-striped table-condensed table-bordered" id="table">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <th class="td_style" style="text-align: center;">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if work_orders %}
+                    {% for value in work_orders %}
+                        <tr>
+                            <td class="td_style" style="text-align: center"><a href="/{{ work_types[value[2]] }}?action=query&work_number={{ value[0] }}">{{ value[0] }}</a></td>
+                            <td class="td_style" style="text-align: center">{{ value[1] }}</td>
+                            <td class="td_style" style="text-align: center">{{ source_types[value[2]] }}</td>
+                            {% for val in value[3:] %}
+                                <td class="td_style" style="text-align: center">{{ val }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table',1));
+    </script>
+{% endblock page %}

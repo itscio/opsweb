@@ -24,8 +24,8 @@
                             {% for va in val[3:] %}
                                 <td style="text-align: center">{{ va }}</td>
                             {% endfor %}
-                            <td style="text-align: center"><a href="#" onclick="ajax_url('/business_monitor/{{ val[0] }}')">检测</a></td>
-                            <td style="text-align: center"><a href="#" onclick="ajax_url('/business_monitor/lock/{{ val[0] }}')">停止</a></td>
+                            <td style="text-align: center"><a href="#" onclick="ajax_run('/business_monitor/{{ val[0] }}')">检测</a></td>
+                            <td style="text-align: center"><a href="#" onclick="ajax_run('/business_monitor/lock/{{ val[0] }}')">停止</a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

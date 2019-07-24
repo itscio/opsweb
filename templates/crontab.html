@@ -14,8 +14,9 @@
                  {% for val in vals %}
                     <tr>
                         <td width="10%">{{ val[0] }}</td>
-                        <td width='40%'>{{ val[1] }}</td>
-                        {% for va in val[2:-1] %}
+                        <td width='6%' style="text-align: center">{{ val[1] }}</td>
+                        <td width='40%'>{{ val[2] }}</td>
+                        {% for va in val[3:-1] %}
                             <td>{{ va }}</td>
                         {% endfor %}
                         <td><a href="/assets_get?type=server&hostname={{ val[-1] }}">{{ val[-1] }}</a></td>

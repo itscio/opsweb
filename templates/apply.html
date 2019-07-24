@@ -1,43 +1,31 @@
-<!DOCTYPE html>
-<html>
-    <head>
-            <title>运维综合管理平台</title>
-            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-            <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
-            <link rel="stylesheet" href="/static/css/style.css" />
-            <script src="/static/js/jquery.min.js"></script>
-            <script src="/static/js/bootstrap.min.js"></script>
-    </head>
-    </head>
-    <body style="background-color:white">
-        <div class="Page" style="width: 100%">
-            <div style="width: 100%;position: absolute; top:0">
-                    <div style="width: 10%;float: left;padding-top: 1%">
-                        <img class="img-rounded" src="/static/images/logo.gif" style="width: auto; height: auto;max-width: 100%;max-height: 100%;">
-                    </div>
-                    <div style="float: left;font-size:25pt;color: black;font-weight:bold;margin-top: 1.5%;margin-left: 0.5%">
-                        <p>运维综合管理平台</p>
-                    </div>
+{% extends "base.html" %}
+{% block page %}
+    <div style="padding-top: 6%" align="center">
+        <div class="panel" style="border: 1px solid #0480be ;width: 50%">
+            <div class="panel-heading  alert alert-info" >
+                <h4 class="panel-title" style="margin:0px;line-height: 15px">平台权限申请</h4>
             </div>
-            <div style="clear:both"></div>
-            <div style="padding-top: 13%" align="center">
-                <div class="panel" style="border: 1px solid #a6d3e8 ;width: 25%">
-                    <div class="panel-heading  alert alert-info" >
-                        <h4 class="panel-title" style="margin:0px;line-height: 15px">平台权限申请</h4>
-                    </div>
-                    <div class="panel-body">
-                        <form action="/apply" method="post">
-                            {{ form.csrf_token }}
-                            <p>选择权限:{{ form.select }}</p>
-                            <p>{{ form.submit(class="btn btn-link") }}</p>
-                        </form>
-                    </div>
-                </div>
+            <div class="panel-body">
+                <form action="/apply" method="post">
+                    {{ form.csrf_token }}
+                    <p>选择权限:{{ form.select }}</p>
+                    <p>{{ form.submit(class="btn btn-primary") }}</p>
+                </form>
             </div>
         </div>
-    </body>
-    <div style="clear:both"></div>
-    <footer>
-            <p>北京xxx科技股份有限公司|版权所有© 2009-{{ ym }} xx科技|运维邮箱:xx@xxx.com</p>
-    </footer>
-</html>
+    </div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <script language="JavaScript">
+                js_msg('{{ messages[-1] }}',3000,'info');
+                $("select").each(function () {
+　　                  $("#" + this.id).attr("disabled", true);
+                    });
+                $('#btn1').attr("disabled","disabled");
+                setTimeout(function () {
+                location.href='/work_order';
+            },5000);
+            </script>
+        {% endif %}
+    {% endwith %}
+{% endblock %}

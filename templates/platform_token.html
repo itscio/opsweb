@@ -6,7 +6,7 @@
         {{ form.input (style="Float:left;width:120px",autocomplete="off")}} &nbsp;
         <span style="float: left;padding-top:0.35%;margin-left: 1%">失效日期:</span>
         {{ form.select_date (style="Float:left")}} &nbsp;
-        <input type="button" onclick="token_url('/platform_token/add')" value="授权" class="btn btn-link" style="float:left">
+        <input type="button" onclick="token_url('/platform_token/add')" value="授权" class="btn btn-link" style="float:left;margin-top: -0.3%">
     </div>
     <div class="style_hr" style="width:98%"></div>
     <div style="width:98%">
@@ -32,7 +32,7 @@
                           <td>{{ v }}</td>
                         {% endfor %}
                     {% endif %}
-                    <td>{{ form.input_date (id=val[0], value=val[-1] ,style="width: 80px") }}</td>
+                    <td>{{ form.input_date (id=val[0], value=val[-1] ,style="width: 100px") }}</td>
                     <td style="text-align: center">
                         <input type="button" onclick="token_url('/platform_token/modify/{{ val[0] }}')" value="修改" class="btn btn-link">|
                         <input type="button" onclick="token_url('/platform_token/drop/{{ val[0] }}')" value="吊销" class="btn btn-link">

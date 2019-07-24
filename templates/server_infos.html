@@ -45,6 +45,8 @@
                                     <td class="table_list" style="vertical-align: middle;text-align: center;">{{ info }}</td>
                                 {% endfor %}
                                 <td class="table_list" style="vertical-align: middle;text-align: center;" colspan="2">
+                                    <i class="fas fa-sign-in-alt" style="color: green"></i>
+                                    <a href="javascript:login_webssh('{{ total_infos['server_info'][1][2]|safe }}','{{ total_infos['server_info'][1][3]|safe }}','/webssh')">登录</a> |
                                     <a href="/assets_manage?mid=assets_manage&aid={{ total_infos['server_info'][1][0] }}&sid={{ total_infos['server_info'][1][2] }}:{{ total_infos['server_info'][1][3] }}&action=modify">
                                         <span style="color:tomato"><i class="fas fa-cogs"></i></span>变更</a>
                                     &nbsp;|&nbsp;
@@ -59,14 +61,22 @@
                                 </td>
                                 <td id='comment_show' colspan="{{ total_infos['server_info'][0][:11]|length }}">
                                     {{ total_infos['server_info'][1][-1] }}
-                                    <a href="javascript:showDialog()" class="current" style="float: right"><i class="fas fa-edit"></i></a>
+                                    <span style="float: right">
+                                        <a href="#" onclick="show_comment()" class="mintip" title="修改备注内容">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        &nbsp;
+                                        <a href="#" onclick="rsync_comment()" class="mintip" title="同步备注信息到Jumpserver">
+                                            <i class="fas fa-sync"></i>
+                                        </a>
+                                    </span>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <strong style="float:left;margin-left:1%;">zabbix监控信息:(<a href="#" onclick="obj_display('zabbix_infos')">折叠/展开</a>)</strong>
+            <strong style="float:left;margin-left:1%;">服务器资源使用:</strong>
             <div style="clear:both;margin-top: 1%"></div>
             <div id="zabbix_infos">
                 {% if total_infos['zabbix_infos'] %}
@@ -75,25 +85,25 @@
                             <div class="assets">
                                 <div class="counter green">
                                     <div class="counter-content">
-                                        <span style="font-weight: bold">正常</span>
+                                        <div style="font-weight: bold;padding-top: 15px;">正常</div>
                                     </div>
-                                    <h3 class="title">zabbix监控</h3>
+                                    <h3 class="title">网络连通</h3>
                                 </div>
                             </div>
                         {% else %}
                             <div class="assets">
                                 <div class="counter red">
                                     <div class="counter-content">
-                                        <span style="font-weight: bold">异常</span>
+                                        <div style="font-weight: bold;padding-top: 15px;">异常</div>
                                     </div>
-                                    <h3 class="title">zabbix监控</h3>
+                                    <h3 class="title">网络连通</h3>
                                 </div>
                             </div>
                         {% endif %}
                         <div class="assets">
                             <div class="counter">
                                 <div class="counter-content">
-                                    <span class="counter-value">{{ total_infos['zabbix_infos'][1]|int}}</span>%
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][1]|int}}</span>%</div>
                                 </div>
                                 <h3 class="title">CPU使用率</h3>
                             </div>
@@ -101,7 +111,7 @@
                         <div class="assets">
                             <div class="counter tomato">
                                 <div class="counter-content">
-                                    <span class="counter-value">{{ total_infos['zabbix_infos'][2]|int}}</span>%
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][2]|int}}</span>%</div>
                                 </div>
                                 <h3 class="title">内存使用率</h3>
                             </div>
@@ -109,7 +119,7 @@
                         <div class="assets">
                             <div class="counter blue">
                                 <div class="counter-content">
-                                    <span class="counter-value">{{ total_infos['zabbix_infos'][3]|int}}</span>%
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][3]|int}}</span>%</div>
                                 </div>
                                 <h3 class="title">磁盘IO</h3>
                             </div>
@@ -117,23 +127,13 @@
                         <div class="assets">
                             <div class="counter purple">
                                 <div class="counter-content">
-                                    <span class="counter-value">{{ total_infos['zabbix_infos'][-1]|int}}</span>
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][-1]|int}}</span></div>
                                 </div>
                                 <h3 class="title">OPENFILE</h3>
                             </div>
                         </div>
                     </div>
                 {% endif %}
-                <div style="clear: both"></div>
-                <div>
-                    {% for bar in total_infos['bar_infos'] %}
-                        <div class="style_border" style="float: left;width: 48.15%;margin-left:1%;overflow: hidden;;height:250px">
-                            {{ echarts_js_dependencies(bar) }}
-                            {{ echarts_container(bar) }}
-                            {{ echarts_js_content(bar) }}
-                        </div>
-                    {% endfor %}
-                </div>
                 <div style="clear: both"></div>
             </div>
         {% endif %}
@@ -143,10 +143,10 @@
             {% if total_infos[Key] %}
                 <div style="clear:both"></div>
                     {% if Key == 'project_info' %}
-                        <strong style="float:left;margin-left: 1%;margin-top: 1%">已部署自有应用列表:</strong>
+                        <strong style="float:left;margin-left: 1%;margin-top: 1%">已部署自有应用:</strong>
                     {% endif %}
                     {% if Key == 'third_info' %}
-                        <strong style="float:left;margin-left: 1%;margin-top: 1%;">已部署第三方应用列表:</strong>
+                        <strong style="float:left;margin-left: 1%;margin-top: 1%;">已部署第三方应用:</strong>
                     {% endif %}
                 <div style="clear:both"></div>
                 <div style="width:97.5%;float:left;text-align: center;margin-left: 1%">
@@ -210,9 +210,9 @@
             <div class="ui-dialog-l40 ui-dialog-pt15">
                 <input id = 'comment_update' class="ui-dialog-input" type="text" />
             </div>
-            <div>
+            <div style="margin-top: 3%">
                 <span style="float: left;margin-left: 1%" class="ui-dialog-submit">
-                    <a href="javascript:hideDialog();" >取消</a>
+                    <a href="javascript:hide_comment();" >取消</a>
                 </span>
                 <span style="float: right;margin-right: 1%" class="ui-dialog-submit">
                     <a href="javascript:comment_modify();" >提交</a>
@@ -221,6 +221,7 @@
         </div>
     </div>
     <script>
+        "use strict";
         $(document).ready(function(){
         $('.counter-value').each(function(){
             $(this).prop('Counter',0).animate({

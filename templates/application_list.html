@@ -4,7 +4,7 @@
         <!-- 应用服务列表-->
         {% if values %}
             {% if host_info %}
-                {% if app in ('php','tomcat','python') %}
+                {% if app in ('php','tomcat','python','java') %}
                     <strong>服务器<span style="color:red">{{ host_info[0] }}的{{ app }}应用端口{{ host_info[1] }}</span>使用以下第三方资源:</strong>
                 {% else %}
                     {% if host_info[1] == 0 %}

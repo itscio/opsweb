@@ -15,9 +15,14 @@
                             <td style="text-align: center">
                                 <a href="/assets_get?type=server&hostname={{ node }}">{{ node }}</a>
                             </td>
-                            {% for key in keys %}
+                            {% for key in keys[:-1] %}
                                 <td style="text-align: center">{{ NODES[context][node][key] }}</td>
                             {% endfor %}
+                            {% if NODES[context][node][keys[-1]] == 'Ready' %}
+                                <td style="text-align: center"><span style="color: darkgreen">{{ NODES[context][node][keys[-1]] }}</span></td>
+                            {% else %}
+                                <td style="text-align: center"><span style="color: darkred">{{ NODES[context][node][keys[-1]] }}</span></td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>

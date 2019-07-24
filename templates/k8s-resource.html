@@ -41,6 +41,11 @@
                             {% else %}
                                 <td style="text-align: center;color: red;vertical-align: middle;">{{ valus[val][keys[-1]] }}</td>
                             {% endif %}
+                            <td style="text-align: center;vertical-align: middle;">
+                                <a href='#' onclick="script:ajax_request('/pod_manage/{{ val|safe }}/delete')" style="color: red">
+                                    <i class="far fa-trash-alt"></i>
+                                </a>
+                            </td>
                         </tr>
                     {% elif resource == 'Service' %}
                         <tr>
@@ -85,6 +90,21 @@
                                 <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
                             {% endfor %}
                         </tr>
+                    {% elif resource == 'HPA' %}
+                        <tr>
+                            {% for v in val %}
+                                <td style="text-align: center;vertical-align: middle;">{{ v }}</td>
+                            {% endfor %}
+                            <td style="text-align: center;vertical-align: middle;">
+                                <a href='#' onclick="javascript:show_k8s_input('{{ val[0]|safe }}','{{ val[1]|safe }}','{{ val[2]|safe }}','{{ val[5]|safe }}')" class="mintip" title="修改参数" style="color: dodgerblue">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                &nbsp;
+                                <a href='#' onclick="javascript:k8s_hpa_delete('{{ val[0]|safe }}')" class="mintip" title="删除HPA" style="color: red">
+                                    <i class="far fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
                     {% else %}
                         <tr>
                             {% for v in val %}
@@ -108,6 +128,7 @@
         {% endif %}
     </div>
     <script>
+        "use strict";
         $('#contexts').val('{{ context|safe }}');
         $(document).ready(table_order("tabledata",1));
         function select_contexts() {
@@ -117,5 +138,45 @@
     </script>
     <style>
     .pod_span{color:#3a87ad;font-weight: bold;background-color: #d9edf7;}
-</style>
+    </style>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >
+            修改HPA参数
+        </div>
+        <div class="ui-dialog-content">
+            <div class="ui-dialog-l70">
+                最大副本数:<input id = 'max_update' class="ui-dialog-input" type="text" />
+            </div>
+            <div class="ui-dialog-l70">
+                CPU阀值:<input id = 'cpu_update' class="ui-dialog-input" type="text" />
+            </div>
+            <div>
+                <span style="float: left;margin-left: 1%" class="ui-dialog-submit">
+                    <a href="javascript:hideDialog();" >取消</a>
+                </span>
+                <span style="float: right;margin-right: 1%" class="ui-dialog-submit">
+                    <a href="javascript:k8s_hpa_modify()" >提交</a>
+                </span>
+            </div>
+        </div>
+        <input id="name" type="hidden">
+        <input id="target_ref" type="hidden">
+    </div>
+    <script>
+        "use strict";
+        $(document).ready(function(){
+        $('.counter-value').each(function(){
+            $(this).prop('Counter',0).animate({
+                Counter: $(this).text()
+            },{
+                duration: 5500,
+                easing: 'swing',
+                step: function (now){
+                    $(this).text(Math.ceil(now));
+                }
+            });
+        });
+        });
+    </script>
 {% endblock page %}

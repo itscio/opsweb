@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:25%;margin-top: 4%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >INGRESS负载均衡配置</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/ingress_apply" method="post">
+                {{ form.csrf_token }}
+                <p>service_name:{{ form.service_name (style="width:175px")}}</p>
+                <p>service_port:&nbsp;&nbsp;{{ form.service_port (style="width:175px")}}</p>
+                <p>{{ form.domains (rows = 3,style="width:266px",placeholder="多个域名以逗号分割")}}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
+            </form>
+        </div>
+    </div>
+    {% if msg %}
+        <script>
+            "use strict";
+            js_msg('{{ msg|safe }}',3000,'info');
+            setTimeout(function () {
+                location.href='/ingress_apply';
+            },4000);
+        </script>
+    {% endif %}
+{% endblock page %}

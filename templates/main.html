@@ -10,7 +10,7 @@
             isIphone =!ipad && ua.match(/(iPhone\sOS)\s([\d_]+)/),
             isAndroid = ua.match(/(Android)\s+([\d.]+)/),
             isMobile = isIphone || isAndroid;
-            if(isMobile){location.href = '/mobile'} else{
+            if(isMobile){location.href = '/mobile/login'} else{
                 location.href='/index'
             };
         </script>

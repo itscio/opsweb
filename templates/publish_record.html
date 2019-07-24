@@ -17,11 +17,7 @@
                         {% for va in value[:-1] %}
                             <td>{{ va }}</td>
                         {% endfor %}
-                        {% if value[-1] == 'None' %}
-                            <tb>{{ value[-1] }}</tb>
-                        {% else %}
-                            <td><a href="/publish_log/{{ value[-1] }}">{{ value[-1] }}</a></td>
-                        {% endif %}
+                        <td><a href="/publish_log/{{ value[-1] }}">{{ value[-1] }}</a></td>
                     </tr>
                  {% endfor %}
             {% endif %}

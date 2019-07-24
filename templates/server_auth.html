@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:950px;margin-left:15%;margin-top: 2%" id="server_auth">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >服务器权限申请</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%;margin-bottom: 5%">
+            <form action="/server_auth" method="post">
+                {{ form.csrf_token }}
+                <div>系统账号:{{ form.account (style="width:185px",autocomplete="off") }}&nbsp;
+                    审核人:{{ form.leader (style="width:200px",placeholder="部门leader邮箱") }}
+                    申请人: <input type="text" id="usr" style="width:78px;text-align: center">
+                </div>
+                <div style="margin-top: 0.8%">申请权限:{{ form.auth_level (style="width:570px",placeholder="对所需权限进行描述",autocomplete="off")}}</div>
+                <div style="margin-top: 0.8%"><div>机器列表</div>{{ form.servers (rows = 4,style="width:630px;resize:vertical",placeholder="格式:服务器主机名或IP以逗号分隔") }}</div>
+                <div style="margin-top: 0.8%"><div>所属用途</div>{{ form.purpose (rows = 4,style="width:630px;resize:vertical",placeholder="对使用用途进行描述")}}</div>
+                <div style="margin-top: 1%">{{ form.submit(class="btn btn-primary") }}</div>
+            </form>
+        </div>
+    </div>
+    {% if Msg %}
+        <script>
+            "use strict";
+            js_msg('{{ Msg[1]|safe }}',3000,'{{ Msg[0] }}');
+            if ('{{ Msg[0]|safe }}' ==='success'){
+            setTimeout(function () {
+                location.href='/server_auth_list';
+            },4000);
+            }
+        </script>
+    {% endif %}
+    {% if not Main_Menu['submenu'] %}
+        <script>
+            "use strict";
+            $('#server_auth').css('margin-left','23%');
+        </script>
+    {% endif %}
+    <script>
+        "use strict";
+        $('#usr').val('{{ g.user|safe }}');
+        $('#usr').attr("readonly","readonly");
+    </script>
+{% endblock page %}
