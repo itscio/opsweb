@@ -6,7 +6,7 @@
     			itemBackgroundColor:'white',//默认背景颜色
     			itemOverColor : 'blue',//选中字体颜色
     			itemOverBackgroundColor : 'white',//选中背景颜色
-    			itemPadding : 3 ,//item间距
+    			itemPadding : 4 ,//item间距
     			fontSize : 14 ,//默认字体大小
     			alwaysShowALL : true //点击input是否展示所有可选项
     			};
@@ -141,7 +141,7 @@
     			itemBackgroundColor:'white',//默认背景颜色
     			itemOverColor : 'blue',//选中字体颜色
     			itemOverBackgroundColor : 'white',//选中背景颜色
-    			itemPadding : 3 ,//item间距
+    			itemPadding : 4 ,//item间距
     			fontSize : 14 ,//默认字体大小
     			alwaysShowALL : true //点击input是否展示所有可选项
     			};

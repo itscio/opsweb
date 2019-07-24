@@ -1,3 +1,4 @@
+"use strict";
 /*jshint node:true */
 var datatable_config = {
            "sProcessing": "处理中...",
@@ -56,7 +57,8 @@ function selectdevice() {
 	else {
 		document.getElementById('device_type').style.display = '';
 		document.getElementById('idrac').style.display = 'None';
-		document.getElementById('old_host').style.display = 'None'
+		document.getElementById('old_host').style.display = 'None';
+        $('#devicetype').css({'width':'141px'});
 	}
 }
 function selectaction() {
@@ -77,7 +79,7 @@ function selectaction() {
         }
         document.getElementById('file_upload').style.display = 'None';
 		document.getElementById('fault').style.display = '';
-		document.getElementById('rack').style.width = '11%';
+		document.getElementById('rack').style.width = '100px';
 		document.getElementById('rack').removeAttribute("readonly");
 		document.getElementById('devicetype').removeAttribute("readonly");
 		document.getElementById('rack').setAttribute("placeholder","可选,鼠标悬停提示");
@@ -95,7 +97,7 @@ function selectaction() {
 	    document.getElementById('file_upload').style.display = 'None';
 		document.getElementById('fault').style.display = 'None';
 		document.getElementById('old_host').style.display = 'None';
-		document.getElementById('rack').style.width = '18.5%';
+		document.getElementById('rack').style.width = '160px';
 		document.getElementById('rack').setAttribute("readonly","readonly");
 		document.getElementById('devicetype').setAttribute("readonly","readonly");
 		document.getElementById('idrac_down').setAttribute("readonly","readonly");
@@ -115,7 +117,7 @@ function selectaction() {
 	    document.getElementById('file_upload').style.display = 'None';
 		document.getElementById('fault').style.display = 'None';
 		document.getElementById('old_host').style.display = 'None';
-        document.getElementById('rack').style.width = '18.5%';
+        document.getElementById('rack').style.width = '158px';
         document.getElementById('rack').removeAttribute("readonly");
 		document.getElementById('devicetype').removeAttribute("readonly");
 		document.getElementById('idrac_down').removeAttribute("readonly");
@@ -174,7 +176,7 @@ function get_uri_lists(id) {
         business_change_select(v);
         if ('/chart_business_bigdata' == uri){
             window.location.reload();
-        };
+        }
     }
 }
 function select_host_set_cookies(host,uri) {
@@ -194,11 +196,11 @@ function select_buy_date(){
             $('#input').val(input_content);
         }else{
             document.getElementById("input").setAttribute("placeholder","自动进行精确或模糊查询");
-        };
+        }
     }
 }
 function business_change_select(host) {
-    var searchs = new Array();
+    var searchs = [];
     var id = "#business_bigdata_select_uri";
     var uri = $.cookie('business_bigdata_select_uri');
     $.ajax({url:"/get_business_bigdata/"+host,dataType : "json",success:
@@ -211,12 +213,12 @@ function business_change_select(host) {
                         $(id).val(uri);
                     }else{
                         $(id).val(data['results'][0]);
-                    };
-                    $.input_uri('business_bigdata_select_uri',searchs);
+                    }
+                $.input_uri('business_bigdata_select_uri',searchs);
             }});
     }
 
-function ajax_url(url) {
+function ajax_run(url) {
     spop({
         template: '操作执行中......',
         style: 'info',
@@ -240,8 +242,58 @@ function ajax_url(url) {
             autoclose: 3000,
             group:'msg',
             });
-            };
-            }});
+        }
+        }});
+}
+function ajax_request(url) {
+    $.ajax({url:url,success:function(data){if (data['status'] == 'ok'){
+            spop({
+            template: data['infos'],
+            style: 'success',
+            position:'top-center',
+            autoclose: 2000,
+            group:'msg',
+            });
+            }else{
+            spop({
+            template: data['infos'],
+            style: 'error',
+            position:'top-center',
+            autoclose: 2000,
+            group:'msg',
+            });
+        }
+        }});
+}
+function ajax_get(url) {
+    $.ajax({url: url});
+}
+function ajax_post(url,data) {
+    $.ajax({
+        type: "POST",
+        url:url,
+        contentType: "application/json; charset=utf-8",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success:function(data){
+            if (data['status'] == 'ok'){
+            spop({
+            template: data['infos'],
+            style: 'success',
+            position:'top-center',
+            autoclose: 2000,
+            group:'msg',
+            });
+            }else{
+            spop({
+            template: data['infos'],
+            style: 'error',
+            position:'top-center',
+            autoclose: 2000,
+            group:'msg',
+            });
+            }
+        }});
 }
 function js_msg(msg,autoclose,style) {
     spop({
@@ -335,7 +387,7 @@ function token_url(url) {
                 }
                 });
             }
-        };
+    }
     if (excute == 'modify'){
         var id = url.split('/')[3];
         var expire_date = $('#'+id).val();
@@ -346,7 +398,7 @@ function token_url(url) {
                         js_msg('修改操作失败',1500,'error');
                     }}
                 });
-        };
+    }
     if (excute == 'drop'){
         $.ajax({url:(url),success:function(data){
             if (data == 'success'){
@@ -356,7 +408,7 @@ function token_url(url) {
                 }
             }
             });
-        };
+    }
     setTimeout(function(){window.location.reload();},1500);
 }
 function select_chart_list(id){
@@ -365,10 +417,55 @@ function select_chart_list(id){
         var new_id = name+'_chart';
         $('#'+id).hide();
         $('#'+new_id).show();
-    };
+    }
     if (id.indexOf('chart') >=0){
         var new_id = name+'_list';
         $('#'+id).hide();
         $('#'+new_id).show();
-    };
+    }
+}
+function login_webssh(host,ssh_port,url) {
+    window.localStorage.setItem('hostname',host);
+    window.localStorage.setItem('port',ssh_port);
+    location.href=url;
+}
+function ajax_alarm_show(url,id){
+$.ajax({url:url,
+            success:function(data){
+                $('#'+id).html(data);
+                }
+            }
+        );
+}
+function search_assets() {
+    var host = $('#host').val();
+    if (host){
+        location.href='/m_assets_info/'+host;
+    }else{
+        js_msg('输入框不能为空!',3000,'info');
+    }
+}
+function rsync_comment() {
+    var m_hostname = window.localStorage.getItem('modify_comment_hostname');
+    var comment =  window.localStorage.getItem('modify_comment_comment');
+    var hostname = $('#hostname').text();
+    var data = {'hostname':hostname,'comment':comment};
+    if (m_hostname === hostname){
+        ajax_post('/modify_ops_comment',data);
+    } else{
+        js_msg('备注未修改,无需同步!',3000,'info');
+    }
+}
+function deny_moment(url) {
+    bootprompt.prompt({
+        title: "拒绝说明:",
+        inputType: 'textarea',
+        callback: function (result) {
+            if (result != null){
+                var URL= url+'&moment='+result;
+                ajax_get(URL);
+                location.href=url.split('?')[0];
+            }
+        }
+    })
 }
