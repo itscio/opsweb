@@ -85,7 +85,7 @@ def index():
             NEW_DATA = [eval(v) for v in RC.lrange('internet_access_%s' %td, 0, -1)]
             attr = [DATA[0] for DATA in NEW_DATA]
             vals =[int(int(DATA[1])/60) for DATA in NEW_DATA]
-            line = Line('墨迹线上业务QPS统计',title_pos='center',title_text_size=12,width='109%',height='250px')
+            line = Line('线上业务QPS统计',title_pos='center',title_text_size=12,width='109%',height='250px')
             line.add("今天", attr, vals,is_toolbox_show=False,is_smooth=True,mark_point=["max", "min"],
                      mark_point_symbolsize=80,is_datazoom_show=True,datazoom_range=[v for v in range(100,10)],
                      datazoom_type= 'both',legend_pos='70%')
