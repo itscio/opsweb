@@ -1,0 +1,10 @@
+FROM 172.16.69.11/moji/centos7
+MAINTAINER yw
+RUN rm -rf /etc/localtime && ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN mkdir -p /opt/jar
+RUN yum -y install java-1.8.0-openjdk.x86_64
+COPY ./<PROJECT> /opt/jar/
+COPY run.sh /opt/jar/
+RUN chmod +x /opt/jar/run.sh
+ENV  LC_ALL en_US.UTF-8
+CMD /opt/jar/run.sh
