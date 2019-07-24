@@ -1,17 +1,17 @@
 #-*- coding: utf-8 -*-
 import time
-from flask import Blueprint,render_template,g,request,make_response,flash
-from Modules import loging,check,produce,db_idc,tools
+from flask import Blueprint,render_template,g,request,make_response,flash,redirect,url_for
+from module import loging,user_auth,db_idc,tools,db_op
 import string
+from kubernetes import client
 import redis
 import datetime
-from pyecharts import Gauge,Line,Bar
-from flask import Flask
+import conf
+from pyecharts import Line,Bar,EffectScatter
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
-app = Flask(__name__)
-app.config.from_pyfile('conf/redis.conf')
-app.config.from_pyfile('conf/sql.conf')
+from sqlalchemy import func
+app = conf.app
 DB = SQLAlchemy(app)
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
@@ -38,22 +38,19 @@ def index():
         #业务信息展示
         try:
             Key = 'op_k8s_ingress_log'
-            k8s_domains_key = 'op_k8s_domains_%s' % td
-            total_key = 'op_totals_alarms_tmp'
-            if RC.exists(k8s_domains_key):
+            line = Line("容器平台业务QPS统计", width='105%', height=250, title_pos='center', title_text_size=12)
+            if RC.exists('%s_%s' % (Key,td)):
                 try:
-                    line = Line("容器平台业务RPS统计", width='105%', height=250, title_pos='center', title_text_size=12)
-                    for domain in RC.smembers(k8s_domains_key):
-                        if RC.exists('%s_%s_%s' % (Key, domain,td)):
-                            vals = RC.hgetall('%s_%s_%s' % (Key, domain,td))
-                            vals = sorted(vals.items(), key=lambda item:item[0])
-                            attrs = [val[0] for val in vals[-10:]]
-                            vals = [int(int(val[1])/60) for val in vals[-10:]]
-                            line.add(domain, attrs, vals, is_label_show=True, is_toolbox_show=False,legend_pos='65%',
-                                     xaxis_interval=0, is_fill=True, area_opacity=0.3, is_smooth=True)
+                    vals = RC.hgetall('%s_%s' % (Key,td))
+                    vals = sorted(vals.items(), key=lambda item:item[0])
+                    attrs = [val[0] for val in vals[-15:]]
+                    vals = [int(int(val[1])/60) for val in vals[-15:]]
+                    line.add('', attrs, vals, is_label_show=True, is_toolbox_show=False,legend_pos='65%',
+                             xaxis_interval=0, is_fill=True, area_opacity=0.3, is_smooth=True)
                 except Exception as e:
                     logging.error(e)
             else:
+                total_key = 'op_totals_alarms_tmp'
                 for i in range(7):
                     data_now = datetime.datetime.now() - datetime.timedelta(days=i)
                     dd = data_now.strftime('%Y-%m-%d')
@@ -88,7 +85,7 @@ def index():
             NEW_DATA = [eval(v) for v in RC.lrange('internet_access_%s' %td, 0, -1)]
             attr = [DATA[0] for DATA in NEW_DATA]
             vals =[int(int(DATA[1])/60) for DATA in NEW_DATA]
-            line = Line('墨迹线上业务RPS统计',title_pos='center',title_text_size=12,width='109%',height='250px')
+            line = Line('墨迹线上业务QPS统计',title_pos='center',title_text_size=12,width='109%',height='250px')
             line.add("今天", attr, vals,is_toolbox_show=False,is_smooth=True,mark_point=["max", "min"],
                      mark_point_symbolsize=80,is_datazoom_show=True,datazoom_range=[v for v in range(100,10)],
                      datazoom_type= 'both',legend_pos='70%')
@@ -136,17 +133,7 @@ def index():
                 z_infos['openfile'] = dict_openfile
         except Exception as e:
             logging.error(e)
-        # 获取问题服务器列表
-        fault_servers = defaultdict()
-        try:
-            for key in ('ssh_login_fault_%s'%td, 'ssh_port_fault_%s'%td):
-                if RC.exists(key):
-                    fault_vals = RC.hgetall(key)
-                    if fault_vals:
-                        fault_servers[key] = zip([fault_vals[val] for val in fault_vals],[val.split(':')[0] for val in fault_vals],[val.split(':')[1] for val in fault_vals])
-        except Exception as e:
-            logging.error(e)
-        app_resp = make_response(render_template('index.html',line=line,tm=TM,z_triggers=z_triggers,z_infos=z_infos,fault_servers=fault_servers,BUSIS=BUSIS,whitelist=whitelist))
+        app_resp = make_response(render_template('index.html',line=line,tm=TM,z_triggers=z_triggers,z_infos=z_infos,BUSIS=BUSIS,whitelist=whitelist))
         app_resp.set_cookie('secret_key',tools.Produce(length=8,chars=string.digits),path='/')
         return app_resp
     except Exception as e:
@@ -163,12 +150,15 @@ def alarm_show():
             whitelist = RC_CLUSTER.smembers(Key)
         td = time.strftime("%Y-%m-%d", time.localtime())
         BUSIS = []
+        #获取每日工单数量
         try:
-            tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
-            tm = tm.strftime('%H:%M')
-            z_triggers = RC.hgetall('zabbix_triggers_%s' %tm)
-            if z_triggers:
-                z_triggers = [[t,z_triggers[t]]for t in z_triggers]
+            db_work_order = db_op.work_order
+            vals = db_work_order.query.with_entities(db_work_order.date,func.count(db_work_order.date)).group_by(db_work_order.date).all()
+            work_bar = EffectScatter("运维工单每日实时统计", width='107%', height=250, title_pos='center', title_text_size=12)
+            bar_vals = [val[0].split('-')[-1] for val in vals[-10:]]
+            bar_counts = [int(val[1]) for val in vals[-10:]]
+            work_bar.add("", bar_vals, bar_counts, is_label_show=True, is_toolbox_show=False, legend_orient='vertical',
+                    legend_pos='right', xaxis_interval=0,xaxis_type="category",label_color=['green'])
         except Exception as e:
             logging.error(e)
         #服务器预警信息
@@ -181,30 +171,47 @@ def alarm_show():
             if RC_CLUSTER.exists('op_zabbix_server_openfile_top'):
                 dict_openfile = eval(RC_CLUSTER.get('op_zabbix_server_openfile_top'))
             if dict_load:
+                dict_load = [load for load in dict_load if load[-1] >100]
                 z_infos['cpu_load']=dict_load
             if dict_openfile:
+                dict_openfile = [openfile for openfile in dict_openfile if openfile[-1] > 300000]
                 z_infos['openfile'] = dict_openfile
         except Exception as e:
             logging.error(e)
-        # 获取问题服务器列表
-        fault_servers = defaultdict()
-        try:
-            for key in ('ssh_login_fault_%s'%td, 'ssh_port_fault_%s'%td):
-                if RC.exists(key):
-                    fault_vals = RC.hgetall(key)
-                    if fault_vals:
-                        fault_servers[key] = zip([fault_vals[val] for val in fault_vals],[val.split(':')[0] for val in fault_vals],[val.split(':')[1] for val in fault_vals])
-        except Exception as e:
-            logging.error(e)
-        return render_template('alarm_show.html',z_triggers=z_triggers,z_infos=z_infos,fault_servers=fault_servers,BUSIS=BUSIS,whitelist=whitelist)
+
+        # 容器平台资源统计
+        config, contexts, config_file = tools.k8s_conf()
+        _, active_contexts = config.list_kube_config_contexts(config_file)
+        v1 = client.CoreV1Api()
+        ret = v1.list_node(watch=False)
+        nodes = len(ret.items)
+        ret = v1.list_pod_for_all_namespaces()
+        pods = len(ret.items)
+        ret = v1.list_service_for_all_namespaces()
+        services = len(ret.items)
+        v1 = client.AppsV1Api()
+        ret = v1.list_deployment_for_all_namespaces()
+        deployments = len(ret.items)
+        ret = v1.list_daemon_set_for_all_namespaces()
+        daemonsets = len(ret.items)
+        k8s_bar = EffectScatter("容器平台资源实时统计", width='107%', height=250, title_pos='center', title_text_size=12)
+        bar_counts = [nodes,pods,deployments,daemonsets,services]
+        bar_vals = ['nodes','pods','deployments','daemonsets','services']
+        k8s_bar.add("", bar_vals, bar_counts, is_label_show=True, is_toolbox_show=False, legend_orient='vertical',
+                     legend_pos='right', xaxis_interval=0, xaxis_type="category", label_color=['blue'])
+        return render_template('alarm_show.html',z_infos=z_infos,BUSIS=BUSIS,
+                               whitelist=whitelist,work_bar=work_bar,k8s_bar=k8s_bar)
     except Exception as e:
         logging.error(e)
-        flash('获取数据错误!',"error")
-        return render_template('Message.html')
+        return redirect(url_for('error'))
+
 @page_index.before_request
-@check.login_required(grade=10)
+@user_auth.login_required(grade=10)
 def check_login(exception = None):
-    produce.Async_log(g.user, request.url)
+    if g.grade == ['9','10']:
+        return redirect(url_for('work_order.work_order'))
+    tools.Async_log(g.user, request.url)
 @page_index.teardown_request
 def db_remove(exception):
     db_idc.DB.session.remove()
+    db_op.DB.session.remove()
