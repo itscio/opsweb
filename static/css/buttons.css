@@ -3,6 +3,7 @@
   border-color: lightslategrey;
   overflow: hidden;
   position: relative;
+  width: max-content;
 }
 .btn-sub:before, .btn-sub:after {
   content: "";

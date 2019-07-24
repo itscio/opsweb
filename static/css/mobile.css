@@ -105,15 +105,13 @@ vertical-align: middle;
 
     padding-left: 0.17rem;
 
-    border-bottom: 1px solid #E0E0E0 ;
+    border-bottom: 1px solid #4f6b72 ;
 
     height: 0.65rem;
 
     line-height: 0.65rem;
 
     padding-right: 0.12rem;
-
-    background: white;
 
 }
 
@@ -128,8 +126,8 @@ margin-bottom: 0.13rem;
 .view{
     font-weight: bold;
     font-size: 0.2rem;
-    margin-bottom: 0.13rem;
     text-align: center;
+    border-bottom:1.5px solid #4f6b72;
 }
 
 .content{
@@ -146,24 +144,26 @@ margin-bottom: 0.13rem;
 
 .footer{
 
-margin-top: 0.2rem;
+    margin-top: 0.2rem;
 
-height: 0.5rem;
+    height: 0.5rem;
 
-font-size: 0.16rem;
+    font-size: 0.16rem;
 
-border:1px solid red;
+    border:1px solid #4f6b72;
 
-border-radius: 0.05rem;
+    border-radius: 0.05rem;
 
-width: 2.99rem;
+    font-weight: bold;
 
-font-weight: bold;
+    text-align: center;
 
-text-align: center;
+    line-height: 0.5rem;
+    width: 97%;
+    margin-left: 1.5%;
 
-line-height: 0.5rem;
-
-margin-left: 0.35rem;
-
+}
+.footer a:hover{
+    color: tomato;
+    opacity: 1.0;
 }
