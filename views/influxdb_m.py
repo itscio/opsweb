@@ -1,22 +1,20 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,render_template,request,g
-from Modules import produce,check,loging,db_op,db_idc
+from module import tools,user_auth,loging,db_op,db_idc
 import time
 import datetime
 import json
 import redis
 from pyecharts import Bar,Line
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from influxdb import InfluxDBClient
 from collections import OrderedDict,defaultdict
 from sqlalchemy import func
 import urllib
 from pyecharts import Pie
-app = Flask(__name__)
+import conf
+app = conf.app
 logging = loging.Error()
-app.config.from_pyfile('../conf/redis.conf')
-app.config.from_pyfile('../conf/sql.conf')
 DB = SQLAlchemy(app)
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -32,7 +30,7 @@ influxdb_db = app.config.get('INFLUXDB_DB')
 Influx_cli = InfluxDBClient(influxdb_host,influxdb_port,influxdb_user,influxdb_pw,'analysis_logs')
 page_influxdb_m=Blueprint('influxdb_m',__name__)
 @page_influxdb_m.route('/interface_monitor')
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def interface_monitor():
     try:
         dd = time.strftime('%Y-%m-%d', time.localtime())
@@ -52,7 +50,7 @@ def interface_monitor():
     return render_template('interface_monitor.html',alarms=alarms,Keys=Keys)
 
 @page_influxdb_m.route('/interface_report')
-@check.login_required(grade=8)
+@user_auth.login_required(grade=8)
 def interface_report():
     try:
         Bars = []
@@ -205,9 +203,9 @@ def interface_report():
     return render_template('interface_report.html',Bars=Bars,Infos=Infos,searchs=searchs)
 
 @page_influxdb_m.before_request
-@check.login_required(grade=10)
+@user_auth.login_required(grade=10)
 def check_login(exception = None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
 
 @page_influxdb_m.teardown_request
 def db_remove(error=None):

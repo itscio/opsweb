@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,render_template,g,flash,request
-from Modules import check,db_op,produce,db_idc,loging
+from module import user_auth,db_op,tools,db_idc,loging
 from sqlalchemy import distinct,and_,func,desc
 from pyecharts import Bar,Pie
 from collections import defaultdict,OrderedDict
@@ -9,11 +9,9 @@ import datetime
 import time
 from functools import reduce
 from influxdb import InfluxDBClient
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-app = Flask(__name__)
-app.config.from_pyfile('../conf/redis.conf')
-app.config.from_pyfile('../conf/sql.conf')
+import conf
+app = conf.app
 DB = SQLAlchemy(app)
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
@@ -229,7 +227,7 @@ def business(id=None):
             vals = {val[0]:val for val in VALS}
             busi_vals = {val[0]: val[1] for val in VALS}
             #获取各业务使用web应用实例数量
-            web_vals = db_project.query.with_entities(db_project.business_id,func.count(db_project.business_id)).filter(and_(db_project.resource.in_(('php','tomcat','python')),db_project.business_id != 0)).group_by(db_project.business_id).order_by(desc(func.count(db_project.business_id))).all()
+            web_vals = db_project.query.with_entities(db_project.business_id,func.count(db_project.business_id)).filter(and_(db_project.resource.in_(('php','tomcat','python','java')),db_project.business_id != 0)).group_by(db_project.business_id).order_by(desc(func.count(db_project.business_id))).all()
             pro_vals = [val[0] for val in web_vals]
             jar_vals = db_project_other.query.with_entities(db_project_other.business_id).group_by(db_project_other.business_id).all()
             jar_vals = [val[0] for val in jar_vals]
@@ -246,9 +244,9 @@ def business(id=None):
         return render_template('Message.html')
     return render_template('business.html',values=values,id=id,business_info = business_info,bar=bar,busi_counts=busi_counts,busi_tables=busi_tables)
 @page_business.before_request
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def check_login(exception = None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
 @page_business.teardown_request
 def db_remove(error=None):
     db_op.DB.session.remove()

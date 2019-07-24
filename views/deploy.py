@@ -1,16 +1,14 @@
 #-*- coding: utf-8 -*-
 import importlib
 from flask import Blueprint,render_template,g,flash,request
-from Modules import check,MyForm,loging,db_op,produce,db_idc
+from module import user_auth,MyForm,loging,db_op,tools,db_idc
 from sqlalchemy import and_
-from flask import Flask
 import time
 import json
+import conf
 from flask_sqlalchemy import SQLAlchemy
-app = Flask(__name__)
-app.config.from_pyfile('../conf/sql.conf')
+app = conf.app
 DB = SQLAlchemy(app)
-app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 page_deploy = Blueprint('deploy',__name__)
 @page_deploy.route('/deploy',methods = ['GET', 'POST'])
@@ -172,9 +170,9 @@ def new_business():
             Info.append("%s业务相关信息录入完成." % business.strip())
     return render_template('new_business.html',form=form,Error=Error,Info=Info,BUSI=BUSI)
 @page_deploy.before_request
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def check_login(error=None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
     importlib.reload(MyForm)
 @page_deploy.teardown_request
 def db_remove(error=None):

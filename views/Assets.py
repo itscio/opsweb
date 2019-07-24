@@ -1,20 +1,17 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,g,request,flash,redirect,session,send_file
+from flask import Blueprint,render_template,g,request,flash,redirect,send_file
 from sqlalchemy import func
 import redis
-from Modules import check,db_idc,db_op,loging,MyForm,produce,tools
+from module import user_auth,db_idc,db_op,loging,MyForm,tools
 from sqlalchemy import distinct,and_
 from collections import defaultdict
 import time,datetime
-from pyecharts import Bar
-from flask import Flask
 import pyexcel
 import os
+import conf
 from flask_sqlalchemy import SQLAlchemy
-app = Flask(__name__)
-app.config.from_pyfile('../conf/sql.conf')
+app = conf.app
 DB = SQLAlchemy(app)
-app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 page_Assets = Blueprint('Assets',__name__)
 redis_host = app.config.get('REDIS_HOST')
@@ -25,7 +22,7 @@ dt = datetime.datetime.now() + datetime.timedelta(days=30)
 dt = dt.strftime('%Y-%m-%d')
 @page_Assets.route('/assets_get',methods = ['GET', 'POST'])
 @page_Assets.route('/assets_get/<action>',methods = ['GET', 'POST'])
-@check.login_required(grade=4)
+@user_auth.login_required(grade=4)
 def assets_get(action=None):
     #公共参数
     Args = {info:tools.http_args(request,info) for info in ('aid','ip','port','type','host_type','action','page','hostname')}
@@ -100,7 +97,7 @@ def assets_get(action=None):
                                 id = val[0]
                                 val[0] = idc_val[id]
                                 val.insert(1,cid_val[id])
-                            export_values = values
+                            export_values = [val for val in values]
                             export_values.insert(0, tables)
                             Redis.set(search_key, export_values)
                     except Exception as e:
@@ -195,40 +192,16 @@ def assets_get(action=None):
                         except Exception as e:
                             logging.error(e)
                         try:
-                            # 获取服务器监控信息
-                            zabbix_infos = []
-                            disks_name = []
-                            disks_val = []
-                            network_in_name = []
-                            networ_in_val = []
-                            network_out_name = []
-                            networ_out_val = []
+                            tt = datetime.datetime.now() - datetime.timedelta(minutes=15)
+                            tt = tt.strftime('%Y-%m-%d %H:%M:%S')
+                            zabbix_infos =[0,0,0,0,0]
                             vals = db_zabbix.query.with_entities(db_zabbix.icmpping, db_zabbix.cpu_load,
                                                                  db_zabbix.mem_use, db_zabbix.disk_io,
                                                                  db_zabbix.openfile).filter(
-                                and_(db_zabbix.ip == server_info[2], db_zabbix.ssh_port == server_info[3])).all()
+                                and_(db_zabbix.ip == server_info[2], db_zabbix.ssh_port == server_info[3],db_zabbix.update_time>tt)).all()
                             if vals:
                                 zabbix_infos = [float(val) for val in list(vals[0])]
-                            Key = "zabbix_history_%s_%s" % (server_info[2], server_info[3])
-                            zabbix_values = Redis.hgetall(Key)
-                            if zabbix_values:
-                                for key in zabbix_values:
-                                    if '/' in key:
-                                        disks_name.append(key)
-                                        disks_val.append(zabbix_values[key])
-                                    if 'in_' in key:
-                                        network_in_name.append(key.split('_')[-1])
-                                        networ_in_val.append(zabbix_values[key])
-                                    if 'out_' in key:
-                                        network_out_name.append(key.split('_')[-1])
-                                        networ_out_val.append(zabbix_values[key])
                             total_infos['zabbix_infos'] = zabbix_infos
-                            disk_bar = Bar(width='100%', height='250px')
-                            disk_bar.add("磁盘使用率", disks_name, disks_val, mark_point=["max", "min"],is_yaxislabel_align=True, is_toolbox_show=False,yaxis_formatter='%',xaxis_interval=0,xaxis_rotate=15)
-                            network_bar = Bar(width='100%', height='250px')
-                            network_bar.add("入口流量", network_in_name, networ_in_val, mark_point=["max", "min"],is_yaxislabel_align=True, is_toolbox_show=False,yaxis_formatter='Mbps',xaxis_interval=0,xaxis_rotate=15)
-                            network_bar.add("出口流量", network_out_name, networ_out_val, mark_point=["max", "min"],is_yaxislabel_align=True, is_toolbox_show=False,yaxis_formatter='Mbps',xaxis_interval=0,xaxis_rotate=15)
-                            total_infos['bar_infos'] = [disk_bar, network_bar]
                         except Exception as e:
                             logging.error(e)
                         try:
@@ -323,7 +296,7 @@ def assets_get(action=None):
     return render_template('server_list.html', values=values, tables=tables, form=form, export=False,assets_type = Args['type'])
 
 @page_Assets.route('/assets')
-@check.login_required(grade=4)
+@user_auth.login_required(grade=4)
 def assets():
     try:
         form = MyForm.MyForm_server()
@@ -337,14 +310,13 @@ def assets():
         #获取机房机柜信息
         db_idc_id = db_idc.idc_id
         db_hosts = db_idc.idc_servers
-        values = db_idc_id.query.with_entities(db_idc_id.aid, func.count(db_idc_id.cid)).filter(db_idc_id.id != 1053).group_by(db_idc_id.aid).all()
+        values = db_idc_id.query.with_entities(db_idc_id.aid, func.count(db_idc_id.cid)).group_by(db_idc_id.aid).all()
         values = [list(val) for val in values]
-        c_val = db_idc_id.query.with_entities(func.count(db_idc_id.cid)).filter(~db_idc_id.cid.in_(('KVM','OSS'))).all()
+        c_val = db_idc_id.query.with_entities(func.count(db_idc_id.cid)).filter(~db_idc_id.cid.in_(('KVM','OSS',''))).all()
         p_val =  db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(db_hosts.host_type=='physical').all()
         v_val = db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(db_hosts.host_type == 'vm').all()
-        e_val = db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(and_(db_hosts.host_type=='physical',db_hosts.expird_date < tt,db_hosts.idc_id !=1053)).all()
-        w_val = db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(and_(db_hosts.host_type=='physical',db_hosts.expird_date >= tt,db_hosts.expird_date <= dt,db_hosts.idc_id !=1053)).all()
-        n_val = db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(db_hosts.idc_id == 1053).all()
+        e_val = db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(and_(db_hosts.host_type=='physical',db_hosts.expird_date < tt)).all()
+        w_val = db_hosts.query.with_entities(func.count(db_hosts.ip)).filter(and_(db_hosts.host_type=='physical',db_hosts.expird_date >= tt,db_hosts.expird_date <= dt)).all()
         try:
             total.append(len(values))
             total.append(int(c_val[0][0]))
@@ -358,10 +330,6 @@ def assets():
             else:
                 total.append(0)
             total.append(int(v_val[0][0]))
-            if n_val:
-                total.append(int(n_val[0][0]))
-            else:
-                total.append(0)
             Key = "op_disconnet_assets_count"
             d_val = Redis.smembers(Key)
             if d_val:
@@ -415,23 +383,10 @@ def assets():
         flash('获取数据错误!',"error")
         return render_template('Message.html')
 
-@page_Assets.route('/other_resource')
-@check.login_required(grade=1)
-def other_resource():
-    try:
-        db_other_resource = db_idc.other_resource
-        domain_tables = ('顶级域名','服务商')
-        domain_values = db_other_resource.query.with_entities(db_other_resource.domain,db_other_resource.provider).filter(db_other_resource.type=='domain').all()
-        cdn_tables = ('加速域名','服务商')
-        cdn_values = db_other_resource.query.with_entities(db_other_resource.domain,db_other_resource.provider).filter(db_other_resource.type=='cdn').all()
-    except Exception as e:
-        logging.error(e)
-    return render_template("other_resource.html", domain_values=domain_values,domain_tables=domain_tables,cdn_tables=cdn_tables,cdn_values=cdn_values)
-
 @page_Assets.route('/assets_deploy/<room>')
 @page_Assets.route('/assets_deploy/business/<busi>')
 @page_Assets.route('/assets_deploy/business/<busi>/<idc>')
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def assets_deploy(room=None,busi=None,idc=None):
     CONFS = defaultdict
     INFOS = defaultdict
@@ -529,9 +484,9 @@ def assets_deploy(room=None,busi=None,idc=None):
         return render_template('assets_deploy.html',INFOS=INFOS,BUSIS=IDCS,tables=tables,CONFS=CONFS,busi_vals=idc_vals,room=room,busi=busi)
 
 @page_Assets.before_request
-@check.login_required(grade=10)
+@user_auth.login_required(grade=10)
 def check_login(error=None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
 
 @page_Assets.teardown_request
 def db_remove(error=None):

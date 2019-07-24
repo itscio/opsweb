@@ -1,16 +1,15 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,render_template,g,Flask
-from Modules import db_op,check,produce,loging,db_idc
+from flask import Blueprint,request,render_template,g
+from module import db_op,user_auth,tools,loging,db_idc
 from sqlalchemy import and_,distinct
 import json
 import redis
-import datetime
+from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
-from pyecharts import Bar,Tree
-app = Flask(__name__)
-app.config.from_pyfile('../conf/sql.conf')
+from pyecharts import Tree
+import conf
+app = conf.app
 DB = SQLAlchemy(app)
-app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -24,12 +23,12 @@ def crontab():
     try:
         VALS = []
         lable = "线上crontab运行列表"
-        tables = ('执行计划', '执行动作', 'IP', 'SSH端口', '主机名')
+        tables = ('执行计划','执行用户','执行动作', 'IP', 'SSH端口', '主机名')
         db_crontab = db_idc.crontabs
         db_servers = db_idc.idc_servers
         servers = db_servers.query.with_entities(db_servers.id,db_servers.ip,db_servers.ssh_port,db_servers.hostname).filter(db_servers.hostname != '').all()
         servers = {info[0]:info[1:] for info in servers}
-        vals  = db_crontab.query.with_entities(db_crontab.cron,db_crontab.action,db_crontab.server_id).all()
+        vals  = db_crontab.query.with_entities(db_crontab.cron,db_crontab.user,db_crontab.action,db_crontab.server_id).all()
         vals = [list(val) for val in vals]
         for val in vals:
             VAL = []
@@ -132,137 +131,124 @@ def redis_info():
         logging.error(e)
     return render_template('redis_info.html',vals = VALS,tables = tables,lable=lable)
 
-@page_app_service.route('/redis_status/<hostname>/<app_port>')
 @page_app_service.route('/redis_master/<redis_master>')
-def redis_status(hostname=None,app_port=None,redis_master=None):
-    try:
-        db_redis = db_idc.redis_info
-        db_server = db_idc.idc_servers
-        BARS = []
-        DATA = []
-        tree = None
-        if hostname and app_port:
+def redis_status(redis_master=None):
+    db_redis = db_idc.redis_info
+    db_server = db_idc.idc_servers
+    DATA = []
+    keys = []
+    if redis_master:
+        try:
+            M_key = defaultdict()
             try:
-                for info in ('used_memory', 'hit_rate','clients', 'ops'):
-                    attrs = []
-                    vals = []
-                    yf = ''
-                    for i in range(7):
-                        update_date = datetime.datetime.now() - datetime.timedelta(days=i)
-                        update_date = update_date.strftime('%Y-%m-%d')
-                        Key = 'op_redis_status_%s_%s_%s' % (hostname, app_port, update_date)
-                        if RC_CLUSTER.exists(Key):
-                            infos = RC_CLUSTER.hgetall(Key)
-                            attrs.append(update_date)
-                            val = infos[info]
-                            if 'G' in infos[info]:
-                                yf = 'G'
-                                val = infos[info].replace('G', '')
-                            if 'M' in infos[info]:
-                                yf = 'M'
-                                val = infos[info].replace('M', '')
-                            vals.append(val)
-                    bar = Bar(info, title_pos='center', width='100%', height='250px')
-                    if info == 'used_memory':
-                        bar.add("", attrs, vals, mark_point=["max", "min"], is_yaxislabel_align=True,
-                            is_toolbox_show=False, xaxis_interval=0, legend_pos='100%',yaxis_formatter=yf,
-                                is_random=True,xaxis_name_size=12,legend_text_size=12)
-                    elif info == 'hit_rate':
-                        bar.add("", attrs, vals, mark_point=["max", "min"], is_yaxislabel_align=True,
-                            is_toolbox_show=False, xaxis_interval=0, legend_pos='100%',yaxis_formatter='%',
-                            is_random=True,xaxis_name_size=12,legend_text_size=12)
-                    else:
-                        bar.add("", attrs, vals, mark_point=["max", "min"], is_yaxislabel_align=True,
-                                is_toolbox_show=False, xaxis_interval=0, legend_pos='100%',
-                                xaxis_name_size=12,legend_text_size=12)
-                    BARS.append(bar)
-            except Exception as e:
-                logging.error(e)
-        if redis_master:
-            try:
-                KEY = 'op_redis_master_lists'
-                redis_master = redis_master.split(':')
-                server_id = db_server.query.with_entities(db_server.id).filter(db_server.hostname==redis_master[0]).all()
-                if server_id:
-                    redis_master[0]=server_id[0][0]
-                RC.lpush(KEY, redis_master)
-                while True:
-                    if RC.llen(KEY) > 0:
-                        id, port = eval(RC.lpop(KEY))
-                        vals = db_redis.query.with_entities(db_redis.server_id,db_redis.port).filter(and_(db_redis.Master_Host==id,db_redis.Master_Port==port)).all()
+                redis_infos = db_redis.query.with_entities(db_redis.server_id, db_redis.port).all()
+                for infos in redis_infos:
+                    try:
+                        id, port = infos
+                        vals = db_redis.query.with_entities(db_redis.server_id, db_redis.port).filter(
+                            and_(db_redis.Master_Host == id, db_redis.Master_Port == port)).all()
                         if vals:
-                            key = 'op_redis_nexus_%s:%s' % (id, port)
-                            RC.set(key, str(vals))
-                            for val in vals:
-                                RC.lpush(KEY, val)
-                    else:
-                        break
-                id, port = redis_master
-                hostname = RC_CLUSTER.hget('op_server_hostnames', id)
-                if hostname:
-                    name = hostname
-                    DATA.append({"children": [], "name": '%s:%s' % (name, port)})
-                keys = []
-                mkey = 'op_redis_nexus_%s:%s' % (id, port)
-                keys.append(mkey)
-                for key in keys:
-                    name = key.replace('op_redis_nexus_', '').split(':')
-                    hostname = RC_CLUSTER.hget('op_server_hostnames',name[0])
-                    if hostname:
-                        name[0] = hostname
-                    name = ':'.join(name)
-                    if RC.exists(key):
-                        for val in eval(RC.get(key)):
-                            id, port = val
-                            key = 'op_redis_nexus_%s:%s' % (id, port)
-                            if RC.exists(key):
-                                keys.append(key)
-                            hostname = RC_CLUSTER.hget('op_server_hostnames',id)
-                            if hostname:
-                                id = hostname
-                            for datas in DATA:
-                                if datas['name'] == name:
-                                    datas["children"].append({"children": [], "name": '%s:%s' % (id, port)})
-                                else:
-                                    for data in datas["children"]:
-                                        if data['name'] == name:
-                                            data["children"].append({"children": [], "name": '%s:%s' % (id, port)})
-                                        else:
-                                            for DAT in data["children"]:
-                                                if DAT['name'] == name:
-                                                    DAT["children"].append({"children": [], "name": '%s:%s' % (id, port)})
-                                                else:
-                                                    for dat in DAT["children"]:
-                                                        if dat['name'] == name:
-                                                            dat["children"].append({"children": [], "name": '%s:%s' % (id, port)})
-                                                        else:
-                                                            for da in dat["children"]:
-                                                                if da['name'] == name:
-                                                                    da["children"].append({"children": [], "name": '%s:%s' % (id, port)})
-                                                                else:
-                                                                    for dd in da["children"]:
-                                                                        if dd['name'] == name:
-                                                                            dd["children"].append({"children": [],"name": '%s:%s' % (id, port)})
-                                                                        else:
-                                                                            for d in dd["children"]:
-                                                                                if d['name'] == name:
-                                                                                    d["children"].append({"children": [],"name": '%s:%s' % (id, port)})
-                                                                                else:
-                                                                                    for t in d["children"]:
-                                                                                        if t['name'] == name:
-                                                                                            t["children"].append({"children": [],"name": '%s:%s' % (id, port)})
-                tree = Tree(width='100%', height=600)
-                tree.add("", DATA,tree_symbol_size=10,tree_label_text_size=14,tree_leaves_text_size=12,is_toolbox_show=False)
+                            RC.hset(M_key, '%s:%s' % (id, port), vals)
+                    except:
+                        continue
             except Exception as e:
                 logging.error(e)
-        return render_template('redis_status.html', BARS=BARS, hostname=hostname, app_port=app_port,tree = tree)
-    except Exception as e:
-        logging.error(e)
+            KEY = 'op_redis_master_lists'
+            RC.delete(KEY)
+            redis_master = redis_master.split(':')
+            server_id = db_server.query.with_entities(db_server.id).filter(db_server.hostname==redis_master[0]).all()
+            if server_id:
+                redis_master[0]=server_id[0][0]
+            RC.lpush(KEY, redis_master)
+            while True:
+                if RC.llen(KEY) > 0:
+                    id, port = eval(RC.lpop(KEY))
+                    vals = RC.hget(M_key, '%s:%s' %(id, port))
+                    if vals:
+                        key = 'op_redis_nexus_%s:%s' %(id, port)
+                        RC.set(key, vals)
+                        for val in eval(vals):
+                            id, port = val
+                            vals = RC.hget(M_key, '%s:%s' %(id, port))
+                            if vals:
+                                RC.lpush(KEY,val)
+                else:
+                    break
+            id, port = redis_master
+            hostname = RC_CLUSTER.hget('op_server_hostnames', id)
+            if hostname:
+                name = hostname
+                DATA.append({"children": [], "name": '%s:%s' % (name, port)})
+            mkey = 'op_redis_nexus_%s:%s' % (id, port)
+            keys.append(mkey)
+            for key in keys:
+                name = key.replace('op_redis_nexus_', '').split(':')
+                hostname = RC_CLUSTER.hget('op_server_hostnames',name[0])
+                if hostname:
+                    name[0] = hostname
+                name = ':'.join(name)
+                if RC.exists(key):
+                    for val in eval(RC.get(key)):
+                        id, port = val
+                        key = 'op_redis_nexus_%s:%s' % (id, port)
+                        if RC.exists(key):
+                            keys.append(key)
+                        hostname = RC_CLUSTER.hget('op_server_hostnames',id)
+                        if hostname:
+                            id = hostname
+                        for datas in DATA:
+                            if datas['name'] == name:
+                                datas["children"].append({"children": [], "name": '%s:%s' % (id, port)})
+                            else:
+                                for data in datas["children"]:
+                                    if data['name'] == name:
+                                        data["children"].append({"children": [], "name": '%s:%s' % (id, port)})
+                                    else:
+                                        for DAT in data["children"]:
+                                            if DAT['name'] == name:
+                                                DAT["children"].append({"children": [], "name": '%s:%s' % (id, port)})
+                                            else:
+                                                for dat in DAT["children"]:
+                                                    if dat['name'] == name:
+                                                        dat["children"].append({"children": [], "name": '%s:%s' % (id, port)})
+                                                    else:
+                                                        for da in dat["children"]:
+                                                            if da['name'] == name:
+                                                                da["children"].append({"children": [], "name": '%s:%s' % (id, port)})
+                                                            else:
+                                                                for dd in da["children"]:
+                                                                    if dd['name'] == name:
+                                                                        dd["children"].append({"children": [],"name": '%s:%s' % (id, port)})
+                                                                    else:
+                                                                        for d in dd["children"]:
+                                                                            if d['name'] == name:
+                                                                                d["children"].append({"children": [],"name": '%s:%s' % (id, port)})
+                                                                            else:
+                                                                                for t in d["children"]:
+                                                                                    if t['name'] == name:
+                                                                                        t["children"].append({"children": [],"name": '%s:%s' % (id, port)})
+                                                                                    else:
+                                                                                        for tt in t["children"]:
+                                                                                            if tt['name'] == name:
+                                                                                                tt["children"].append({"children": [],"name": '%s:%s' % (id, port)})
+                                                                                            else:
+                                                                                                for dt in tt["children"]:
+                                                                                                    if dt['name'] == name:
+                                                                                                        dt["children"].append({
+                                                                                                                "children": [],
+                                                                                                                "name": '%s:%s' % (
+                                                                                                                id,
+                                                                                                                port)})
+        except Exception as e:
+            logging.error(e)
+    tree = Tree(width='100%', height=600)
+    tree.add("", DATA, tree_symbol_size=10, tree_label_text_size=14, tree_leaves_text_size=12, is_toolbox_show=False)
+    return render_template('redis_status.html',tree = tree)
 
 @page_app_service.before_request
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def check_login(error=None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
 
 @page_app_service.teardown_request
 def db_remove(error=None):

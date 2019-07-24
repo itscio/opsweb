@@ -1,13 +1,11 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,request,render_template,g,jsonify
 import redis
-from Modules import loging, db_op,check,produce,Task
-from flask import Flask
+from module import loging, db_op,user_auth,tools,Task
 from flask_sqlalchemy import SQLAlchemy
-app = Flask(__name__)
-app.config.from_pyfile('../conf/sql.conf')
+import conf
+app = conf.app
 DB = SQLAlchemy(app)
-app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -51,9 +49,9 @@ def business_monitor(id=None,lock=None):
             return jsonify({'status': 'error', 'infos': "%s接口监控关闭失败!" %project})
     return render_template('business_monitor.html',vals = vals,codes=codes,tables=tables)
 @page_business_monitor.before_request
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def check_login(exception = None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
 @page_business_monitor.teardown_request
 def db_remove(error=None):
     db_op.DB.session.remove()

@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 from flask import Blueprint,render_template,flash,g,request,make_response
-from Modules import check,loging,produce,db_idc,db_op,MyForm
+from module import user_auth,loging,tools,db_idc,db_op,MyForm
 import redis
 import urllib
 import json
@@ -11,13 +11,10 @@ from sqlalchemy import func,desc,distinct
 import time,datetime
 from elasticsearch import Elasticsearch
 from pyecharts import Bar,Pie,Line
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from  collections import defaultdict,OrderedDict
-app = Flask(__name__)
-app.config.from_pyfile('../conf/redis.conf')
-app.config.from_pyfile('../conf/sql.conf')
-app.config.from_pyfile('../conf/es.conf')
+from collections import defaultdict,OrderedDict
+import conf
+app = conf.app
 DB = SQLAlchemy(app)
 logging = loging.Error()
 es_hosts = app.config.get('ES_HOSTS')
@@ -36,7 +33,7 @@ influxdb_db = 'analysis_logs'
 Influx_cli = InfluxDBClient(influxdb_host,influxdb_port,influxdb_user,influxdb_pw,influxdb_db)
 page_chart_center = Blueprint('chart_center', __name__)
 @page_chart_center.route('/chart_error_status',methods = ['GET', 'POST'])
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def chart_center_status():
     try:
         td = time.strftime("%Y-%m-%d", time.localtime())
@@ -125,7 +122,7 @@ def chart_center_status():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_time_detail',methods = ['GET', 'POST'])
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def chart_time_detail():
     try:
         td = time.strftime("%Y-%m-%d", time.localtime())
@@ -140,26 +137,8 @@ def chart_time_detail():
         NOW_DATA = [eval(v) for v in RC.lrange('internet_access_%s' % td, 0, -1)]
         NOW_DATA = {val[0]: val[1] for val in NOW_DATA if int(val[0].replace(':', '')) <= int(now_time)}
         Lines = []
-        line_p = Line('线上服务响应时间段占比', width='110%', height='250px', title_pos='center', title_text_size=14)
-        for k in ['0-100']:
-            Key = 'es_get_time_%s_%s' % (k, td)
-            vals = RC.hgetall(Key)
-            vals = sorted(vals.items(), key=lambda item: int(item[0].split('_')[-1].replace(':', '')))
-            line_attrs = [val[0].split('_')[-1] for val in vals]
-            line_vals = [eval(val[1])[0] for val in vals]
-            line_attrs_p = [key for key in line_attrs if key in NOW_DATA.keys()]
-            line_vals_p = [float('%.2f' % ((float(line_vals[i]) / NOW_DATA[key]) * 100)) for i, key in
-                           enumerate(line_attrs) if key in NOW_DATA.keys()]
-            for i, val in enumerate(line_vals_p):
-                if val > 100:
-                    line_vals_p[i] = 100
-            line_p.add('%sms' % k, line_attrs_p, line_vals_p, is_toolbox_show=False, is_smooth=True,
-                       mark_point=["max", "min"], mark_point_symbolsize=80, legend_pos='55%', legend_top='top',
-                       is_datazoom_show=True,
-                       datazoom_range=[v for v in range(100, 10)], datazoom_type='both', yaxis_formatter='%')
-        Lines.append(line_p)
-        mline_p = Line('线上服务响应时间段占比', width='110%', height='250px', title_pos='center', title_text_size=14)
-        for k in ['100-200', '200-500', '500-1000', '1000-3000', '3000+']:
+        line = Line('线上服务响应时间段占比', width='110%', height='250px', title_pos='center', title_text_size=14)
+        for k in ['0-100','100-200', '200-500', '500-1000', '1000-3000', '3000+']:
             Key = 'es_get_time_%s_%s' % (k, td)
             vals = RC.hgetall(Key)
             vals = sorted(vals.items(), key=lambda item: int(item[0].split('_')[-1].replace(':', '')))
@@ -172,10 +151,10 @@ def chart_time_detail():
             for i, val in enumerate(line_vals_p):
                 if val > 100:
                     line_vals_p[i] = 100
-            mline_p.add('%sms' % k, line_attrs_p, line_vals_p, is_toolbox_show=False, is_smooth=True,
+            line.add('%sms' % k, line_attrs_p, line_vals_p, is_toolbox_show=False, is_smooth=True,
                         mark_point=["max", "min"], mark_point_symbolsize=80,legend_pos='55%', legend_top='top', is_datazoom_show=True,
                         datazoom_range=[v for v in range(100, 10)], datazoom_type='both', yaxis_formatter='%')
-        Lines.append(mline_p)
+        Lines.append(line)
         infos = []
         host_vals_1 = None
         host_vals_3 = None
@@ -256,7 +235,7 @@ def chart_time_detail():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_third_resource')
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def chart_third_resource():
     idc_ids= {}
     idc_vals = {}
@@ -303,7 +282,7 @@ def chart_third_resource():
             else:
                 pie_counts=[]
                 pie_vals= []
-                if app in ['php','tomcat','python']:
+                if app in ['php','tomcat','python','java']:
                     vals  = db_project.query.with_entities(db_project.ip).filter(db_project.resource==app).all()
                 else:
                     vals = db_third.query.with_entities(db_third.ip).filter(db_third.resource_type == app).all()
@@ -334,7 +313,7 @@ def chart_third_resource():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_domain_status',methods = ['GET', 'POST'])
-@check.login_required(grade=1)
+@user_auth.login_required(grade=1)
 def chart_center_hosts():
     try:
         bar_upstreams = []
@@ -522,7 +501,7 @@ def chart_center_hosts():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_business_bigdata',methods = ['GET', 'POST'])
-@check.login_required(grade=8)
+@user_auth.login_required(grade=8)
 def chart_business_bigdata():
     try:
         try:
@@ -717,7 +696,7 @@ def chart_business_bigdata():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_business_collect',methods = ['GET', 'POST'])
-@check.login_required(grade=8)
+@user_auth.login_required(grade=8)
 def chart_business_collect():
     try:
         try:
@@ -860,10 +839,99 @@ def chart_business_collect():
         logging.error(e)
         return render_template('Message.html')
 
+@page_chart_center.route('/chart_k8s_status')
+@page_chart_center.route('/chart_k8s_status/<domain>')
+@user_auth.login_required(grade=1)
+def chart_k8s_status(domain=None):
+    try:
+        td = time.strftime("%Y-%m-%d", time.localtime())
+        charts = []
+        vals = OrderedDict()
+        now_date = datetime.datetime.now()
+        db_project = db_op.project_list
+        all_domains = db_project.query.with_entities(distinct(db_project.domain)).all()
+        all_domains = [domains[0].split(',') for domains in all_domains if domains[0]]
+        all_domains = set([domain for domains in all_domains for domain in domains])
+        k8s_domains_key = 'op_k8s_domains_%s' % td
+        domains_menu = RC.smembers(k8s_domains_key)
+        domains_menu = [domain for domain in domains_menu if domain in all_domains]
+        if not domain:
+            domain = domains_menu[0]
+        for i in range(10):
+            tt = now_date - datetime.timedelta(days=i)
+            tt = tt.strftime('%Y-%m-%d')
+            k8s_pv_key = 'op_k8s_pv_%s' % tt
+            if RC.exists(k8s_pv_key):
+                vals[tt] = int(RC.get(k8s_pv_key))
+        bar = Bar("容器平台每日PV统计", width='105%', height=250, title_pos='5%', title_text_size=12)
+        if vals:
+            vals = sorted(vals.items(), key=lambda item:item[0])
+            bar_vals = [val[0] for val in vals]
+            bar_counts = [float('%.2f'%(float(val[1])/10000)) for val in vals]
+            bar.add("", bar_vals, bar_counts, is_label_show=True, is_toolbox_show=False, legend_orient='vertical',
+                    legend_pos='right', xaxis_interval=0,yaxis_formatter='万')
+            charts.append(bar)
+        Key = 'op_k8s_ingress_log'
+        if RC.exists('%s_%s' % (Key,td)):
+            try:
+                line = Line("容器平台业务QPS统计", width='105%', height=250, title_pos='5%', title_text_size=12)
+                vals = RC.hgetall('%s_%s' % (Key, td))
+                vals = sorted(vals.items(), key=lambda item: item[0])
+                attrs = [val[0] for val in vals[::10]]
+                vals = [int(int(val[1]) / 60) for val in vals[::10]]
+                line.add('', attrs, vals, is_label_show=True, is_toolbox_show=False, legend_pos='70%',xaxis_interval=0, is_datazoom_show=True,
+                 datazoom_range=[v for v in range(100, 10)],datazoom_type='both', is_smooth=True)
+                charts.append(line)
+            except Exception as e:
+                logging.error(e)
+        stat_key = 'op_k8s_ingress_stat'
+        rt_key = 'op_k8s_ingress_rt'
+        line = Line("域名%s访问量统计" % domain, width='105%', height=250, title_pos='5%', title_text_size=12)
+        vals = RC.hgetall('%s_%s_%s' % (Key, domain, td))
+        vals = sorted(vals.items(), key=lambda item: item[0])
+        line_vals = [val[0] for val in vals]
+        line_counts = [int(int(val[1]) / 60) for val in vals]
+        line.add('RPS', line_vals, line_counts, is_label_show=True, is_toolbox_show=False, is_smooth=True,
+                 mark_point=["max", "min"],
+                 mark_point_symbolsize=80, is_datazoom_show=True,
+                 datazoom_range=[v for v in range(100, 10)],
+                 datazoom_type='both', legend_pos='70%')
+        charts.append(line)
+        line = Line("域名%s状态码统计" %domain, width='105%', height=250, title_pos='5%', title_text_size=12)
+        vals = RC.hgetall('%s_%s_%s' % (stat_key, domain, td))
+        if vals:
+            vals = sorted(vals.items(), key=lambda item: item[0])
+            line_vals = [val[0] for val in vals]
+            line_key = set([key for val in vals for key in eval(val[1])])
+            for key in line_key:
+                line_counts = []
+                for val in vals:
+                    if key in eval(val[1]):
+                        line_counts.append(float('%.2f'%(float(eval(val[1])[key])/reduce(lambda x,y:x+y,eval(val[1]).values())*100)))
+                    else:
+                        line_counts.append(0.0)
+                line.add('%s'%key, line_vals, line_counts,is_label_show=True, is_toolbox_show=False, is_smooth=True, mark_point=["max", "min"],
+                         mark_point_symbolsize=80, is_datazoom_show=True,
+                         datazoom_range=[v for v in range(100, 10)],
+                         datazoom_type='both', legend_pos='70%',yaxis_formatter='%')
+            charts.append(line)
+            line = Line("域名%s响应时间" % domain, width='105%', height=250, title_pos='5%', title_text_size=12)
+            vals = RC.hgetall('%s_%s_%s' % (rt_key, domain, td))
+            vals = sorted(vals.items(), key=lambda item: item[0])
+            line_vals = [val[0] for val in vals]
+            line_counts = [float(val[1])*1000 for val in vals]
+            line.add('响应时间', line_vals, line_counts,is_label_show=True, is_toolbox_show=False, is_smooth=True, mark_point=["max", "min"],
+                         mark_point_symbolsize=80, is_datazoom_show=True,
+                         datazoom_range=[v for v in range(100, 10)],
+                         datazoom_type='both', legend_pos='70%', yaxis_formatter='ms')
+            charts.append(line)
+    except Exception as e:
+        logging.error(e)
+    return render_template('chart_k8s_status.html', charts=charts,domains_menu=domains_menu,domain=domain)
 @page_chart_center.before_request
-@check.login_required(grade=10)
+@user_auth.login_required(grade=10)
 def check_login(exception = None):
-    produce.Async_log(g.user, request.url)
+    tools.Async_log(g.user, request.url)
 @page_chart_center.teardown_request
 def db_remove(error=None):
     db_idc.DB.session.remove()
