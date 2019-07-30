@@ -8,11 +8,11 @@ import time
 import ssl
 from flask_assets import Environment
 from flask_mail import Mail
-from view import chart_center,publish,deploy,k8s,k8s_deploy
-from view import sch_list,app_service,k8s_manage
-from view import business_m,report,influxdb_m
-from view import Assets,business,approval
-from view import work_order
+from views import chart_center,publish,deploy,k8s,k8s_deploy
+from views import sch_list,app_service,k8s_manage
+from views import business_m,report,influxdb_m
+from views import Assets,business,approval
+from views import work_order
 from operation import examine,assets_manage,resource_pool
 from module import tools,user_auth,produce
 from flask_debugtoolbar import DebugToolbarExtension
