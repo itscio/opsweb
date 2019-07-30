@@ -10,20 +10,22 @@ import paramiko
 from scp import SCPClient
 import redis
 import zipfile
-import conf
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from module import Md5,db_op,loging,produce
 from sqlalchemy import and_,desc
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
 logging = loging.Error()
 bak_path = '/opt/bak/'
-username = 'root'
-key_file = '/root/.ssh/id_rsa'
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/ssh.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
+username = app.config.get('USER')
+key_file = app.config.get('KEY_FILE')
 db_project = db_op.project_list
 db_publish = db_op.publish_records
 Publish_types = {'batch':5,'step':1}

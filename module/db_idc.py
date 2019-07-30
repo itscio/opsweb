@@ -1,8 +1,9 @@
 #-*- coding: utf-8 -*-
 from flask_sqlalchemy import SQLAlchemy
-import conf
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/sql.conf')
 class idc_servers(DB.Model):
     __tablename__ = 'servers'
     __bind_key__='idc'

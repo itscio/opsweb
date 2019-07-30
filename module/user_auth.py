@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import request,g,redirect,url_for,session
+from flask import Flask,request,g,redirect,url_for,session
 import time
 from  module import db_op,loging
 import redis
@@ -8,10 +8,11 @@ from sso_cas import CASClient
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_,distinct
 from collections import defaultdict
-import conf
-app = conf.app
+app = Flask(__name__)
 logging = loging.Error()
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/cas.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')

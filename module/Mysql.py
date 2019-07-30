@@ -1,8 +1,9 @@
 #-*- coding: utf-8 -*-
 import mysql.connector as mysql
 from module import loging
-import conf
-app = conf.app
+from flask import  Flask
+app = Flask(__name__)
+app.config.from_pyfile('../conf/sql.conf')
 logging = loging.Error()
 mysql_user = app.config.get('MYSQL_USER')
 mysql_password = app.config.get('MYSQL_PASSWORD')

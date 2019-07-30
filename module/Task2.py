@@ -2,7 +2,7 @@
 import redis
 import socket
 from module import loging,SSH,db_idc,db_op,tools
-import conf
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_,or_,distinct
 from influxdb import InfluxDBClient
@@ -14,9 +14,13 @@ from functools import reduce
 from multiprocessing.dummy import Pool as ThreadPool
 from tcpping import tcpping
 from kubernetes import client
-app = conf.app
-logging = loging.Error()
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
+app.config.from_pyfile('../conf/es.conf')
+app.config.from_pyfile('../conf/tokens.conf')
+logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -711,33 +715,30 @@ def Redis_alarm():
     db_servers = db_idc.idc_servers
     db_redis = db_idc.redis_info
     try:
-        try:
-            #获取服务器信息
-            blacklist = ('172.16.70.34','172.16.19.104')
-            server_ids = db_servers.query.with_entities(db_servers.id, db_servers.ip).filter(db_servers.idc_id != 1025).all()
-            server_ids = {str(infos[0]): infos[-1] for infos in server_ids}
-            #获取主redis信息
-            Masters = db_redis.query.with_entities(db_redis.server_id,db_redis.port,db_redis.requirepass).filter(db_redis.master=='是').all()
-            S_Masters = db_redis.query.with_entities(db_redis.Master_Host, db_redis.Master_Port).filter(and_(db_redis.slave == '是',db_redis.Master_Host !='')).all()
-            S_Masters = set(['%s:%s' %info for info in S_Masters])
-            #主redis写入数据
-            for Master in set(Masters):
-                server_id, port, requirepass = Master
-                try:
-                    mip = server_ids[str(server_id)]
-                except:
-                    continue
-                try:
-                    RC = redis.StrictRedis(mip, int(port), decode_responses=True)
-                    if requirepass:
-                        RC = redis.StrictRedis(mip, int(port), password=requirepass, decode_responses=True)
-                except:
-                    continue
-                else:
-                    RC.set(Key, tm)
-                    redis_m.append((int(server_id),int(port)))
-        except Exception as e:
-            logging.error(e)
+        #获取服务器信息
+        blacklist = ('172.16.70.34','172.16.19.104')
+        server_ids = db_servers.query.with_entities(db_servers.id, db_servers.ip).filter(db_servers.idc_id != 1025).all()
+        server_ids = {str(infos[0]): infos[-1] for infos in server_ids}
+        #获取主redis信息
+        Masters = db_redis.query.with_entities(db_redis.server_id,db_redis.port,db_redis.requirepass).filter(db_redis.master=='是').all()
+        S_Masters = db_redis.query.with_entities(db_redis.Master_Host, db_redis.Master_Port).filter(and_(db_redis.slave == '是',db_redis.Master_Host !='')).all()
+        S_Masters = set(['%s:%s' %info for info in S_Masters])
+        #主redis写入数据
+        for Master in set(Masters):
+            server_id, port, requirepass = Master
+            try:
+                mip = server_ids[str(server_id)]
+            except:
+                continue
+            try:
+                RC = redis.StrictRedis(mip, int(port), decode_responses=True)
+                if requirepass:
+                    RC = redis.StrictRedis(mip, int(port), password=requirepass, decode_responses=True)
+            except:
+                continue
+            else:
+                RC.set(Key, tm)
+                redis_m.append((int(server_id),int(port)))
         def check_slave(info):
             #检查从reids是否同步
             server_id,port = info

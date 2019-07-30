@@ -11,8 +11,13 @@ import time
 import redis
 from sqlalchemy import and_,desc
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/docker.conf')
+app.config.from_pyfile('../conf/tokens.conf')
+app.config.from_pyfile('../conf/oss.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -107,7 +112,7 @@ def download_war(object,version,redis_key):
                 dockerfile = '%s/%s/Dockerfile' %(dockerfile_path,dm_name)
                 if os.path.exists(dockerfile):
                     os.remove(dockerfile)
-                with open('%s/conf/dockerfile_%s.template'%(app.root_path,dm_type)) as F:
+                with open('%s/../conf/dockerfile_%s.template'%(app.root_path,dm_type)) as F:
                     for line in F:
                         with open(dockerfile,'a+') as f:
                             if '<PROJECT>' in line:

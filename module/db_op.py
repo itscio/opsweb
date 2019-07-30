@@ -1,8 +1,9 @@
 #-*- coding: utf-8 -*-
-import conf
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/sql.conf')
 class project_list(DB.Model):
     __tablename__ = 'project_list'
     __bind_key__='op'
@@ -469,24 +470,22 @@ class server_auth(DB.Model):
     time = DB.Column(DB.String(20))
     dingid = DB.Column(DB.String(100))
     leader = DB.Column(DB.String(50))
-    account = DB.Column(DB.String(50))
     servers = DB.Column(DB.String(500))
     auth_level = DB.Column(DB.String(50))
     purpose = DB.Column(DB.String(500))
     work_number = DB.Column(DB.Integer)
-    def __init__(self,date,time,dingid,leader,account,servers,auth_level,purpose,work_number):
+    def __init__(self,date,time,dingid,leader,servers,auth_level,purpose,work_number):
         self.date = date
         self.time = time
         self.dingid = dingid
         self.leader = leader
-        self.account = account
         self.servers = servers
         self.auth_level = auth_level
         self.purpose = purpose
         self.work_number = work_number
     def __repr__(self):
-        values=(self.date,self.time,self.dingid,self.leader,self.account,self.servers,self.auth_level,self.purpose,self.work_number)
-        return '%s,%s,%s,%s,%s,%s,%s,%s,%i'%values
+        values=(self.date,self.time,self.dingid,self.leader,self.servers,self.auth_level,self.purpose,self.work_number)
+        return '%s,%s,%s,%s,%s,%s,%s,%i'%values
 
 class project_offline(DB.Model):
     __tablename__ = 'project_offline'

@@ -1,7 +1,6 @@
 #-*- coding: utf-8 -*-
-from flask import request,render_template_string,session
+from flask import Flask,request,render_template_string,session
 import requests
-import conf
 from functools import wraps
 import time
 import re
@@ -17,9 +16,14 @@ import socket
 from flask_sqlalchemy import SQLAlchemy
 from pyzabbix import ZabbixAPI
 from kubernetes import config
-app = conf.app
+app = Flask(__name__)
 logging = loging.Error()
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/tokens.conf')
+app.config.from_pyfile('../conf/zabbix.conf')
+app.config.from_pyfile('../conf/jump.conf')
+app.config.from_pyfile('../conf/security.conf')
 zabbix_url = app.config.get('ZABBIX_URL')
 zabbix_user = app.config.get('ZABBIX_USER')
 zabbix_pw = app.config.get('ZABBIX_PW')
@@ -29,7 +33,6 @@ username = app.config.get('USERNAME')
 password = app.config.get('PASSWORD')
 alarm_token = app.config.get('ALARM_TOKEN')
 white_list = app.config.get('WHITE_LIST')
-task_servers = app.config.get('TASK_SERVERS')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -143,7 +146,7 @@ def format_day_date(date):
         logging.error(e)
 
 def k8s_conf():
-    config_file="%s/conf/k8s.conf" % app.root_path
+    config_file="%s/../conf/k8s.conf" % app.root_path
     contexts, active_context = config.list_kube_config_contexts(config_file)
     contexts = [context['name'] for context in contexts]
     config.load_kube_config(config_file, context=active_context['name'])
@@ -268,15 +271,12 @@ def proce_lock(func):
     @wraps(func)
     def LOCK(*args, **kwargs):
         try:
-            if HOST in task_servers:
-                time.sleep(choice([i for i in range(1,10)]))
-                if Redis.exists('task_%s'%func.__name__):
-                    raise AssertionError
-                Redis.set('task_%s' %func.__name__, HOST)
-                Redis.expire('task_%s' % func.__name__,15)
-                return func(*args, **kwargs)
-            else:
+            time.sleep(choice([i for i in range(1,10)]))
+            if Redis.exists('task_%s'%func.__name__):
                 raise AssertionError
+            Redis.set('task_%s' %func.__name__, HOST)
+            Redis.expire('task_%s' % func.__name__,15)
+            return func(*args, **kwargs)
         except:
             pass
     return LOCK

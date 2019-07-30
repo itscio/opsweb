@@ -2,16 +2,18 @@
 from flask_wtf import Form
 from wtforms import StringField,BooleanField,SelectMultipleField,TextAreaField,SelectField,SubmitField,FileField,IntegerField,PasswordField
 from wtforms.validators import DataRequired,Length
-from flask_wtf.csrf import CsrfProtect
+from flask_wtf import CsrfProtect
 import redis
 import datetime
 from module import tools,db_idc,db_op,loging
 from sqlalchemy import distinct,and_,desc
 from flask_sqlalchemy import SQLAlchemy
-import conf
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
 CsrfProtect(app)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -287,7 +289,6 @@ class MyForm_sql_execute(Form):
     submit = SubmitField('提交',id='btn1')
 
 class MyForm_server_auth(Form):
-    account = StringField(validators=[DataRequired()],id='account')
     leader = StringField(validators=[DataRequired()],id='leader')
     servers = TextAreaField(validators=[DataRequired()],id='servers')
     auth_level = StringField(validators=[DataRequired()],id='auth_level')
@@ -305,9 +306,8 @@ class MyForm_project_offline(Form):
 class MyForm_other_work(Form):
     assign = SelectField(choices=[], id='assign')
     text = TextAreaField(validators=[DataRequired()],id='text')
-    choices = [('办公VPN申请','办公VPN申请'),('无线MOJISE申请','无线MOJISE申请'),
-               ('大数据相关申请','大数据相关申请'),('权限相关申请','权限相关申请'),
-                ('OPS开通申请', 'OPS开通申请'),('其它事项申请','其它事项申请')]
+    choices = [('OPS开通申请', 'OPS开通申请'),('办公VPN申请','办公VPN申请'),('大数据相关申请','大数据相关申请'),('权限相关申请','权限相关申请'),
+                ('其它事项申请','其它事项申请')]
     titles = SelectField(choices=choices, id='titles')
     input = StringField('input', validators=[DataRequired()], id='input')
     try:

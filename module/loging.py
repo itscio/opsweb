@@ -2,9 +2,10 @@
 import logging
 import logzero
 from logzero import logger
-import conf
+from flask import Flask
 from logging.handlers import RotatingFileHandler
-app = conf.app
+app = Flask(__name__)
+app.config.from_pyfile('../conf/log.conf')
 log_path = app.config.get('LOG_PATH')
 log_debug_path = app.config.get('LOG_DEBUG_PATH')
 def Error():

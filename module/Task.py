@@ -14,11 +14,17 @@ from module import loging,db_op,db_idc,SSH,ip_adress,Mysql,tools,Md5
 from sqlalchemy import distinct,and_
 from collections import defaultdict
 from functools import reduce
-import conf
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
-logging = loging.Error()
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
+app.config.from_pyfile('../conf/cas.conf')
+app.config.from_pyfile('../conf/es.conf')
+app.config.from_pyfile('../conf/oss.conf')
+app.config.from_pyfile('../conf/assets.conf')
+logging = loging.Error()
 HOST = socket.gethostbyname(socket.gethostname())
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -36,7 +42,6 @@ influxdb_db = app.config.get('INFLUXDB_DB')
 Influx_cli = InfluxDBClient(influxdb_host,influxdb_port,influxdb_user,influxdb_pw,influxdb_db)
 PHYSICAL_TYPES = app.config.get('PHYSICAL_TYPES')
 dt = time.strftime('%m%d',time.localtime())
-TASK_SERVERS = app.config.get('TASK_SERVERS')
 oss_id = app.config.get('OSS_ID')
 oss_key = app.config.get('OSS_KEY')
 oss_url = app.config.get('OSS_URL')
@@ -244,67 +249,60 @@ def count_es_logs():
         logging.error(e)
 
 def server_per():
+    loging.write('start %s running......' %server_per.__name__)
     db_server = db_idc.idc_servers
     db_zabbix = db_idc.zabbix_info
     host_infos = db_server.query.with_entities(db_server.ip, db_server.ssh_port, db_server.hostname,
                                                db_server.cpu_core).filter(
         and_(db_server.status != '维护中', db_server.comment != '跳过')).all()
-    _Key = 'op_server_per_servers_%s' %time.strftime('%Y%m%d%H%M',time.localtime())
-    for info in host_infos:
-        if info:
-            RC.sadd(_Key,info)
     Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw, 'zabbix_infos')
     try:
-        while True:
-            host_info = RC.spop(_Key)
-            if host_info:
-                host,ssh_port,hostname,cpu_core = eval(host_info)
-                now_date = datetime.datetime.now()
-                tm = time.strftime('%Y-%m-%d %H:%M:%S')
-                dm = now_date.strftime('%Y-%m-%dT%H:%M:00Z')
-                disk_io = 0
-                mem_use = 0
-                cpu_load = 0
-                openfile = 0
-                if tcpping(host=host, port=ssh_port, timeout=5):
+        for host_info in host_infos:
+            host,ssh_port,hostname,cpu_core = host_info
+            now_date = datetime.datetime.now()
+            tm = time.strftime('%Y-%m-%d %H:%M:%S')
+            dm = now_date.strftime('%Y-%m-%dT%H:%M:00Z')
+            disk_io = 0
+            mem_use = 0
+            cpu_load = 0
+            openfile = 0
+            if tcpping(host=host, port=ssh_port, timeout=15):
+                try:
+                    Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
+                    ssh_values = Ssh.Run('cat /proc/sys/fs/file-nr')
+                    if ssh_values['stdout']:
+                        openfile = int(ssh_values['stdout'][0].split('\t')[0])
+                    ssh_values = Ssh.Run('w')
+                    if ssh_values['stdout'] and int(cpu_core)>0:
+                        cpu_load = int(int(float(ssh_values['stdout'][0].split(',')[-2]))/int(cpu_core)*100)
+                    ssh_values = Ssh.Run('free -g')
+                    if ssh_values['stdout']:
+                        mem_use = int(float(ssh_values['stdout'][1].split()[2])/float(ssh_values['stdout'][1].split()[1])*100)
+                    ssh_values = Ssh.Run('iostat -c')
+                    if ssh_values['stdout']:
+                        disk_io = float(ssh_values['stdout'][3].split()[3])
+                    Ssh.Close()
+                except:
+                    continue
+                else:
                     try:
-                        Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
-                    except:
-                        continue
-                    else:
-                        ssh_values = Ssh.Run('cat /proc/sys/fs/file-nr')
-                        if ssh_values['stdout']:
-                            openfile = int(ssh_values['stdout'][0].split('\t')[0])
-                        ssh_values = Ssh.Run('w')
-                        if ssh_values['stdout'] and int(cpu_core)>0:
-                            cpu_load = int(int(float(ssh_values['stdout'][0].split(',')[-2]))/int(cpu_core)*100)
-                        ssh_values = Ssh.Run('free -g')
-                        if ssh_values['stdout']:
-                            mem_use = int(float(ssh_values['stdout'][1].split()[2])/float(ssh_values['stdout'][1].split()[1])*100)
-                        ssh_values = Ssh.Run('iostat -c')
-                        if ssh_values['stdout']:
-                            disk_io = float(ssh_values['stdout'][3].split()[3])
-                        Ssh.Close()
-                        try:
-                            # 写入数据库
-                            val = db_zabbix.query.filter(and_(db_zabbix.ip==host,db_zabbix.ssh_port==ssh_port,db_zabbix.hostname==hostname)).all()
-                            if val:
-                                db_zabbix.query.filter(and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port, db_zabbix.hostname == hostname)).update({db_zabbix.icmpping:1,db_zabbix.cpu_load:cpu_load,
-                                                                                            db_zabbix.mem_use:mem_use,db_zabbix.disk_io:disk_io,db_zabbix.openfile:openfile,db_zabbix.update_time:tm})
-                                db_idc.DB.session.commit()
-                            else:
-                                v=db_zabbix(ip=host,ssh_port=ssh_port,hostname=hostname,icmpping=1,cpu_load=cpu_load,
-                                            mem_use=mem_use,disk_io=disk_io,openfile=openfile,update_time=tm)
-                                db_idc.DB.session.add(v)
-                                db_idc.DB.session.commit()
-                            # 写入influxdb数据库
-                            json_body = [{"measurement": "server_infos", "tags": {"ip": host, "ssh_port": ssh_port,"hostname":hostname},
-                                              "fields": {'cpu_load':cpu_load,'mem_use':mem_use,'openfile':openfile}, "time": dm}]
-                            Influx_cli.write_points(json_body)
-                        except Exception as e:
-                            logging.error(e)
-            else:
-                break
+                        # 写入数据库
+                        val = db_zabbix.query.filter(and_(db_zabbix.ip==host,db_zabbix.ssh_port==ssh_port,db_zabbix.hostname==hostname)).all()
+                        if val:
+                            db_zabbix.query.filter(and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port, db_zabbix.hostname == hostname)).update({db_zabbix.icmpping:1,db_zabbix.cpu_load:cpu_load,
+                                                                                        db_zabbix.mem_use:mem_use,db_zabbix.disk_io:disk_io,db_zabbix.openfile:openfile,db_zabbix.update_time:tm})
+                            db_idc.DB.session.commit()
+                        else:
+                            v = db_zabbix(ip=host,ssh_port=ssh_port,hostname=hostname,icmpping=1,cpu_load=cpu_load,
+                                        mem_use=mem_use,disk_io=disk_io,openfile=openfile,update_time=tm)
+                            db_idc.DB.session.add(v)
+                            db_idc.DB.session.commit()
+                        # 写入influxdb数据库
+                        json_body = [{"measurement": "server_infos", "tags": {"ip": host, "ssh_port": ssh_port,"hostname":hostname},
+                                          "fields": {'cpu_load':cpu_load,'mem_use':mem_use,'openfile':openfile}, "time": dm}]
+                        Influx_cli.write_points(json_body)
+                    except Exception as e:
+                        logging.error(e)
     except Exception as e:
         logging.error(e)
     finally:

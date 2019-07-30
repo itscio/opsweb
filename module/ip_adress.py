@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
 import struct, io, socket, sys
 from module import loging
-import conf
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
 logging = loging.Error()
-dbFile   = "%s/conf/ip.db" %app.root_path
+dbFile   = "%s/../conf/ip.db" %app.root_path
 class Ip2Region(object):
     __INDEX_BLOCK_LENGTH = 12
     __TOTAL_HEADER_LENGTH = 8192

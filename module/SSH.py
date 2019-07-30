@@ -1,7 +1,8 @@
 #-*- coding: utf-8 -*-
 import paramiko
-import conf
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
+app.config.from_pyfile('../conf/ssh.conf')
 username = app.config.get('USER')
 password = app.config.get('SSH_PW')
 keyfile = app.config.get('KEY_FILE')
