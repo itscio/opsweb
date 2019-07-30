@@ -1,18 +1,19 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,render_template,g,jsonify,Flask
+from flask import Flask,Blueprint,request,render_template,g,jsonify,Flask
 from module import user_auth,db_op,loging,tools
 from sqlalchemy import desc
 import redis
 import time
 from flask_mail import Mail
 from flask_mail import Message
-import conf
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
-app = conf.app
-mapp = Flask(__name__)
-mail = Mail(mapp)
+app = Flask(__name__)
+mail = Mail(app)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/mail.conf')
+app.config.from_pyfile('../conf/tokens.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -114,7 +115,7 @@ def ensure_application():
                                 if moment:
                                     alarm_html = "%s<p>拒绝说明:%s</p>" %(alarm_html,moment)
                             Msg.html = '%s%s' % (mail_html,alarm_html)
-                            with mapp.app_context():
+                            with app.app_context():
                                 mail.send(Msg)
                     msg = "%s工单当前状态:%s!" % (work_number, actions[action])
                 else:
@@ -219,7 +220,7 @@ def ensure_server_auth():
                             Msg.html = '%s%s' % (mail_html, alarm_html)
                             if action == 'agree':
                                 Msg.html = '%s%s%s' % (mail_html,alarm_html,Redis.get('op_send_mail_url_%s' % work_number))
-                            with mapp.app_context():
+                            with app.app_context():
                                 mail.send(Msg)
                     if Redis.exists('op_send_dingding_msg_%s' % work_number) and action in ('deny','agree'):
                         text = eval(Redis.get('op_send_dingding_msg_%s' % work_number))
@@ -236,12 +237,11 @@ def ensure_server_auth():
             msg = "未知异常错误!"
     finally:
         #获取最新数据
-        tables = ('工单号','日期','申请人','部门','系统账号','服务器列表','申请权限','所属用途','执行人','详情','状态','操作')
+        tables = ('工单号','日期','申请人','部门','服务器列表','申请权限','所属用途','执行人','详情','状态','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
         users = {info[0]: info[1:] for info in users}
         servers = db_server_auth.query.with_entities(db_server_auth.work_number,
                                                              db_server_auth.date,
-                                                             db_server_auth.account,
                                                              db_server_auth.servers,
                                                              db_server_auth.auth_level,
                                                              db_server_auth.purpose,
@@ -332,7 +332,7 @@ def ensure_sql_execute():
                                 if moment:
                                     alarm_html = "%s<p>拒绝说明:%s</p>" %(alarm_html,moment)
                             Msg.html = '%s%s' % (mail_html,alarm_html)
-                            with mapp.app_context():
+                            with app.app_context():
                                 mail.send(Msg)
                     msg = "%s工单当前状态:%s!" % (work_number, actions[action])
                 else:
@@ -434,7 +434,7 @@ def ensure_project_offline():
                                 if moment:
                                     alarm_html = "%s<p>拒绝说明:%s</p>" %(alarm_html,moment)
                             Msg.html = '%s%s' % (mail_html,alarm_html)
-                            with mapp.app_context():
+                            with app.app_context():
                                 mail.send(Msg)
                     msg = "%s工单当前状态:%s!" % (work_number, actions[action])
                 else:
@@ -484,7 +484,7 @@ def ensure_other_work():
         source = 'ensure_other_work'
         Key = 'new_other_work_work_number_%s' % dt
         #验证票据
-        actions = {'complete': '已完成', 'deny': '已拒绝'}
+        actions = {'complete': '已完成', 'deny': '已拒绝','refuse':'审批拒绝','agree':'审批通过'}
         ticket = tools.http_args(request,'ticket')
         action = tools.http_args(request,'action')
         work_number = tools.http_args(request,'work_number')
@@ -495,7 +495,7 @@ def ensure_other_work():
                 val = db_work_order.query.filter(db_work_order.work_number == int(work_number)).all()
                 if val:
                     val = db_work_order.query.filter(and_(db_work_order.work_number == int(work_number),
-                                                    db_work_order.source == source,db_work_order.status=='未受理')).all()
+                                                    db_work_order.source == source,db_work_order.status=='审批通过')).all()
                     if val:
                         db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                         db_work_order.source==source)).update({db_work_order.dingid:g.dingId,
@@ -514,11 +514,15 @@ def ensure_other_work():
         if action and work_number:
             moment = None
             if action in actions:
+                if action in ('refuse','agree'):
+                    if g.grade[0] != '0':
+                        msg = '当前用户无审批权限!'
+                        raise AssertionError
                 if action == 'deny':
                     moment = tools.http_args(request,'moment')
                 val = db_work_order.query.filter(and_(db_work_order.work_number == int(work_number),
                                                       db_work_order.source==source
-                                                      ,db_work_order.status=='受理中')).all()
+                                                      ,db_work_order.status.in_(('待审批','受理中')))).all()
                 if val:
                     db_work_order.query.filter(and_(db_work_order.work_number == int(work_number),
                                                     db_work_order.source==source)).update({
@@ -526,19 +530,25 @@ def ensure_other_work():
                     db_op.DB.session.commit()
                     Redis.srem(Key, work_number)
                     if Redis.exists('op_send_mail_html_%s' %work_number):
-                        dingid = db_other_work.query.with_entities(db_other_work.dingid).filter(db_other_work.work_number==work_number).all()
-                        mailer = db_sso.query.with_entities(db_sso.mail).filter(db_sso.dingunionid==dingid[0][0]).all()
-                        if mailer:
-                            Msg = Message("%s工单进度通知"%work_number, sender=sender, recipients=[mailer[0][0]],
-                                          cc=[receiver],charset='utf-8')
-                            mail_html = Redis.get('op_send_mail_html_%s' %work_number)
-                            alarm_html = '<p style="color:red">工单当前进度:%s</p>' %actions[action]
-                            if action == 'deny':
-                                if moment:
-                                    alarm_html = "%s<p>拒绝说明:%s</p>" %(alarm_html,moment)
-                            Msg.html = '%s%s' % (mail_html,alarm_html)
-                            with mapp.app_context():
-                                mail.send(Msg)
+                        try:
+                            dingid = db_other_work.query.with_entities(db_other_work.dingid).filter(db_other_work.work_number==work_number).all()
+                            mailer = db_sso.query.with_entities(db_sso.mail).filter(db_sso.dingunionid==dingid[0][0]).all()
+                            if mailer:
+                                receiver = Redis.get('op_other_work_receiver_%s' % work_number)
+                                Msg = Message("%s工单进度通知"%work_number, sender=sender, recipients=[mailer[0][0]],
+                                              cc=[receiver],charset='utf-8')
+                                mail_html = Redis.get('op_send_mail_html_%s' %work_number)
+                                alarm_html = '<p style="color:red">工单当前进度:%s</p>' %actions[action]
+                                if action == 'deny':
+                                    if moment:
+                                        alarm_html = "%s<p>拒绝说明:%s</p>" %(alarm_html,moment)
+                                Msg.html = '%s%s' % (mail_html, alarm_html)
+                                if action == 'agree':
+                                    Msg.html = '%s%s%s' % (mail_html,alarm_html,Redis.get('op_send_ensure_url_%s' % work_number))
+                                with app.app_context():
+                                    mail.send(Msg)
+                        except Exception as e:
+                            logging.error(e)
                     msg = "%s工单当前状态:%s!" % (work_number, actions[action])
                 else:
                     msg = "无效操作!"

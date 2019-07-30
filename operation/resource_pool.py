@@ -1,14 +1,15 @@
 #-*- coding: utf-8 -*-
 import importlib
-from flask import Blueprint,render_template,g,flash,request
+from flask import Flask,Blueprint,render_template,g,flash,request
 from module import MyForm,user_auth,loging,db_op,db_idc,tools
 from sqlalchemy import distinct,and_,or_
 import conf
 from flask_sqlalchemy import SQLAlchemy
 import redis
 import time
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
