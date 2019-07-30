@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,flash,g,request,make_response
+from flask import Flask,Blueprint,render_template,flash,g,request,make_response
 from module import user_auth,loging,tools,db_idc,db_op,MyForm
 import redis
 import urllib
@@ -14,8 +14,11 @@ from pyecharts import Bar,Pie,Line
 from flask_sqlalchemy import SQLAlchemy
 from collections import defaultdict,OrderedDict
 import conf
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
+app.config.from_pyfile('../conf/es.conf')
 logging = loging.Error()
 es_hosts = app.config.get('ES_HOSTS')
 es = Elasticsearch(hosts=es_hosts)

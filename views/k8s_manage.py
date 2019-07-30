@@ -1,15 +1,15 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,g,request,jsonify,render_template,redirect,url_for
+from flask import Flask,Blueprint,g,request,jsonify,render_template,redirect,url_for
 from module import user_auth,loging,tools,db_idc,db_op,k8s_resource
-import conf
 from kubernetes import client
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import distinct,desc
 import redis
 import time
 from collections import defaultdict
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -19,8 +19,8 @@ config,contexts,config_file = tools.k8s_conf()
 page_k8s_manage = Blueprint('k8s_manage',__name__)
 db_k8s = db_op.k8s_deploy
 namespace = "default"
-@page_k8s_manage.route('/pod_manage/<pod>/<action>')
-def pod_manage(pod = None,action=None):
+@page_k8s_manage.route('/pod_manage/<pod>/<namespace>/<action>')
+def pod_manage(pod = None,namespace=None,action=None):
     try:
         if pod:
             if action == 'delete':

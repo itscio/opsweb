@@ -1,15 +1,17 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,request,g,redirect,url_for,make_response
+from flask import Flask,Blueprint,render_template,request,g,redirect,url_for,make_response
 from module import user_auth,db_op,loging,db_idc,MyForm,k8s_resource,tools,produce,Md5
 import redis
 import time
-import conf
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func,and_,or_
 from collections import defaultdict
 from importlib import reload
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/ssh.conf')
+app.config.from_pyfile('../conf/docker.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')

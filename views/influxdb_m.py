@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,request,g
+from flask import Flask,Blueprint,render_template,request,g
 from module import tools,user_auth,loging,db_op,db_idc
 import time
 import datetime
@@ -12,10 +12,11 @@ from collections import OrderedDict,defaultdict
 from sqlalchemy import func
 import urllib
 from pyecharts import Pie
-import conf
-app = conf.app
+app = Flask(__name__)
 logging = loging.Error()
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')

@@ -1,11 +1,11 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,render_template,g,jsonify
+from flask import Flask,Blueprint,request,render_template,g,jsonify
 import redis
 from module import loging, db_op,user_auth,tools,Task
 from flask_sqlalchemy import SQLAlchemy
-import conf
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')

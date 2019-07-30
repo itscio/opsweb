@@ -1,13 +1,13 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,render_template,g,flash,render_template_string
+from flask import Flask,Blueprint,request,render_template,g,flash,render_template_string
 from module import db_op,user_auth,loging,MyForm,tools,Md5
 from sqlalchemy import and_,desc
 import time,datetime
 import string
-import conf
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/sql.conf')
 logging = loging.Error()
 page_approval = Blueprint('approval', __name__)
 #用户申请权限

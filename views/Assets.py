@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,g,request,flash,redirect,send_file
+from flask import Flask,Blueprint,render_template,g,request,flash,redirect,send_file
 from sqlalchemy import func
 import redis
 from module import user_auth,db_idc,db_op,loging,MyForm,tools
@@ -8,10 +8,10 @@ from collections import defaultdict
 import time,datetime
 import pyexcel
 import os
-import conf
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 page_Assets = Blueprint('Assets',__name__)
 redis_host = app.config.get('REDIS_HOST')

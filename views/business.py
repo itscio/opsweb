@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,g,flash,request
+from flask import Flask,Blueprint,render_template,g,flash,request
 from module import user_auth,db_op,tools,db_idc,loging
 from sqlalchemy import distinct,and_,func,desc
 from pyecharts import Bar,Pie
@@ -10,9 +10,10 @@ import time
 from functools import reduce
 from influxdb import InfluxDBClient
 from flask_sqlalchemy import SQLAlchemy
-import conf
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')

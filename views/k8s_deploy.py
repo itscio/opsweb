@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,g,request,flash,render_template_string,url_for,redirect
+from flask import Flask,Blueprint,render_template,g,request,flash,render_template_string,url_for,redirect
 from module import user_auth,loging,tools,MyForm,k8s_resource,db_op,produce
 import time
 from flask_sqlalchemy import SQLAlchemy
@@ -7,8 +7,10 @@ import os
 from kubernetes import client
 from importlib import reload
 import redis
-import conf
-app = conf.app
+app = Flask(__name__)
+DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/git.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -16,7 +18,6 @@ dockerfile_path = app.config.get('DOCKERFILE_PATH')
 docker_registry = app.config.get('REGISTRY')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 logging = loging.Error()
-DB = SQLAlchemy(app)
 config,contexts,config_file = tools.k8s_conf()
 config.load_kube_config(config_file, context=contexts[0])
 page_k8s_deploy = Blueprint('k8s_deploy',__name__)

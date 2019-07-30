@@ -1,13 +1,12 @@
 #-*- coding: utf-8 -*-
 import importlib
-from flask import Blueprint,render_template,g,flash,request
+from flask import Flask,Blueprint,render_template,g,flash,request
 from module import user_auth,MyForm,loging,db_op,tools,db_idc
 from sqlalchemy import and_
 import time
 import json
-import conf
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
 logging = loging.Error()
 page_deploy = Blueprint('deploy',__name__)

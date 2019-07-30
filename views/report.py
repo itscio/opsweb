@@ -1,14 +1,14 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,render_template,g,redirect,url_for
+from flask import Flask,Blueprint,request,render_template,g,redirect,url_for
 from module import user_auth,db_op,db_idc,loging,MyForm,tools
 from sqlalchemy import func,and_
-from pyecharts import Bar,Tree,Pie,Line
+from pyecharts import Bar,Pie,Line
 import redis
 from functools import reduce
 from flask_sqlalchemy import SQLAlchemy
 import datetime,time
-import conf
-app = conf.app
+app = Flask(__name__)
+app.config.from_pyfile('../conf/redis.conf')
 DB = SQLAlchemy(app)
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')

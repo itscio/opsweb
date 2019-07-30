@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,render_template,g
+from flask import Flask,Blueprint,request,render_template,g
 from module import db_op,user_auth,tools,loging,db_idc
 from sqlalchemy import and_,distinct
 import json
@@ -7,9 +7,9 @@ import redis
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
 from pyecharts import Tree
-import conf
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')

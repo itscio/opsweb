@@ -1,16 +1,17 @@
 #-*- coding: utf-8 -*-
 import redis
-from flask import Blueprint,render_template,render_template_string,g,flash,request,redirect,url_for
+from flask import Flask,Blueprint,render_template,render_template_string,g,flash,request,redirect,url_for
 from module import user_auth,MyForm,db_op,loging,task_publish,tools,produce
 import time
 import conf
 import string
 import importlib
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+app = Flask(__name__)
+DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 limiter = conf.web_limiter()
 limiter = limiter.limiter
-DB = SQLAlchemy(app)
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')

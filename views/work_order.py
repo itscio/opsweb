@@ -9,13 +9,15 @@ from flask_mail import Mail
 from flask_mail import Message
 from flask import Blueprint,render_template,request,g,Flask
 from module import user_auth,db_op,loging,MyForm,tools,Md5
-import conf
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_,desc,distinct
-app = conf.app
-mapp = Flask(__name__)
-mail = Mail(mapp)
+app = Flask(__name__)
+mail = Mail(app)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/mail.conf')
+app.config.from_pyfile('../conf/oss.conf')
+app.config.from_pyfile('../conf/tokens.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -133,6 +135,9 @@ def work_review():
                             ensure_url = Redis.get('op_send_ensure_url_%s' % work_number)
                             msg_url = Redis.get('op_send_msg_url_%s' % work_number)
                             try:
+                                receiver = app.config.get('DEFAULT_RECEIVER')
+                                if Redis.exists('op_other_work_receiver_%s' % work_number):
+                                    receiver = Redis.get('op_other_work_receiver_%s' % work_number)
                                 msg = Message("%s运维工单进度通知" % work_number, sender=sender, recipients=[receiver],
                                               cc=[g.mail,applicanter])
                                 if action  == 'review_pass':
@@ -376,7 +381,6 @@ def server_auth():
         source = 'ensure_server_auth'
         if form.submit.data:
             work_number = int(time.time())
-            account = form.account.data.strip()
             leader = form.leader.data.strip()
             servers = form.servers.data.strip()
             auth_level = form.auth_level.data.strip()
@@ -395,7 +399,6 @@ def server_auth():
                 raise Msg.extend(('error', '申请工单已存在!'))
             text = ['### 服务器权限申请:',
                     "> **工单号:%s**" % work_number,
-                    "> **服务器账户:%s**" %account,
                     "> **服务器:%s**" %servers,
                     "> **申请权限:%s**" %auth_level,
                     "> **功能描述:%s**" %purpose
@@ -403,14 +406,12 @@ def server_auth():
             text.append("##### 申请人:%s" %g.user)
             mail_html = '<p>工单号:%s</p><table style="border:1px solid black;border-collapse:collapse;width:1200;"> \
                             <tr> \
-                               <th style="border:1px solid black;text-align:center;vertical-align:middle;">系统账户</th> \
                                <th style="border:1px solid black;text-align:center;vertical-align:middle;">服务器列表</th> \
                                <th style="border:1px solid black;text-align:center;vertical-align:middle;">申请权限</th> \
                                <th style="border:1px solid black;text-align:center;vertical-align:middle;">功能描述</th> \
                                <th style="border:1px solid black;text-align:center;vertical-align:middle;">申请人</th> \
                             </tr> \
                             <tr> \
-                               <td style="border:1px solid black;text-align:center;vertical-align:middle;">%s</td> \
                                <td style="border:1px solid black;text-align:center;vertical-align:middle;"> \
                                     <div style="width:300;word-wrap: break-word;word-break: break-all;overflow: hidden;">%s</div></td> \
                                <td style="border:1px solid black;text-align:center;vertical-align:middle;"> \
@@ -418,7 +419,7 @@ def server_auth():
                                <td style="border:1px solid black;text-align:center;vertical-align:middle;"> \
                                     <div style="width:300;word-wrap: break-word;word-break: break-all;overflow: hidden;">%s</div></td> \
                                <td style="border:1px solid black;text-align:center;vertical-align:middle;">%s</td> \
-                            </tr></table><br>' %(work_number,account,servers,auth_level,purpose,g.user)
+                            </tr></table><br>' %(work_number,servers,auth_level,purpose,g.user)
             #记录工单受理地址
             Redis.set('op_send_mail_url_%s' % work_number, ensure_url)
             Redis.set('op_send_dingding_url_%s' % work_number,msg_url)
@@ -431,13 +432,13 @@ def server_auth():
             try:
                 # 项目申请记录
                 c = db_server_auth(date=td,time=tt,dingid=g.dingId,
-                                           leader=leader, account=account, servers=servers,
+                                           leader=leader, servers=servers,
                                            auth_level=auth_level,
                                            purpose=purpose, work_number = work_number)
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
                 # 记录任务流水状态
-                c = db_work_order(date=td,work_number = work_number, source=source,applicant=g.dingId,reviewer=leader, dingid='',
+                c = db_work_order(date=td,work_number = work_number, source=source,applicant=g.dingId,reviewer='hanlong.zhang@moji.com', dingid='',
                                   status='待审批')
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
@@ -447,17 +448,17 @@ def server_auth():
             else:
                 try:
                     msg = Message("服务器权限申请", sender=sender, recipients=[leader, receiver], cc=[g.mail],charset='utf-8')
-                    msg.html = '%s%s' %(mail_html,'<p style="color:red">审批结果会自动邮件通知</p>')
+                    msg.html = '%s%s' %(mail_html,'<p style="color:red">运维审批结果会自动邮件通知</p>')
                     with mapp.app_context():
                         mail.send(msg)
                     # 发送钉钉
-                    text.append('##### 审批结果会自动通知')
+                    text.append('##### 运维审批结果会自动通知')
                     tools.dingding_msg(text, token=work_token)
                 except Exception as e:
                     logging.error(e)
-                    Msg.extend(('error', '服务器权限申请通知失败!'))
+                    Msg.extend(('error', '服务器权限申请失败!'))
                 else:
-                    Msg.extend(('success','服务器权限申请通知完成!'))
+                    Msg.extend(('success','服务器权限申请完成!'))
     except Exception as e:
         Msg.extend(('error', '内部未知错误!'))
         logging.error(e)
@@ -581,11 +582,11 @@ def sql_execute():
             else:
                 try:
                     msg = Message("线上SQL执行申请", sender=sender, recipients=[leader, receiver],cc=[g.mail],charset='utf-8')
-                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">项目负责人审核后自动邮件通知</p>', review_url)
+                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
                     with mapp.app_context():
                         mail.send(msg)
                     # 发送钉钉
-                    text.append('##### 项目负责人审核后自动消息通知')
+                    text.append('##### 审核人审核后自动消息通知')
                     tools.dingding_msg(text, token=work_token)
                 except Exception as e:
                     logging.error(e)
@@ -678,11 +679,11 @@ def project_offline():
                 try:
                     msg = Message("%s线上项目下线申请" % project, sender=sender, recipients=[leader, receiver],
                                   cc=[g.mail],charset='utf-8')
-                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">项目负责人审核后自动邮件通知</p>', review_url)
+                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
                     with mapp.app_context():
                         mail.send(msg)
                     # 发送钉钉
-                    text.append('##### 项目负责人审核后自动消息通知')
+                    text.append('##### 审核人审核后自动消息通知')
                     tools.dingding_msg(text, token=work_token)
                 except Exception as e:
                     logging.error(e)
@@ -708,6 +709,7 @@ def other_work():
     db_work_order = db_op.work_order
     Msg = []
     source = 'ensure_other_work'
+    receiver = app.config.get('DEFAULT_RECEIVER')
     try:
         if form.submit.data:
             try:
@@ -762,6 +764,10 @@ def other_work():
                 # 记录任务流水状态
                 c = db_work_order(date=td,work_number=work_number, source=source,applicant=g.dingId,reviewer =leader, dingid='',
                                   status='未审核')
+                if 'VPN' in title:
+                    c = db_work_order(date=td, work_number=work_number, source=source, applicant=g.dingId,
+                                      reviewer=leader, dingid='',
+                                      status='待审批')
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
             except Exception as e:
@@ -771,13 +777,19 @@ def other_work():
                 try:
                     if assign != 'default':
                         receiver = assign
+                    #记录受理人邮箱
+                    Redis.set('op_other_work_receiver_%s' % work_number, receiver)
                     msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver,leader],
                                   cc=[g.mail],charset='utf-8')
-                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">项目负责人审核后自动邮件通知</p>', review_url)
+                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
+                    if 'VPN' in title:
+                        msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver],
+                                      cc=[g.mail], charset='utf-8')
+                        msg.html = '%s%s' % (mail_html, '<p style="color:red">审核人审批后自动邮件通知</p>')
                     with mapp.app_context():
                         mail.send(msg)
                     # 发送钉钉
-                    text.append('##### 项目负责人审核后自动消息通知')
+                    text.append('##### 审核人审核后自动消息通知')
                     tools.dingding_msg(text, token=work_token)
                 except Exception as e:
                     logging.error(e)
@@ -842,7 +854,6 @@ def server_auth_details(work_number=None):
             users = {info[0]: info[1:] for info in users}
             task_records = db_server_auth.query.with_entities(db_server_auth.date,
                                                               db_server_auth.time,
-                                                              db_server_auth.account,
                                                               db_server_auth.servers,
                                                               db_server_auth.auth_level,
                                                               db_server_auth.purpose,
@@ -996,7 +1007,7 @@ def work_order_list():
                                                   cc=[g.mail],charset='utf-8')
                                     alarm_html = '<p style="color:red">工单状态:申请人已主动撤销</p>'
                                     msg.html = '%s%s' %(mail_html, alarm_html)
-                                    with mapp.app_context():
+                                    with app.app_context():
                                         mail.send(msg)
                             except Exception as e:
                                 logging.error(e)
@@ -1094,7 +1105,7 @@ def server_auth_list():
                                     msg = Message("%s工单撤销通知" % work_number, sender=sender, recipients=[receiver],
                                                   cc=[g.mail],charset='utf-8')
                                     msg.html = '%s%s' % (mail_html, alarm_html)
-                                    with mapp.app_context():
+                                    with app.app_context():
                                         mail.send(msg)
                             except Exception as e:
                                 logging.error(e)
@@ -1103,12 +1114,11 @@ def server_auth_list():
                         Msg = '无效的工单撤销操作!'
                 except Exception as e:
                     logging.error(e)
-        tables = ('工单号','日期', '申请人', '部门', '系统账号', '服务器列表', '申请权限', '所属用途', '执行人', '详情', '状态')
+        tables = ('工单号','日期', '申请人', '部门', '服务器列表', '申请权限', '所属用途', '执行人', '详情', '状态')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
         users = {info[0]: info[1:] for info in users}
         servers = db_server_auth.query.with_entities(db_server_auth.work_number,
                                                              db_server_auth.date,
-                                                             db_server_auth.account,
                                                              db_server_auth.servers,
                                                              db_server_auth.auth_level,
                                                              db_server_auth.purpose,
@@ -1195,7 +1205,7 @@ def sql_execute_list():
                                                   cc=[g.mail],charset='utf-8')
                                     alarm_html = '<p style="color:red">工单状态:申请人已主动撤销</p>'
                                     msg.html = '%s%s' %(mail_html, alarm_html)
-                                    with mapp.app_context():
+                                    with app.app_context():
                                         mail.send(msg)
                             except Exception as e:
                                 logging.error(e)
@@ -1284,7 +1294,7 @@ def project_offline_list():
                                                   cc=[g.mail],charset='utf-8')
                                     alarm_html = '<p style="color:red">工单状态:申请人已主动撤销</p>'
                                     msg.html = '%s%s' %(mail_html, alarm_html)
-                                    with mapp.app_context():
+                                    with app.app_context():
                                         mail.send(msg)
                             except Exception as e:
                                 logging.error(e)
@@ -1340,7 +1350,7 @@ def other_work_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source==source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
+                                                          db_work_order.status.in_(('未受理','已拒绝','未审核','已退回','审批拒绝','审批通过','待审批')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number == int(work_number)).all()
@@ -1370,11 +1380,12 @@ def other_work_list():
                                 # 邮件通知工单撤销
                                 if Redis.exists('op_send_mail_html_%s' % work_number):
                                     mail_html = Redis.get('op_send_mail_html_%s' % work_number)
+                                    receiver = Redis.get('op_other_work_receiver_%s' % work_number)
                                     msg = Message("%s工单撤销通知" % work_number, sender=sender, recipients=[receiver],
                                                   cc=[g.mail],charset='utf-8')
                                     alarm_html = '<p style="color:red">工单状态:申请人已主动撤销</p>'
                                     msg.html = '%s%s' %(mail_html, alarm_html)
-                                    with mapp.app_context():
+                                    with app.app_context():
                                         mail.send(msg)
                             except Exception as e:
                                 logging.error(e)

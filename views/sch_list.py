@@ -1,15 +1,15 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,request,g
+from flask import Flask,Blueprint,render_template,request,g
 from module import tools,user_auth,db_op,loging
 import time
 import redis
-import conf
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+app = Flask(__name__)
+DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
-DB = SQLAlchemy(app)
 RC = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 page_sch_list=Blueprint('scheduler_list',__name__)
 @page_sch_list.route('/scheduler_list')
