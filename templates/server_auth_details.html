@@ -2,10 +2,9 @@
     <div style="font-size:14px">
         {% if 'task_records' in publish_info %}
             <div style="text-align: center;font-weight: bold">----服务器权限申请详情----</div>
-            <div style="text-align: left;margin-top: 1%"><strong>系统账号:</strong>{{ publish_info['task_records'][2] }}</div>
-            <div style="text-align: left;margin-top: 1%"><strong>服务器列表:</strong>{{ publish_info['task_records'][3] }}</div>
-            <div style="text-align: left;margin-top: 1%"><strong>申请权限:</strong>{{ publish_info['task_records'][4] }}</div>
-            <div style="text-align: left;margin-top: 1%"><strong>所属用途:</strong>{{ publish_info['task_records'][5] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>服务器列表:</strong>{{ publish_info['task_records'][2] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>申请权限:</strong>{{ publish_info['task_records'][3] }}</div>
+            <div style="text-align: left;margin-top: 1%"><strong>所属用途:</strong>{{ publish_info['task_records'][4] }}</div>
         {% endif %}
         <div style="text-align: center;font-weight: bold">----申请人详情----</div>
         <div style="text-align: left;margin-top: 1%"><strong>申请人:</strong>{{ publish_info['user_info'][0] }}&nbsp;&nbsp;<strong>部门:</strong>{{ publish_info['user_info'][1] }}</div>

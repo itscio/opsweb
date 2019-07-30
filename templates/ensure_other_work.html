@@ -44,7 +44,14 @@
                                 {% endif %}
                             </td>
                             <td class="td_style" style="text-align: center;vertical-align: middle">
-                                {% if value[2] == '未受理' %}
+                                {% if value[2] == '待审批' %}
+                                    <a href="/ensure_other_work?action=agree&work_number={{ value[0] }}"><i class="far fa-check-circle" style="color: darkgreen"></i>同意</a> |
+                                    <a href="/ensure_other_work?action=refuse&work_number={{ value[0] }}"><i class="far fa-times-circle" style="color: darkred"></i>拒绝</a>
+                                {% elif value[2] == '审批通过' %}
+                                    <a href="/ensure_other_work?action=activate&work_number={{ value[0] }}" class="mintip" title="受理工单"><i class="far fa-clock"></i>受理</a>
+                                {% elif value[2] == '审批拒绝' %}
+                                    <span class="icon-remove" style="color:darkred"></span>
+                                {% elif value[2] == '未受理' %}
                                     <a href="/ensure_other_work?action=activate&work_number={{ value[0] }}" class="mintip" title="受理工单"><i class="far fa-clock"></i>受理</a>
                                 {% elif value[2] == '受理中' %}
                                     <a href="/ensure_other_work?action=complete&work_number={{ value[0] }}" class="mintip" title="关闭完成工单"><i class="far fa-check-circle" style="color: darkgreen"></i>完成</a> |

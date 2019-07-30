@@ -7,7 +7,7 @@
         <div class="panel-body" style="margin-bottom: 3%">
             <form action="/other_work" method="post" enctype=multipart/form-data>
                 {{ form.csrf_token }}
-                <div style="margin-top: 1%">选择事项:{{ form.titles (style="width:150px")}} &nbsp;指定受理人:{{ form.assign (style="width:150px")}}&nbsp;
+                <div style="margin-top: 1%">选择事项:{{ form.titles (style="width:150px",onchange="other_work_menu()")}} &nbsp;指定受理人:{{ form.assign (style="width:150px")}}&nbsp;
                     审核人:{{ form.input (style="width:200px",placeholder="部门leader邮箱") }} &nbsp;申请人: <input type="text" id="usr" style="width:50px;text-align: center"></div>
                 <div style="border-top: 1px solid #d1d1d1;margin-top: 1%;background-color: #f8f8f8">
                     <div style="font-weight: bold;margin-top: 1%">事项说明:</div>
@@ -38,5 +38,13 @@
         CKEDITOR.replace('text',{height:300});
         $('#usr').val('{{ g.user|safe }}');
         $('#usr').attr("readonly","readonly");
+        function other_work_menu(){
+        if ($('#titles').val().indexOf('VPN') >=0){
+            $('#input').val('hanlong.zhang@moji.com');
+            $('#input').attr("readonly","true");
+        }else{
+            $('#input').val('');
+            $('#input').removeAttr("readonly");
+        }}
     </script>
 {% endblock page %}
