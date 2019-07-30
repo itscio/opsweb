@@ -26,7 +26,7 @@ page_k8s = Blueprint('k8s',__name__)
 def pods(context=None):
     form = MyForm.Form_k8s_contexts()
     valus = defaultdict()
-    if context and context != 'moji':
+    if context and context != 'xxxx':
         config.load_kube_config(config_file,context)
     else:
         _,active_contexts = config.list_kube_config_contexts(config_file)
@@ -90,7 +90,7 @@ def deployment(context=None):
     try:
         form = MyForm.Form_k8s_contexts()
         valus = defaultdict()
-        if context and context != 'moji':
+        if context and context != 'xxxx':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -138,7 +138,7 @@ def daemonset(context=None):
     try:
         form = MyForm.Form_k8s_contexts()
         valus = defaultdict()
-        if context and context != 'moji':
+        if context and context != 'xxxx':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -183,7 +183,7 @@ def service(context=None):
     try:
         form = MyForm.Form_k8s_contexts()
         valus = defaultdict()
-        if context and context != 'moji':
+        if context and context != 'xxxx':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -221,7 +221,7 @@ def ingress(context=None):
     try:
         form = MyForm.Form_k8s_contexts()
         valus = []
-        if context and context != 'moji':
+        if context and context != 'xxxx':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -251,7 +251,7 @@ def hpa(context=None):
         td = time.strftime("%Y-%m-%d", time.localtime())
         form = MyForm.Form_k8s_contexts()
         valus = []
-        if context and context != 'moji':
+        if context and context != 'xxxx':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -313,7 +313,7 @@ def hpa(context=None):
 @page_k8s.route('/k8s/nodes/<context>')
 def nodes(context=None):
     NODES = defaultdict()
-    if context and context != 'moji':
+    if context and context != 'xxxx':
         config.load_kube_config(config_file,context)
     else:
         _,active_contexts = config.list_kube_config_contexts(config_file)
@@ -368,7 +368,7 @@ def nodes(context=None):
 @page_k8s.route('/k8s/endpoints')
 @page_k8s.route('/k8s/endpoints/<context>')
 def endpoints(context=None):
-    if context and context != 'moji':
+    if context and context != 'xxxx':
         config.load_kube_config(config_file,context)
     else:
         _,active_contexts = config.list_kube_config_contexts(config_file)
