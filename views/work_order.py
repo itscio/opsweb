@@ -251,9 +251,9 @@ def application():
                                     #上传至oss
                                     try:
                                         auth = oss2.Auth(oss_id, oss_key)
-                                        bucket = oss2.Bucket(auth, oss_url, 'mojiops')
+                                        bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
                                         bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                        sql_url = 'https://mojiops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
+                                        sql_url = 'https://xxx.aliyuncs.com/op_xxxx/{}'.format(File.filename)
                                     except:
                                         raise Msg.extend(('error', '文件上传oss失败!'))
                                 else:
@@ -514,7 +514,7 @@ def sql_execute():
                                     auth = oss2.Auth(oss_id, oss_key)
                                     bucket = oss2.Bucket(auth, oss_url, 'mojiops')
                                     bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                    sql_url = 'https://mojiops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
+                                    sql_url = 'https://xxxx.aliyuncs.com/op_xxxx/{}'.format(File.filename)
                                 except:
                                     raise Msg.extend(('error', '文件上传oss失败!'))
                             else:
