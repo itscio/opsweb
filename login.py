@@ -1,14 +1,16 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,redirect,url_for,make_response,request
+from flask import Flask,Blueprint,redirect,url_for,make_response,request
 from module import db_op,loging,Md5,tools
 import redis
 import time
-import conf
 import os
 from sso_cas import CASClient
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+import conf
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('conf/redis.conf')
+app.config.from_pyfile('conf/cas.conf')
 limiter = conf.web_limiter()
 limiter = limiter.limiter
 logging = loging.Error()
@@ -83,8 +85,6 @@ def login():
                             return app_resp
             except Exception as e:
                 logging.error(e)
-            finally:
-                db_op.DB.session.remove()
     except Exception as e:
         logging.error(e)
         return redirect(url_for('error'))

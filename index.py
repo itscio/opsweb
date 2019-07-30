@@ -1,18 +1,18 @@
 #-*- coding: utf-8 -*-
 import time
-from flask import Blueprint,render_template,g,request,make_response,flash,redirect,url_for
+from flask import Flask,Blueprint,render_template,g,request,make_response,flash,redirect,url_for
 from module import loging,user_auth,db_idc,tools,db_op
 import string
 from kubernetes import client
 import redis
 import datetime
-import conf
 from pyecharts import Line,Bar,EffectScatter
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('conf/redis.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')

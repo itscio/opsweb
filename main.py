@@ -1,31 +1,41 @@
 #-*- coding: utf-8 -*-
-from flask import make_response,render_template,render_template_string,request,g
+from flask import Flask,make_response,render_template,render_template_string,request,g
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from api import ajax_api,assets_query,k8s_project_update
-import index,login,logout,conf
+import index,login,logout
 import time
 import ssl
 from flask_assets import Environment
 from flask_mail import Mail
 from view import chart_center,publish,deploy,k8s,k8s_deploy
-from view import sch_list,app_service,k8s_manage
+from view import sch_list,app_service,mobile,k8s_manage
 from view import business_m,report,influxdb_m
 from view import Assets,business,approval
 from view import work_order
 from operation import examine,assets_manage,resource_pool
 from module import tools,user_auth,produce
 from flask_debugtoolbar import DebugToolbarExtension
-app = conf.app
+import conf
+class MyFlask(Flask):
+    jinja_environment = conf.FlaskEchartsEnvironment
+app = MyFlask(__name__)
 DB = SQLAlchemy(app)
 mail = Mail(app)
 limiter = conf.web_limiter()
 limiter = limiter.limiter
 moment = Moment(app)
 assets = Environment(app)
+app.config.from_pyfile('conf/main.conf')
+app.config.from_pyfile('conf/sql.conf')
+app.config.from_pyfile('conf/redis.conf')
+app.config.get('TRAP_HTTP_EXCEPTIONS')
+app.secret_key = app.config.get('SECRET_KEY')
+app.debug = False
 task_run = produce.Scheduler_backgroud()
 toolbar = DebugToolbarExtension(app)
 ssl._create_default_https_context = ssl._create_unverified_context
+app.register_blueprint(mobile.page_mobile)
 app.register_blueprint(Assets.page_Assets)
 app.register_blueprint(assets_manage.page_assets_manage)
 app.register_blueprint(publish.page_publish)

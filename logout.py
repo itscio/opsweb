@@ -1,13 +1,14 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,redirect,make_response,request,jsonify
+from flask import Flask,Blueprint,redirect,make_response,request,jsonify
 from module import tools,user_auth
 from xml.dom.minidom import parseString
 from collections import defaultdict
 import os
 import redis
 import time
-import conf
-app = conf.app
+app = Flask(__name__)
+app.config.from_pyfile('conf/redis.conf')
+app.config.from_pyfile('conf/cas.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
