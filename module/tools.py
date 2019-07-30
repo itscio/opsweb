@@ -40,8 +40,8 @@ Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True
 HOST = socket.gethostbyname(socket.gethostname())
 def Async_log(user,url):
     try:
-        url = url.replace('op_servers', 'op.moji.com')
-        if 'op.moji.com' in url and not url.endswith('/index'):
+        url = url.replace('op_servers', 'op.xxxx.com')
+        if 'op.xxxx.com' in url and not url.endswith('/index'):
             ip = session['remote_ip']
             Key = 'op_http_log_%s' %time.strftime('%Y-%m-%d',time.localtime())
             Redis.hset(Key,time.strftime('%H:%M:%S',time.localtime()),[ip,user,url])
