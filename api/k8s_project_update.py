@@ -1,13 +1,13 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,request,jsonify
+from flask import Flask,Blueprint,request,jsonify
 from module import loging,tools,k8s_resource,db_op,produce
-import conf
 import time
 from sqlalchemy import and_
 from flask_sqlalchemy import SQLAlchemy
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
 logging = loging.Error()
+app.config.from_pyfile('../conf/docker.conf')
 docker_registry = app.config.get('REGISTRY')
 config,contexts,config_file = tools.k8s_conf()
 config.load_kube_config(config_file, context=contexts[0])

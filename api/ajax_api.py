@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,jsonify,request,abort
+from flask import Flask,Blueprint,jsonify,request,abort
 from module import db_op,db_idc,loging,tools
 import time
 import redis
@@ -9,8 +9,11 @@ import conf
 from flask_sqlalchemy import SQLAlchemy
 from module import user_auth
 from sqlalchemy import distinct,desc
-app = conf.app
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/oss.conf')
+app.config.from_pyfile('../conf/sql.conf')
 logging = loging.Error()
 limiter = conf.web_limiter()
 limiter = limiter.limiter

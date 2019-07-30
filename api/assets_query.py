@@ -7,8 +7,11 @@ import conf
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import distinct
 import redis
-app = conf.app
+from flask import Flask
+app = Flask(__name__)
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/sql.conf')
 limiter = conf.web_limiter()
 limiter = limiter.limiter
 logging = loging.Error()
