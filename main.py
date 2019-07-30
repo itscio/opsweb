@@ -9,7 +9,7 @@ import ssl
 from flask_assets import Environment
 from flask_mail import Mail
 from view import chart_center,publish,deploy,k8s,k8s_deploy
-from view import sch_list,app_service,mobile,k8s_manage
+from view import sch_list,app_service,k8s_manage
 from view import business_m,report,influxdb_m
 from view import Assets,business,approval
 from view import work_order
@@ -35,7 +35,6 @@ app.debug = False
 task_run = produce.Scheduler_backgroud()
 toolbar = DebugToolbarExtension(app)
 ssl._create_default_https_context = ssl._create_unverified_context
-app.register_blueprint(mobile.page_mobile)
 app.register_blueprint(Assets.page_Assets)
 app.register_blueprint(assets_manage.page_assets_manage)
 app.register_blueprint(publish.page_publish)
