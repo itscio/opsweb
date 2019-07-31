@@ -636,7 +636,7 @@ def Publish_center(args):
                 _console_out(channel, Msg_Key, "启动代码分发模块,开始部署%s,执行过程稍后输出......" % package_name)
                 _console_out(channel, Msg_Key, '-' * 100)
                 for i in range(Publish_types[publish_type]):
-                    Scheduler = produce.Scheduler_publish()
+                    Scheduler = produce.SchedulerPublish()
                     Scheduler = Scheduler.Scheduler_mem(Publish_agent, [server_lists_key,server_lists_counts,d_files,project,package_name,package_path,Msg_Key,secret_key,INFOS])
                     Scheduler.start()
                     time.sleep(1)

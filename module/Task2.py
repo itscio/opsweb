@@ -238,7 +238,7 @@ def get_redis_info():
                                     try:
                                         result = results['stdout'][0].split()[-1]
                                         if '/' in result:
-                                            conf_file = "/usr/local/redis/etc/{}".format(result.split('/')[-1])
+                                            conf_file = "/usr/local/moji/redis/etc/{}".format(result.split('/')[-1])
                                         if not conf_file.endswith('.conf'):
                                             cmd = "lsof -p {}|grep 'cwd'".format(pid)
                                             cwd = Ssh.Run(cmd)
@@ -487,7 +487,7 @@ def alarm_load():
 
                                     if results[-1].endswith('-rpc.jar'):
                                         pro_jar = results[-1]
-                                        if pro_jar in ['location-rpc.jar']:
+                                        if pro_jar in ['moji-location-rpc.jar']:
                                             Project =pro_jar.split('.')[0]
                                     else:
                                         for line in results:
@@ -710,7 +710,7 @@ def k8s_ingress_log():
 def Redis_alarm():
     loging.write("start %s ......" %Redis_alarm.__name__)
     tm = time.strftime('%Y%m%d%H%M',time.localtime())
-    Key = 'yw_check_master_slave_%s' %tm
+    Key = 'yw_check_master_slave'
     redis_m = []
     db_servers = db_idc.idc_servers
     db_redis = db_idc.redis_info
@@ -738,6 +738,7 @@ def Redis_alarm():
                 continue
             else:
                 RC.set(Key, tm)
+                RC.expire(Key, 360)
                 redis_m.append((int(server_id),int(port)))
         def check_slave(info):
             #检查从reids是否同步
@@ -806,9 +807,10 @@ def Redis_alarm():
             pool.map(check_slave,set(redis_m))
             pool.close()
             pool.join()
+    except Exception as e:
+        logging.error(e)
     finally:
         db_idc.DB.session.remove()
-        RC.expire(Key,360)
         loging.write("%s complete !" % Redis_alarm.__name__)
 
 @tools.proce_lock
@@ -841,3 +843,44 @@ def rsync_comment():
     finally:
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
+
+@tools.proce_lock
+def Redis_clear():
+    loging.write("start %s ......" %Redis_clear.__name__)
+    db_servers = db_idc.idc_servers
+    db_redis = db_idc.redis_info
+    try:
+        #获取服务器信息
+        server_ids = db_servers.query.with_entities(db_servers.id, db_servers.ip).filter(db_servers.idc_id != 1025).all()
+        server_ids = {str(infos[0]): infos[-1] for infos in server_ids}
+        #获取主redis信息
+        Masters = db_redis.query.with_entities(db_redis.server_id,db_redis.port,db_redis.requirepass).filter(db_redis.master=='是').all()
+        #主redis写入数据
+        for Master in set(Masters):
+            server_id, port, requirepass = Master
+            try:
+                mip = server_ids[str(server_id)]
+            except:
+                continue
+            try:
+                RC = redis.StrictRedis(mip, int(port), decode_responses=True)
+                if requirepass:
+                    RC = redis.StrictRedis(mip, int(port), password=requirepass, decode_responses=True)
+            except:
+                continue
+            else:
+                for i in range(144000):
+                    try:
+                        tm = datetime.datetime.now() - datetime.timedelta(minutes=i)
+                        tm = tm.strftime('%Y%m%d%H%M')
+                        Key = 'yw_check_master_slave_%s' % tm
+                        if RC.exists(Key):
+                            loging.write('delete %s %s %s' % (mip, port, Key))
+                            RC.delete(Key)
+                    except:
+                        continue
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_idc.DB.session.remove()
+        loging.write("%s complete !" % Redis_clear.__name__)

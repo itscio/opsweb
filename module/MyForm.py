@@ -21,7 +21,7 @@ redis_password = app.config.get('REDIS_PASSWORD')
 rc = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 redis_data = app.config.get('REDIS_DATA')
 RC_CLUSTER = redis.StrictRedis(host=redis_data, port=redis_port,decode_responses=True)
-class MyForm_input(Form):
+class MyFormInput(Form):
     text = TextAreaField(validators=[DataRequired()],id='text')
     text2 = TextAreaField(validators=[DataRequired()],id='text2')
     input = StringField('Input', validators=[DataRequired()],id='input')
@@ -29,13 +29,13 @@ class MyForm_input(Form):
     passwd = PasswordField('password', validators=[DataRequired()],id='passwd')
     submit = SubmitField('提交',id='btn1')
 
-class MyForm_server(Form):
+class MyFormServer(Form):
     select = SelectField(choices=[('hostname', '主机名'),('ip', 'ip地址'),('sn', 'sn号'),('cid', '机柜'),('status', '使用状态'),('buy_date', '购买日期')],id='select')
     show_pages = SelectField(choices=[(15,15),(30,30),(50,50),(70,70),(100,100)],id='show_pages')
     text = StringField(validators=[DataRequired()],id='input')
     submit = SubmitField('服务器查询',id='btn1')
 
-class MyForm_publish(Form):
+class MyFormPublish(Form):
     package_url = TextAreaField(validators=[DataRequired()],id='package_url')
     package_md5 = StringField('md5', validators=[DataRequired()],id='package_md5')
     check_url = StringField('url', validators=[DataRequired()],id='check_url')
@@ -64,7 +64,7 @@ class MyForm_publish(Form):
         db_op.DB.session.remove()
     submit = SubmitField('提交',id='btn1')
 
-class MyFrom_resource_pool(Form):
+class MyFromResourcePool(Form):
     db_project = db_op.project_list
     db_server = db_idc.idc_servers
     try:
@@ -95,11 +95,11 @@ class MyFrom_resource_pool(Form):
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
-class MyFrom_third_resource(Form):
+class MyFromThirdResource(Form):
         hosts = TextAreaField(validators=[DataRequired()])
         submit_recucle = SubmitField('回收', id='submit')
 
-class MyForm_assets_manage(Form):
+class MyFormAssetsManage(Form):
     db_idc_id = db_idc.idc_id
     text = TextAreaField(validators=[DataRequired()])
     try:
@@ -120,7 +120,7 @@ class MyForm_assets_manage(Form):
     finally:
         db_idc.DB.session.remove()
 
-class MyForm_apply(Form):
+class MyFormApply(Form):
     try:
         db_permission = db_op.permission
         vals = db_permission.query.with_entities(db_permission.authid,db_permission.auth).all()
@@ -129,7 +129,7 @@ class MyForm_apply(Form):
     select = SelectField(choices= vals,id='select')
     submit = SubmitField('提交',id='btn1')
 
-class MyForm_deploy(Form):
+class MyFormDeploy(Form):
     try:
         db_project = db_op.project_list
         db_third = db_idc.third_resource
@@ -165,7 +165,7 @@ class MyForm_deploy(Form):
         db_op.DB.session.remove()
         db_idc.DB.session.remove()
 
-class Form_business_bigdata(Form):
+class FormBusinessBigdata(Form):
     dms = []
     for i in range(7):
         dm = datetime.datetime.now() - datetime.timedelta(days=i)
@@ -173,15 +173,15 @@ class Form_business_bigdata(Form):
         dms.append((dm,dm))
     select_date = SelectField(choices= dms,id='business_bigdata_select_date')
 
-class Form_platform_token(Form):
+class FormPlatformToken(Form):
     input = StringField('input_platform', validators=[DataRequired()],id='input_platform')
     input_date = StringField('input_date', validators=[DataRequired()])
     select_date = SelectField(choices=[(0,'永不'),(3,'3天'),(7,'7天'),(15,'15天'),(30,'30天'),(90,'90天'),(180,'180天')], id='select_date')
 
-class Form_resource_report(Form):
+class FormResourceReport(Form):
     select = SelectField(choices=[(30,'近一个月'),(90,'近三个月'),(180,'近六个月'),(360,'近一年内')],id='select')
 
-class Form_resource_modify(Form):
+class FormResourceModify(Form):
     db_business = db_op.business
     business = []
     resource = StringField('input_resource', validators=[DataRequired()],id='resource')
@@ -200,11 +200,11 @@ class Form_resource_modify(Form):
     select_busi = SelectField(choices=business, id='select_busi')
     submit = SubmitField('提交')
 
-class Form_k8s_contexts(Form):
+class FormK8sContexts(Form):
     _,contexts,_ = tools.k8s_conf()
     select = SelectField(choices=[(context,context) for context in contexts],id='contexts')
 
-class Form_k8s_deploy(Form):
+class FormK8sDeploy(Form):
     try:
         db_project = db_op.project_list
         projects = db_project.query.with_entities(distinct(db_project.project)).all()
@@ -226,7 +226,7 @@ class Form_k8s_deploy(Form):
     finally:
         db_op.DB.session.remove()
 
-class Form_k8s_update(Form):
+class FormK8sUpdate(Form):
     try:
         db_k8s_deploy = db_op.k8s_deploy
         values = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
@@ -239,7 +239,7 @@ class Form_k8s_update(Form):
     finally:
         db_op.DB.session.remove()
 
-class Form_k8s_hpa(Form):
+class FormK8sHpa(Form):
     try:
         db_k8s_deploy = db_op.k8s_deploy
         values = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
@@ -253,13 +253,13 @@ class Form_k8s_hpa(Form):
     finally:
         db_op.DB.session.remove()
 
-class Form_k8s_ingress(Form):
+class FormK8sIngress(Form):
     service_name = StringField(validators=[DataRequired()], id='service_name')
     service_port = IntegerField(validators=[DataRequired()],id='service_port')
     domains = TextAreaField(validators=[DataRequired()],id='domains')
     submit = SubmitField('提交', id='btn1')
 
-class MyForm_application(Form):
+class MyFormApplication(Form):
     project = StringField(validators=[DataRequired()],id='project')
     tag = StringField(validators=[DataRequired()],id='tag')
     leader = StringField(validators=[DataRequired()], id='leader')
@@ -278,7 +278,7 @@ class MyForm_application(Form):
     sql_file = FileField('sql_file')
     submit = SubmitField('提交',id='btn1')
 
-class MyForm_sql_execute(Form):
+class MyFormSqlExecute(Form):
     leader = StringField(validators=[DataRequired()], id='leader')
     sql_database = StringField(validators=[DataRequired()],id='sql_database')
     sql_describe = TextAreaField(validators=[DataRequired()],id='sql_describe')
@@ -288,14 +288,14 @@ class MyForm_sql_execute(Form):
     sql_file = FileField('sql_file',validators=[DataRequired()])
     submit = SubmitField('提交',id='btn1')
 
-class MyForm_server_auth(Form):
+class MyFormServerAuth(Form):
     leader = StringField(validators=[DataRequired()],id='leader')
     servers = TextAreaField(validators=[DataRequired()],id='servers')
     auth_level = StringField(validators=[DataRequired()],id='auth_level')
     purpose = TextAreaField(validators=[DataRequired()],id='purpose')
     submit = SubmitField('提交',id='btn1')
 
-class MyForm_project_offline(Form):
+class MyFormProjectOffline(Form):
     project = StringField(validators=[DataRequired()],id='project')
     leader = StringField(validators=[DataRequired()], id='leader')
     git_url = StringField(validators=[DataRequired()],id='git_url')
@@ -303,7 +303,7 @@ class MyForm_project_offline(Form):
     comment = TextAreaField(id='comment')
     submit = SubmitField('提交',id='btn1')
 
-class MyForm_other_work(Form):
+class MyFormOtherWork(Form):
     assign = SelectField(choices=[], id='assign')
     text = TextAreaField(validators=[DataRequired()],id='text')
     choices = [('OPS开通申请', 'OPS开通申请'),('办公VPN申请','办公VPN申请'),('大数据相关申请','大数据相关申请'),('权限相关申请','权限相关申请'),

@@ -30,7 +30,7 @@ def scheduler_tasks():
     run_date = datetime.datetime.now() + datetime.timedelta(minutes=1)
     run_date = run_date.strftime('%H:%M').split(':')
     #scheduler.add_job(Task.server_per, 'cron', second='0', minute=run_date[1], hour=run_date[0], id=Task.server_per.__name__, replace_existing=True)
-    #scheduler.add_job(Task2.make_redis_relation, 'cron', second='0', minute=run_date[1], hour=run_date[0], id=Task2.make_redis_relation.__name__,replace_existing=True)
+    scheduler.add_job(Task2.Redis_clear, 'cron', second='0', minute=run_date[1], hour=run_date[0], id=Task2.Redis_clear.__name__,replace_existing=True)
     ################################################################################################################################################
     scheduler.add_job(Task.business_monitor, 'cron', second='0', minute='*', id=Task.business_monitor.__name__,replace_existing=True)
     scheduler.add_job(Task.es_get_log_status, 'cron', second='0', minute='*', id=Task.es_get_log_status.__name__,replace_existing=True)
@@ -57,7 +57,7 @@ def scheduler_tasks():
     scheduler.add_job(Task2.rsync_comment, 'cron', second='0', minute='0',hour='3',id=Task2.rsync_comment.__name__,replace_existing=True)
     scheduler.start()
 #实时后台执行
-class Scheduler_publish(object):
+class SchedulerPublish(object):
     def __init__(self):
         self.run_date = datetime.datetime.now() + datetime.timedelta(seconds=3)
         self.run_date = self.run_date.strftime('%Y-%m-%d %H:%M:%S')
@@ -70,7 +70,7 @@ class Scheduler_publish(object):
         self.scheduler.add_job(func,'date', run_date=self.run_date,args=[args],id=self.tm,replace_existing=True)
         return self.scheduler
 #并发后台执行
-class Scheduler_backgroud(object):
+class SchedulerBackgroud(object):
     def __init__(self):
         self.run_date = datetime.datetime.now() + datetime.timedelta(seconds=3)
         self.run_date = self.run_date.strftime('%Y-%m-%d %H:%M:%S')
