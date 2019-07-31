@@ -37,7 +37,6 @@ redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
-HOST = socket.gethostbyname(socket.gethostname())
 def Async_log(user,url):
     try:
         url = url.replace('op_servers', 'op.moji.com')
@@ -267,19 +266,31 @@ def check_chinese(char):
         return False
 
 #任务执行锁
-def proce_lock(func):
-    @wraps(func)
-    def LOCK(*args, **kwargs):
-        try:
-            time.sleep(choice([i for i in range(1,10)]))
-            if Redis.exists('task_%s'%func.__name__):
-                raise AssertionError
-            Redis.set('task_%s' %func.__name__, HOST)
-            Redis.expire('task_%s' % func.__name__,15)
-            return func(*args, **kwargs)
-        except:
-            pass
-    return LOCK
+def proce_lock(Host=None):
+    def verify_host(func):
+        @wraps(func)
+        def LOCK(*args, **kwargs):
+            try:
+                Key = 'op_proce_lock_%s' % func.__name__
+                if Host:
+                    Redis.set(Key,Host)
+                    Redis.expire(Key,3600)
+                if Redis.exists(Key):
+                    host = Redis.get(Key)
+                    ip = socket.gethostbyname(socket.gethostname())
+                    if host != ip:
+                        raise AssertionError
+                time.sleep(choice([i for i in range(1,10)]))
+                if Redis.exists('task_%s'%func.__name__):
+                    raise AssertionError
+                Redis.set('task_%s' %func.__name__, func.__name__)
+                Redis.expire('task_%s' % func.__name__,15)
+                return func(*args, **kwargs)
+            except:
+                pass
+        return LOCK
+    return verify_host
+
 
 #访问ip限制
 def acl_ip(func):
