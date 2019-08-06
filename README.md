@@ -1,20 +1,20 @@
 该平台整合业界开源自动化运维工具结合自主研发，致力于打造CI/CD全链路平台和一站式综合管理平台。由于使用sso方式登录验证、平台配置文件及依赖底层数据源众多建议只做代码交流学习.因项目开发进度问题代码注释比较少,只注释重要逻辑部分,见谅！别忘了给个star^_^
 # 开发语言与环境依赖 #
-编程语言：Python3.6 + HTML + JQuery
-前端Web框架：Bootstrap4
-前端图表框架：Pycharts + Datatables
-后端Web框架：Flask1.0+
-后端Task框架：Pyscheduler + Redis
-后端数据库：mysql、influxdb
-后端日志源：ElasticSearch
-监控数据源：zabbix
-后端代码库：gitlab
-容器化平台：Kubernetes + Docker + Harbor
-后端编译：jenkins
-登录鉴权：cas
-操作系统：CentOS 7+
-Ansible版本：2.6+
-web运行：Nginx + Gunicron
+  - 编程语言：Python3.6 + HTML + JQuery
+  - 前端Web框架：Bootstrap4
+  - 前端图表框架：Pycharts + Datatables
+  - 后端Web框架：Flask1.0+
+  - 后端Task框架：Pyscheduler + Redis
+  - 后端数据库：mysql、influxdb
+  - 后端日志源：ElasticSearch
+  - 监控数据源：zabbix
+  - 后端代码库：gitlab
+  - 容器化平台：Kubernetes + Docker + Harbor
+  - 后端编译：jenkins
+  - 登录鉴权：cas
+  - 操作系统：CentOS 7+
+  - Ansible版本：2.6+
+  - web运行：Nginx + Gunicron
 
 # 主要功能： #
     - 全新架构优化调整
