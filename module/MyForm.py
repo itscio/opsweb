@@ -313,7 +313,11 @@ class MyFormProjectOffline(Form):
 class MyFormOtherWork(Form):
     assign = SelectField(choices=[], id='assign')
     text = TextAreaField(validators=[DataRequired()],id='text')
-    choices = [('OPS开通申请', 'OPS开通申请'),('办公VPN申请','办公VPN申请'),('大数据相关申请','大数据相关申请'),('权限相关申请','权限相关申请'),
+    choices = [('OPS开通申请', 'OPS开通申请'),
+               ('办公VPN申请','办公VPN申请'),
+               ('大数据相关申请','大数据相关申请'),
+               ('权限相关申请','权限相关申请'),
+                ('新项目部署申请', '新项目部署申请'),
                 ('其它事项申请','其它事项申请')]
     titles = SelectField(choices=choices, id='titles')
     input = StringField('input', validators=[DataRequired()], id='input')

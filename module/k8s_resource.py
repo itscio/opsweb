@@ -32,8 +32,8 @@ oss_url = app.config.get('OSS_URL')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 logging = loging.Error()
 config,contexts,config_file = tools.k8s_conf()
-Files = app.config.get('PROJECT_FILES')
 flow_number = time.strftime('%Y%m%d%H%M%S',time.localtime())
+Files = tools.get_k8s_packages()
 #流水日志记录
 def _flow_log(Msg):
     try:
@@ -550,7 +550,7 @@ def object_deploy(args):
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                     #记录docker启动参数
-                                    v = db_docker_run(deployment=dm_name,run_args=run_args)
+                                    v = db_docker_run(deployment=dm_name,run_args=run_args,side_car=sidecar)
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                 except Exception as e:
@@ -584,6 +584,7 @@ def object_update(args):
         mounts = None
         healthcheck= None
         sidecar = None
+        run_args = None
         new_image, new_replicas,version,redis_key,channel = args
         if new_image and redis_key:
             db_k8s = db_op.k8s_deploy
@@ -594,9 +595,10 @@ def object_update(args):
                                                 db_k8s.replicas,db_k8s.re_requests, db_k8s.re_limits).filter(and_(
                 db_k8s.deployment == dm_name, db_k8s.action != 'delete')).order_by(desc(db_k8s.id)).limit(1).all()
             project, container_port,image,war,replicas, re_requests, re_limits = values[0]
-            run_args = db_docker_run.query.with_entities(db_docker_run.run_args).filter(db_docker_run.deployment==dm_name).all()
-            if run_args:
+            vals = db_docker_run.query.with_entities(db_docker_run.run_args,db_docker_run.side_car).filter(db_docker_run.deployment==dm_name).all()
+            if vals:
                 run_args = eval(run_args[0][0])
+                sidecar = eval(run_args[0][1])
             war = download_war(dm_name,version,run_args,redis_key)
             if not war:
                 _flow_log("params error,update fail!")

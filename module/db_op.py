@@ -311,13 +311,28 @@ class docker_run(DB.Model):
     __tablename__ = 'docker_run'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
-    deployment = DB.Column(DB.String(50))
+    deployment = DB.Column(DB.String(45))
     run_args = DB.Column(DB.String(500))
-    def __init__(self,deployment,run_args):
+    side_car = DB.Column(DB.String(500))
+    def __init__(self,deployment,run_args,side_car):
         self.deployment = deployment
         self.run_args = run_args
+        self.side_car = side_car
     def __repr__(self):
-        values=(self.deployment,self.run_args)
+        values=(self.deployment,self.run_args,self.side_car)
+        return '%s,%s,%s'%values
+
+class k8s_packages(DB.Model):
+    __tablename__ = 'k8s_packages'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    deployment = DB.Column(DB.String(45))
+    package = DB.Column(DB.String(100))
+    def __init__(self,deployment,package):
+        self.deployment = deployment
+        self.package = package
+    def __repr__(self):
+        values=(self.deployment,self.package)
         return '%s,%s'%values
 
 class k8s_ingress(DB.Model):

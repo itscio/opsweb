@@ -6,7 +6,7 @@ import time
 import re
 import datetime
 import pytz
-from module import loging,db_idc
+from module import loging,db_idc,db_op
 import dns.resolver
 from random import choice
 import string
@@ -326,3 +326,14 @@ def acl_ip(func):
             return render_template_string('%s 该IP地址未被授权访问!' % src_ip)
         return func(*args, **kwargs)
     return check_ip
+
+#获取k8s项目包名
+def get_k8s_packages():
+    try:
+        db_k8s_packages = db_op.k8s_packages
+        Files = db_k8s_packages.query.with_entities(db_k8s_packages.deployment,db_k8s_packages.package).all()
+        return {file[0]:file[1] for file in Files}
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_op.DB.session.remove()
