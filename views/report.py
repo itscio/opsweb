@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 from flask import Flask,Blueprint,request,render_template,g,redirect,url_for
 from module import user_auth,db_op,db_idc,loging,MyForm,tools
-from sqlalchemy import func,and_
+from sqlalchemy import func,and_,desc
 from pyecharts import Bar,Pie,Line
 import redis
 from functools import reduce
@@ -21,7 +21,7 @@ page_report = Blueprint('report', __name__)
 @page_report.route('/resource_report')
 def resource_report():
     try:
-        form =  MyForm.Form_resource_report()
+        form =  MyForm.FormResourceReport()
         days = tools.http_args(request,'days')
         date = datetime.datetime.now()
         db_server = db_idc.idc_servers
@@ -270,6 +270,107 @@ def alarm_report():
         logging.error(e)
         return redirect(url_for('error'))
     return render_template('alarm_report.html',INFOS=INFOS,alarm_count=alarm_count)
+@page_report.route('/work_order_report_show')
+def work_order_report_show():
+    form = MyForm.MyFormWorkOrderReport()
+    tm = datetime.datetime.now() - datetime.timedelta(days=90)
+    start_time = tm.strftime('%Y-%m-%d')
+    end_time = time.strftime('%Y-%m-%d', time.localtime())
+    return render_template('work_order_report_show.html',form=form,tt=(start_time,end_time))
+@page_report.route('/work_order_report')
+@page_report.route('/work_order_report/<start_time>/<end_time>/<source>')
+def work_order_report(start_time=None,end_time=None,source=None):
+    INFOS = []
+    db_sso = db_op.user_sso
+    db_work_order = db_op.work_order
+    dm_key = 'op_work_order_report_dm'
+    stat_key = 'op_work_order_report_status'
+    dep_key = 'op_work_order_report_department'
+    if not source:
+        tm = datetime.datetime.now() - datetime.timedelta(days=90)
+        start_time = tm.strftime('%Y-%m-%d')
+        end_time = time.strftime('%Y-%m-%d',time.localtime())
+        source = 'ensure_application'
+    try:
+        infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.department,db_sso.realName).all()
+        departments = {info[0]: info[1] for info in infos}
+        users = {info[0]: info[-1] for info in infos}
+        #统计运维工单状态
+        try:
+            vals = db_work_order.query.with_entities(db_work_order.status,func.count(db_work_order.status)).filter(and_(
+                db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).group_by(db_work_order.status).all()
+            pie = Pie("运维工单状态统计", width='100%', height='100%', title_pos='center', title_text_size=14)
+            pie_vals = [val[0] for val in vals]
+            pie_counts = [int(val[1]) for val in vals]
+            pie.add("", pie_vals, pie_counts, is_label_show=True, is_toolbox_show=False, legend_orient='vertical',
+                           legend_pos='right',radius=[1, 65], is_random=True)
+            INFOS.append(pie)
+        except Exception as e:
+            logging.error(e)
+        #统计月度工单数量及受理率
+        try:
+            vals = db_work_order.query.with_entities(db_work_order.date,db_work_order.status).filter(and_(
+                db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).all()
+            if vals:
+                for val in vals:
+                    dm,status = val
+                    dm = dm.split('-')[1]
+                    RC.hincrby(dm_key,dm)
+                    if status not in ('未受理', '未审核'):
+                        RC.hincrby(stat_key,dm)
+            line = Line("月度工单数量及受理率统计", width='100%', height='100%', title_pos='center',title_text_size=14)
+            total_vals = RC.hgetall(dm_key)
+            vals = sorted(total_vals.items(), key=lambda item: int(item[0]))
+            dm_vals = [val[0] for val in vals]
+            dm_counts = [int(val[1]) for val in vals]
+            line.add('工单数量', dm_vals, dm_counts, is_label_show=True, is_toolbox_show=False,
+                         legend_orient='vertical', legend_pos='right', xaxis_interval=0, is_random=True, xaxis_rotate=15)
+            stat_vals = RC.hgetall(stat_key)
+            stat_counts = [round((float(stat_vals[val])/float(total_vals[val]))*100,1) for val in stat_vals]
+            line.add('受理率', dm_vals, stat_counts, is_label_show=True, is_toolbox_show=False,
+                         legend_orient='vertical', legend_pos='right', xaxis_interval=0, is_random=True, xaxis_rotate=15)
+            RC.delete(stat_key)
+            RC.delete(dm_key)
+            INFOS.append(line)
+        except Exception as e:
+            logging.error(e)
+        #工单申请数量部门排名
+        try:
+            vals = db_work_order.query.with_entities(db_work_order.applicant).filter(and_(
+                db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).all()
+            if vals:
+                for val in vals:
+                    RC.hincrby(dep_key,departments[val[0]])
+            bar = Bar("部门提交工单统计", width='100%', height='100%', title_pos='center', title_text_size=14)
+            vals = RC.hgetall(dep_key)
+            dep_vals = [val for val in vals]
+            dep_counts = [int(vals[val]) for val in vals]
+            bar.add('', dep_vals, dep_counts, is_label_show=True, is_toolbox_show=False,
+                         legend_orient='vertical', legend_pos='right', xaxis_interval=0, is_random=True, xaxis_rotate=15)
+            RC.delete(dep_key)
+            INFOS.append(bar)
+        except Exception as e:
+            logging.error(e)
+        #工单申请数量个人排名
+        try:
+            vals = db_work_order.query.with_entities(db_work_order.applicant,func.count(db_work_order.applicant)).filter(and_(
+                db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).group_by(
+                db_work_order.applicant).order_by(
+                desc(func.count(db_work_order.applicant))).limit(15).all()
+            vals = [list(val) for val in vals]
+            for val in vals:
+                val[0] = users[val[0]]
+            bar = Bar("个人提交工单统计", width='100%', height='100%', title_pos='center', title_text_size=14)
+            dep_vals = [val[0] for val in vals]
+            dep_counts = [int(val[1]) for val in vals]
+            bar.add('', dep_vals, dep_counts, is_label_show=True, is_toolbox_show=False,
+                    legend_orient='vertical', legend_pos='right', xaxis_interval=0, is_random=True, xaxis_rotate=15)
+            INFOS.append(bar)
+        except Exception as e:
+            logging.error(e)
+    except Exception as e:
+        logging.error(e)
+    return render_template('work_order_report.html',INFOS=INFOS,tt=(start_time,end_time))
 
 @page_report.before_request
 @user_auth.login_required(grade=1)

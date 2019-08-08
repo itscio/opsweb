@@ -7,10 +7,12 @@ import os
 from kubernetes import client
 from importlib import reload
 import redis
+from collections import defaultdict
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/git.conf')
+app.config.from_pyfile('../conf/docker.conf')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -50,7 +52,8 @@ def deploy_query(redis_key = None):
 def deployment_create():
     tools.Async_log(g.user, request.url)
     reload(MyForm)
-    form = MyForm.Form_k8s_deploy()
+    form = MyForm.FormK8sDeploy()
+    mounts = defaultdict()
     if form.submit.data:
         project = form.projects.data
         version = form.version.data
@@ -63,8 +66,16 @@ def deployment_create():
         request_mem = form.request_mem.data
         limit_mem = form.limit_mem.data
         domain = form.domain.data
+        healthcheck = form.healthcheck.data
+        mount_path2 = form.mount_path2.data
+        mount_name2 = form.mount_name2.data
+        sidecar = form.sidecar.data
+        run_args = form.run_args.data
+        run_args = run_args.splitlines()
         re_requests = {}
         re_limits = {}
+        if mount_path2:
+            mounts[mount_path2] = mount_name2
         try:
             if object and version and  container_port and replicas:
                 if object.endswith('.war') or object.endswith('.tar.gz') or object.endswith('.jar'):
@@ -82,10 +93,13 @@ def deployment_create():
                         if domain and not ingress_port:
                             raise flash('域名配置后还需配置容器对外服务端口!')
                         redis_key = 'op_k8s_create_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
-                        Scheduler = produce.Scheduler_publish()
+                        Scheduler = produce.SchedulerPublish()
                         Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_deploy, [project,object,version, image,
-                                                                                         container_port, ingress_port,replicas,
-                                                                                         domain,re_requests, re_limits,redis_key])
+                                                                                         run_args,container_port, ingress_port,
+                                                                                         replicas,
+                                                                                         domain,re_requests,mounts,
+                                                                                         healthcheck,sidecar,re_limits,
+                                                                                         redis_key])
                         Scheduler.start()
                         return render_template('deploy_show.html',redis_key=redis_key)
                     else:
@@ -106,7 +120,7 @@ def image_update():
     try:
         tools.Async_log(g.user, request.url)
         reload(MyForm)
-        form = MyForm.Form_k8s_update()
+        form = MyForm.FormK8sUpdate()
         if form.submit.data:
             deployment = form.deployment.data
             version = form.version.data
@@ -114,7 +128,7 @@ def image_update():
                 new_image = "%s/%s:%s" %(docker_registry,deployment,version)
                 new_replicas = form.replicas.data
                 redis_key = 'op_k8s_update_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
-                Scheduler = produce.Scheduler_publish()
+                Scheduler = produce.SchedulerPublish()
                 Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [new_image, new_replicas,version, redis_key,'web'])
                 Scheduler.start()
                 return render_template('deploy_show.html',redis_key=redis_key)
@@ -128,7 +142,7 @@ def image_update():
 def hpa_apply():
     try:
         reload(MyForm)
-        form = MyForm.Form_k8s_hpa()
+        form = MyForm.FormK8sHpa()
         if form.submit.data:
             deployment = form.deployment.data
             max_replica = form.max_replica.data
@@ -183,7 +197,7 @@ def hpa_apply():
 @page_k8s_deploy.route('/ingress_apply',methods = ['GET','POST'])
 @user_auth.login_required(grade=1)
 def ingress_apply():
-    form = MyForm.Form_k8s_ingress()
+    form = MyForm.FormK8sIngress()
     namespace = "default"
     msg = None
     if form.submit.data:

@@ -20,7 +20,7 @@ def apply():
         ym = time.strftime('%Y', time.localtime())
         db_approval = db_op.user_approval
         db_sso = db_op.user_sso
-        form = MyForm.MyForm_apply()
+        form = MyForm.MyFormApply()
         val = db_approval.query.filter(and_(db_approval.dingId == g.dingId,db_approval.status == '待审批')).all()
         if val:
            raise flash('权限还未审批,请耐心等待!')
@@ -95,7 +95,7 @@ def platform_token(action=None,id=None,args=None):
     tools.Async_log(g.user, request.url)
     db_token = db_op.platform_token
     tm = time.strftime('%Y-%m-%d', time.localtime())
-    form = MyForm.Form_platform_token()
+    form = MyForm.FormPlatformToken()
     tables = ['第三方平台', '连接方式', 'Token', '颁发日期', '失效日期', '管理']
     if action == 'add':
         expire_date = "2999-12-30"

@@ -25,6 +25,7 @@ redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 sender = app.config.get('MAIL_DEFAULT_SENDER')
 receiver = app.config.get('DEFAULT_RECEIVER')
+test_mail = app.config.get('TEST_MAIL')
 work_token = app.config.get('WORK_TOKEN')
 ALLOWED_EXTENSIONS = set(['zip'])
 oss_id = app.config.get('OSS_ID')
@@ -138,8 +139,11 @@ def work_review():
                                 receiver = app.config.get('DEFAULT_RECEIVER')
                                 if Redis.exists('op_other_work_receiver_%s' % work_number):
                                     receiver = Redis.get('op_other_work_receiver_%s' % work_number)
+                                cc_mail = [g.mail,applicanter]
+                                if Redis.exists('op_cc_test_mail_%s' % work_number):
+                                    cc_mail.append(Redis.get('op_cc_test_mail_%s' % work_number))
                                 msg = Message("%s运维工单进度通知" % work_number, sender=sender, recipients=[receiver],
-                                              cc=[g.mail,applicanter])
+                                              cc=cc_mail)
                                 if action  == 'review_pass':
                                     msg.html = '{0}<div>{1}</div><div>{2}</div>'.format(mail_html,'<p style="color:red">工单状态:部门审核通过</p>',ensure_url)
                                     text.append('#### 工单状态:部门审核通过')
@@ -147,7 +151,7 @@ def work_review():
                                 else:
                                     msg.html = '%s%s' % (mail_html, '<p style="color:red">工单状态:工单被退回</p>')
                                     text.append('#### 工单状态:工单被退回')
-                                with mapp.app_context():
+                                with app.app_context():
                                     mail.send(msg)
                                 # 发送钉钉
                                 tools.dingding_msg(text, token=work_token)
@@ -182,7 +186,7 @@ def work_review():
 def application():
     td = time.strftime('%Y-%m-%d', time.localtime())
     tt = time.strftime('%H:%M:%S', time.localtime())
-    form = MyForm.MyForm_application()
+    form = MyForm.MyFormApplication()
     db_publish_application = db_op.publish_application
     db_sql_execute = db_op.sql_execute
     db_work_order = db_op.work_order
@@ -251,9 +255,9 @@ def application():
                                     #上传至oss
                                     try:
                                         auth = oss2.Auth(oss_id, oss_key)
-                                        bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
+                                        bucket = oss2.Bucket(auth, oss_url, 'mojiops')
                                         bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                        sql_url = 'https://xxx.aliyuncs.com/op_xxxx/{}'.format(File.filename)
+                                        sql_url = 'https://mojiops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
                                     except:
                                         raise Msg.extend(('error', '文件上传oss失败!'))
                                 else:
@@ -345,11 +349,16 @@ def application():
                 logging.error(e)
             else:
                 try:
+                    cc_mail = [g.mail]
+                    if int(test) == 1:
+                        cc_mail.append(test_mail)
+                        # 记录是否抄送给测试
+                        Redis.set('op_cc_test_mail_%s' % work_number, test_mail)
                     msg = Message("%s项目上线发布申请" % project, sender=sender, recipients=[leader, receiver],
-                                  cc=[g.mail])
+                                  cc=cc_mail)
                     # 发送邮件
                     msg.html = '%s%s%s%s' % (mail_html, sql_html,'<p style="color:red">项目负责人审核后自动邮件通知</p>',review_url)
-                    with mapp.app_context():
+                    with app.app_context():
                         mail.send(msg)
                     # 发送钉钉
                     text.append('##### 项目负责人审核后自动消息通知')
@@ -374,7 +383,7 @@ def server_auth():
     try:
         td = time.strftime('%Y-%m-%d', time.localtime())
         tt = time.strftime('%H:%M:%S', time.localtime())
-        form = MyForm.MyForm_server_auth()
+        form = MyForm.MyFormServerAuth()
         db_server_auth = db_op.server_auth
         db_work_order = db_op.work_order
         Msg = []
@@ -449,7 +458,7 @@ def server_auth():
                 try:
                     msg = Message("服务器权限申请", sender=sender, recipients=[leader, receiver], cc=[g.mail],charset='utf-8')
                     msg.html = '%s%s' %(mail_html,'<p style="color:red">运维审批结果会自动邮件通知</p>')
-                    with mapp.app_context():
+                    with app.app_context():
                         mail.send(msg)
                     # 发送钉钉
                     text.append('##### 运维审批结果会自动通知')
@@ -468,7 +477,7 @@ def server_auth():
 def sql_execute():
     td = time.strftime('%Y-%m-%d', time.localtime())
     tt = time.strftime('%H:%M:%S', time.localtime())
-    form = MyForm.MyForm_sql_execute()
+    form = MyForm.MyFormSqlExecute()
     db_sql_execute = db_op.sql_execute
     db_work_order = db_op.work_order
     Msg = []
@@ -514,7 +523,7 @@ def sql_execute():
                                     auth = oss2.Auth(oss_id, oss_key)
                                     bucket = oss2.Bucket(auth, oss_url, 'mojiops')
                                     bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                    sql_url = 'https://xxxx.aliyuncs.com/op_xxxx/{}'.format(File.filename)
+                                    sql_url = 'https://mojiops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
                                 except:
                                     raise Msg.extend(('error', '文件上传oss失败!'))
                             else:
@@ -583,7 +592,7 @@ def sql_execute():
                 try:
                     msg = Message("线上SQL执行申请", sender=sender, recipients=[leader, receiver],cc=[g.mail],charset='utf-8')
                     msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
-                    with mapp.app_context():
+                    with app.app_context():
                         mail.send(msg)
                     # 发送钉钉
                     text.append('##### 审核人审核后自动消息通知')
@@ -602,7 +611,7 @@ def sql_execute():
 def project_offline():
     td = time.strftime('%Y-%m-%d', time.localtime())
     tt = time.strftime('%H:%M:%S', time.localtime())
-    form = MyForm.MyForm_project_offline()
+    form = MyForm.MyFormProjectOffline()
     db_project_offline = db_op.project_offline
     db_work_order = db_op.work_order
     Msg = []
@@ -680,7 +689,7 @@ def project_offline():
                     msg = Message("%s线上项目下线申请" % project, sender=sender, recipients=[leader, receiver],
                                   cc=[g.mail],charset='utf-8')
                     msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
-                    with mapp.app_context():
+                    with app.app_context():
                         mail.send(msg)
                     # 发送钉钉
                     text.append('##### 审核人审核后自动消息通知')
@@ -704,7 +713,7 @@ def project_offline():
 def other_work():
     td = time.strftime('%Y-%m-%d', time.localtime())
     tt = time.strftime('%H:%M:%S', time.localtime())
-    form = MyForm.MyForm_other_work()
+    form = MyForm.MyFormOtherWork()
     db_other_work = db_op.other_work
     db_work_order = db_op.work_order
     Msg = []
@@ -786,7 +795,7 @@ def other_work():
                         msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver],
                                       cc=[g.mail], charset='utf-8')
                         msg.html = '%s%s' % (mail_html, '<p style="color:red">审核人审批后自动邮件通知</p>')
-                    with mapp.app_context():
+                    with app.app_context():
                         mail.send(msg)
                     # 发送钉钉
                     text.append('##### 审核人审核后自动消息通知')
@@ -969,7 +978,7 @@ def work_order_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source == source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
+                                                          db_work_order.status.in_(('未审核','未受理','已退回')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number==int(work_number)).all()
@@ -1003,8 +1012,11 @@ def work_order_list():
                                 # 邮件通知工单撤销
                                 if Redis.exists('op_send_mail_html_%s' % work_number):
                                     mail_html = Redis.get('op_send_mail_html_%s' % work_number)
+                                    cc_mail = [g.mail]
+                                    if Redis.exists('op_cc_test_mail_%s' % work_number):
+                                        cc_mail.append(Redis.get('op_cc_test_mail_%s' % work_number))
                                     msg = Message("%s工单撤销通知" % work_number, sender=sender, recipients=[receiver],
-                                                  cc=[g.mail],charset='utf-8')
+                                                  cc=cc_mail,charset='utf-8')
                                     alarm_html = '<p style="color:red">工单状态:申请人已主动撤销</p>'
                                     msg.html = '%s%s' %(mail_html, alarm_html)
                                     with app.app_context():
@@ -1165,7 +1177,7 @@ def sql_execute_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source==source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
+                                                          db_work_order.status.in_(('未审核','未受理','已退回')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number == int(work_number)).all()
@@ -1260,7 +1272,7 @@ def project_offline_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source == source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
+                                                          db_work_order.status.in_(('未审核','未受理','已退回')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number==int(work_number)).all()
@@ -1350,7 +1362,7 @@ def other_work_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source==source,
-                                                          db_work_order.status.in_(('未受理','已拒绝','未审核','已退回','审批拒绝','审批通过','待审批')))).all()
+                                                          db_work_order.status.in_(('未受理','已拒绝','未审核','已退回','审批拒绝','待审批')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number == int(work_number)).all()

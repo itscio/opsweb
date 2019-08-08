@@ -13,7 +13,6 @@ from elasticsearch import Elasticsearch
 from pyecharts import Bar,Pie,Line
 from flask_sqlalchemy import SQLAlchemy
 from collections import defaultdict,OrderedDict
-import conf
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
@@ -39,8 +38,8 @@ page_chart_center = Blueprint('chart_center', __name__)
 @user_auth.login_required(grade=1)
 def chart_center_status():
     try:
+        form = MyForm.MyFormInput()
         td = time.strftime("%Y-%m-%d", time.localtime())
-        form = MyForm.MyForm_input()
         tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
         tm = tm.strftime('%H:%M')
         tm = '%s_%s'%(time.strftime('%Y-%m-%d',time.localtime()),tm)
@@ -129,7 +128,7 @@ def chart_center_status():
 def chart_time_detail():
     try:
         td = time.strftime("%Y-%m-%d", time.localtime())
-        form = MyForm.MyForm_input()
+        form = MyForm.MyFormInput()
         tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
         tm = tm.strftime('%H:%M')
         tm = '%s_%s'%(time.strftime('%Y-%m-%d',time.localtime()),tm)
@@ -320,7 +319,7 @@ def chart_third_resource():
 def chart_center_hosts():
     try:
         bar_upstreams = []
-        form = MyForm.MyForm_input()
+        form = MyForm.MyFormInput()
         tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
         tm = tm.strftime('%H:%M')
         tm = '%s_%s'%(time.strftime('%Y-%m-%d',time.localtime()),tm)
@@ -509,7 +508,7 @@ def chart_business_bigdata():
     try:
         try:
             importlib.reload(MyForm)
-            form = MyForm.Form_business_bigdata()
+            form = MyForm.FormBusinessBigdata()
             tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
             tm = tm.strftime('%H:%M')
             dt = time.strftime('%Y-%m-%d', time.localtime())

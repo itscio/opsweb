@@ -10,7 +10,7 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
-limiter = conf.web_limiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
@@ -65,7 +65,7 @@ def publish():
         importlib.reload(MyForm)
         secret_key= tools.Produce(length=12, chars=string.digits)
         Msg_Key = 'op_publish_msg_%s' %secret_key
-        form = MyForm.MyForm_publish()
+        form = MyForm.MyFormPublish()
         if form.submit.data:
             try:
                 if Redis.exists(Msg_Key):
@@ -95,7 +95,7 @@ def publish():
                          'restart': restart, 'execute': execute, 'check_url': check_url.replace('https','http'), 'project': rb_project,
                          'version': rb_version,'channel':'web','callback_url':'None','token':'None','timestamp' :int(time.time())}
                 #启动代码分发控制中心
-                Scheduler = produce.Scheduler_publish()
+                Scheduler = produce.SchedulerPublish()
                 Scheduler = Scheduler.Scheduler_mem(task_publish.Publish_center,[INFOS,Msg_Key,secret_key])
                 Scheduler.start()
                 return render_template('publish_show.html',secret_key=secret_key)

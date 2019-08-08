@@ -24,9 +24,9 @@ page_k8s = Blueprint('k8s',__name__)
 @page_k8s.route('/k8s/pods')
 @page_k8s.route('/k8s/pods/<context>')
 def pods(context=None):
-    form = MyForm.Form_k8s_contexts()
+    form = MyForm.FormK8sContexts()
     valus = defaultdict()
-    if context and context != 'xxxx':
+    if context and context != 'moji':
         config.load_kube_config(config_file,context)
     else:
         _,active_contexts = config.list_kube_config_contexts(config_file)
@@ -88,9 +88,9 @@ def pods(context=None):
 @page_k8s.route('/k8s/deployment/<context>')
 def deployment(context=None):
     try:
-        form = MyForm.Form_k8s_contexts()
+        form = MyForm.FormK8sContexts()
         valus = defaultdict()
-        if context and context != 'xxxx':
+        if context and context != 'moji':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -136,9 +136,9 @@ def deployment(context=None):
 @page_k8s.route('/k8s/daemonset/<context>')
 def daemonset(context=None):
     try:
-        form = MyForm.Form_k8s_contexts()
+        form = MyForm.FormK8sContexts()
         valus = defaultdict()
-        if context and context != 'xxxx':
+        if context and context != 'moji':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -181,9 +181,9 @@ def daemonset(context=None):
 @page_k8s.route('/k8s/service/<context>')
 def service(context=None):
     try:
-        form = MyForm.Form_k8s_contexts()
+        form = MyForm.FormK8sContexts()
         valus = defaultdict()
-        if context and context != 'xxxx':
+        if context and context != 'moji':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -219,9 +219,9 @@ def service(context=None):
 @page_k8s.route('/k8s/ingress/<context>')
 def ingress(context=None):
     try:
-        form = MyForm.Form_k8s_contexts()
+        form = MyForm.FormK8sContexts()
         valus = []
-        if context and context != 'xxxx':
+        if context and context != 'moji':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -249,9 +249,9 @@ def ingress(context=None):
 def hpa(context=None):
     try:
         td = time.strftime("%Y-%m-%d", time.localtime())
-        form = MyForm.Form_k8s_contexts()
+        form = MyForm.FormK8sContexts()
         valus = []
-        if context and context != 'xxxx':
+        if context and context != 'moji':
             config.load_kube_config(config_file, context)
         else:
             _, active_contexts = config.list_kube_config_contexts(config_file)
@@ -313,7 +313,7 @@ def hpa(context=None):
 @page_k8s.route('/k8s/nodes/<context>')
 def nodes(context=None):
     NODES = defaultdict()
-    if context and context != 'xxxx':
+    if context and context != 'moji':
         config.load_kube_config(config_file,context)
     else:
         _,active_contexts = config.list_kube_config_contexts(config_file)
@@ -368,7 +368,7 @@ def nodes(context=None):
 @page_k8s.route('/k8s/endpoints')
 @page_k8s.route('/k8s/endpoints/<context>')
 def endpoints(context=None):
-    if context and context != 'xxxx':
+    if context and context != 'moji':
         config.load_kube_config(config_file,context)
     else:
         _,active_contexts = config.list_kube_config_contexts(config_file)

@@ -35,8 +35,9 @@ def pod_manage(pod = None,namespace=None,action=None):
         return redirect(url_for('error'))
 @page_k8s_manage.route('/modify_k8s_hpa', methods=['POST','DELETE'])
 def modify_k8s_hpa():
+    infos = None
+    status = None
     try:
-        status = None
         Infos = request.get_json()
         api_instance = client.AutoscalingV1Api()
         if request.method == 'POST':
@@ -75,41 +76,39 @@ def k8s_project_offline(dm_name=None):
     try:
         tools.Async_log(g.user, request.url)
         busi_data = defaultdict()
+        mounts = None
+        healthcheck = None
+        sidecar = None
+        tables = ('项目', '业务', '代码包', '最近上线日期', '最近上线时间', '操作')
         # Delete deployment
         if dm_name:
             values = db_k8s.query.with_entities(db_k8s.project, db_k8s.image, db_k8s.container_port, db_k8s.replicas,
                                                 db_k8s.re_requests,db_k8s.re_limits).filter(db_k8s.deployment==dm_name).order_by(desc(db_k8s.id)).limit(1).all()
             if values:
-                project, image, container_port, replicas,re_requests,re_limits = values[0]
-                k8s = k8s_resource.k8s_object(dm_name, image, container_port, replicas, re_requests, re_limits)
+                id,project, image, container_port, replicas,re_requests,re_limits = values[0]
+                k8s = k8s_resource.k8s_object(dm_name, image, container_port, replicas,mounts,healthcheck,sidecar, re_requests, re_limits)
                 if k8s.delete_hpa() and k8s.delete_ingress() and k8s.delete_service() and k8s.delete_deployment():
-                    v = db_k8s(project=project, image=image, container_port=container_port, replicas=replicas, re_requests=re_requests,
-                               re_limits=re_limits, action='delete',
-                               update_date=time.strftime('%Y-%m-%d', time.localtime()),
-                               update_time=time.strftime('%H:%M:%S', time.localtime()))
-                    db_op.DB.session.add(v)
+                    db_k8s.query.filter(db_k8s.deployment==dm_name).update({db_k8s.action:'delete'})
                     db_op.DB.session.commit()
-        else:
-            tables = ('项目','业务','代码包','最近上线日期','最近上线时间','操作')
-            db_k8s_deploy = db_op.k8s_deploy
-            db_project = db_op.project_list
-            db_business = db_op.business
-            projects = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
-            projects = [project[0] for project in projects]
-            v1 = client.AppsV1Api()
-            ret = v1.list_deployment_for_all_namespaces()
-            dm_names = [[i.metadata.name] for i in ret.items if i.metadata.name in projects]
-            for dm_name in dm_names:
-                vals = db_k8s_deploy.query.with_entities(db_k8s_deploy.project,db_k8s_deploy.war,db_k8s_deploy.update_date,
-                                                         db_k8s_deploy.update_time).filter(db_k8s_deploy.deployment==dm_name[0]).order_by(desc(db_k8s_deploy.id)).all()
+        db_k8s_deploy = db_op.k8s_deploy
+        db_project = db_op.project_list
+        db_business = db_op.business
+        projects = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
+        projects = [project[0] for project in projects]
+        v1 = client.AppsV1Api()
+        ret = v1.list_deployment_for_all_namespaces()
+        dm_names = [[i.metadata.name] for i in ret.items if i.metadata.name in projects]
+        for dm_name in dm_names:
+            vals = db_k8s_deploy.query.with_entities(db_k8s_deploy.project,db_k8s_deploy.war,db_k8s_deploy.update_date,
+                                                     db_k8s_deploy.update_time).filter(db_k8s_deploy.deployment==dm_name[0]).order_by(desc(db_k8s_deploy.id)).all()
+            if vals:
+                dm_name.extend(vals[0])
+                vals = db_project.query.with_entities(db_project.business_id).filter(db_project.project == vals[0][0]).limit(1).all()
                 if vals:
-                    dm_name.extend(vals[0])
-                    vals = db_project.query.with_entities(db_project.business_id).filter(db_project.project == vals[0][0]).limit(1).all()
-                    if vals:
-                        business = db_business.query.with_entities(db_business.business).filter(db_business.id==vals[0][0]).all()
-                        if business:
-                            dm_name[1] = business[0][0]
-                            busi_data[business[0][0]] = vals[0][0]
+                    business = db_business.query.with_entities(db_business.business).filter(db_business.id==vals[0][0]).all()
+                    if business:
+                        dm_name[1] = business[0][0]
+                        busi_data[business[0][0]] = vals[0][0]
         return render_template('k8s_offline.html',dm_names=dm_names,tables=tables,busi_data=busi_data)
     except Exception as e:
         logging.error(e)

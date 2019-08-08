@@ -13,7 +13,7 @@ page_deploy = Blueprint('deploy',__name__)
 @page_deploy.route('/deploy',methods = ['GET', 'POST'])
 def deploy():
     db_project = db_op.project_list
-    form = MyForm.MyForm_deploy()
+    form = MyForm.MyFormDeploy()
     #判断自有资源
     if form.submit.data:
         project = form.project.data
@@ -67,7 +67,7 @@ def deploy():
                 else:
                     flash('%s:%s:%s:%s环境分配录入完成' % tuple(third))
     importlib.reload(MyForm)
-    form = MyForm.MyForm_deploy()
+    form = MyForm.MyFormDeploy()
     return render_template('deploy.html',form=form)
 
 @page_deploy.route('/new_business',methods = ['GET', 'POST'])
@@ -76,7 +76,7 @@ def new_business():
     db_project = db_op.project_list
     db_project_other = db_op.project_other
     db_servers = db_idc.idc_servers
-    form = MyForm.MyForm_deploy()
+    form = MyForm.MyFormDeploy()
     Error = []
     Info = []
     BUSI = db_business.query.with_entities(db_business.id,db_business.business).all()

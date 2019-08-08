@@ -27,7 +27,7 @@ def assets_get(action=None):
     #公共参数
     Args = {info:tools.http_args(request,info) for info in ('aid','ip','port','type','host_type','action','page','hostname')}
     search_key = 'search_results_%s' % g.token
-    form = MyForm.MyForm_server()
+    form = MyForm.MyFormServer()
     db = db_idc.idc_servers
     db_idc_id = db_idc.idc_id
     db_zabbix = db_idc.zabbix_info
@@ -299,7 +299,7 @@ def assets_get(action=None):
 @user_auth.login_required(grade=4)
 def assets():
     try:
-        form = MyForm.MyForm_server()
+        form = MyForm.MyFormServer()
         tables=('机柜数量','物理机数量','虚拟机数量')
         ns = ('网络设备数量','存储设备数量','应用部署情况')
         phosts=[]
