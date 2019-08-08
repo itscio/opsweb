@@ -1,24 +1,35 @@
 {% extends "base.html" %}
 {% block page %}
-    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:23%;margin-top: 4%">
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:800px;float:left;margin-left:21%;margin-top: 4%">
         <div class="panel-heading" style="background-color: #0480be">
             <h4 class="panel-title" style="margin:0px;color:whitesmoke" >项目容器化部署</h4>
         </div>
         <div class="panel-body" style="margin-top: 5%">
             <form action="/deployment_create" method="post">
                 {{ form.csrf_token }}
-                <p>项目:{{ form.projects(style="width:150px") }}&nbsp;
-                    服务端口:{{ form.container_port (style="width:115px",placeholder="多个以逗号分割")}}&nbsp;
-                    副本数量:{{ form.replicas (style="width:21px")}}
+                <p>项目<span style="color: red">*</span>:{{ form.projects(style="width:150px") }}&nbsp;
+                    服务端口<span style="color: red">*</span>:{{ form.container_port (style="width:150px",placeholder="多个以逗号分割")}}&nbsp;
+                    副本数量<span style="color: red">*</span>:{{ form.replicas (style="width:50px")}}
                 </p>
-                <p>代码包名:{{ form.object (style="width:200px")}}&nbsp;版本号:{{ form.version (style="width:144px")}}</p>
-                <p style="text-align: center;color: #11689e">>>>>>>>>>>>>以下为可选项-----以下为可选项<<<<<<<<<<<<</p>
-                <p>容器CPU核数:{{ form.request_cpu (style="width:71px") }}-{{ form.limit_cpu (style="width:71px")}}&nbsp;
-                    内存资源:{{ form.request_mem (style="width:71px",placeholder="默认GB")}}-{{ form.limit_mem (style="width:71px",placeholder="默认GB")}}
+                <p>代码包名<span style="color: red">*</span>:{{ form.object (style="width:230px")}}&nbsp;版本号<span style="color: red">*</span>:{{ form.version (style="width:183px")}}</p>
+                <p>容器系统环境及应用进程运行参数<span style="color: red">*</span>:</p>
+                <p>{{ form.run_args (style="width:536px;height:60px;margin-top:-14px;margin-bottom:-10px") }}</p>
+                <p>Sidecar镜像:{{ form.sidecar (placeholder="完整Docker镜像地址",style="width:456px") }}</p>
+                <p>健康监测URL:{{ form.healthcheck (placeholder="以/开头的URL地址",style="width:449px") }}</p>
+                <p>mount路径:{{ form.mount_path1 (style="width:193px") }}&nbsp;mount名称:{{ form.mount_name1 (style="width:193px") }}</p>
+                <p>mount路径:{{ form.mount_path2 (style="width:193px") }}&nbsp;mount名称:{{ form.mount_name2 (style="width:193px") }}</p>
+                <p>容器CPU核数:{{ form.request_cpu (style="width:92px") }}-{{ form.limit_cpu (style="width:92px")}}&nbsp;
+                    内存资源:{{ form.request_mem (style="width:92px",placeholder="默认GB")}}-{{ form.limit_mem (style="width:92px",placeholder="默认GB")}}
                 </p>
-                <p>项目域名:{{ form.domain (style="width:256px",placeholder="对外提供http服务必填,多个以逗号分割")}} &nbsp;对外服务端口:{{ form.ingress_port (style="width:41px") }}</p>
+                <p>项目域名:{{ form.domain (style="width:333px",placeholder="对外提供http服务必填,多个以逗号分割")}} &nbsp;对外服务端口:{{ form.ingress_port (style="width:50px") }}</p>
                 <p>{{ form.submit (class="btn btn-primary") }}</p>
             </form>
         </div>
     </div>
+    <script>
+        $("#mount_path1").val('/opt/logs');
+        $("#mount_name1").val('logs');
+        $("#mount_path1").attr('readonly','readonly');
+        $("#mount_name1").attr('readonly','readonly');
+    </script>
 {% endblock page %}
