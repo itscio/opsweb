@@ -1,6 +1,5 @@
 #-*- coding: utf-8 -*-
 import redis
-import socket
 from module import loging,SSH,db_idc,db_op,tools
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -33,12 +32,11 @@ influxdb_user = app.config.get('INFLUXDB_USER')
 influxdb_pw = app.config.get('INFLUXDB_PASSWORD')
 influxdb_db = app.config.get('INFLUXDB_DB')
 es_hosts = app.config.get('ES_HOSTS')
-HOST = socket.gethostbyname(socket.gethostname())
 es = Elasticsearch(hosts=es_hosts,timeout=60)
 ops_token = app.config.get('OPS_TOKEN')
 redis_token = app.config.get('REDIS_TOKEN')
 config,contexts,config_file = tools.k8s_conf()
-@tools.proce_lock
+@tools.proce_lock()
 def task_run():
     try:
         # 获取业务访问数据
@@ -91,7 +89,7 @@ def task_run():
     except Exception as e:
         logging.error(e)
 
-@tools.proce_lock
+@tools.proce_lock()
 def get_other_info():
     db_project_other = db_op.project_other
     db_crontabs = db_idc.crontabs
@@ -190,7 +188,7 @@ def get_other_info():
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def get_redis_info():
     db_third = db_idc.third_resource
     db_redis = db_idc.redis_info
@@ -379,7 +377,7 @@ def get_redis_info():
     finally:
         db_idc.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def k8s_health_check():
     v1 = client.CoreV1Api()
     try:
@@ -420,7 +418,7 @@ def k8s_health_check():
     except Exception as e:
         logging.error(e)
 
-@tools.proce_lock
+@tools.proce_lock()
 def alarm_load():
     try:
         loging.write("start %s ......" %alarm_load.__name__)
@@ -530,7 +528,7 @@ def alarm_load():
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def k8s_ingress_log():
     td = time.strftime('%Y-%m-%d', time.localtime())
     th = time.strftime('%H:%M', time.localtime())
@@ -706,7 +704,7 @@ def k8s_ingress_log():
             RC.expire(key,864000)
         loging.write('complete %s !' % k8s_ingress_log.__name__)
 
-@tools.proce_lock
+@tools.proce_lock()
 def Redis_alarm():
     loging.write("start %s ......" %Redis_alarm.__name__)
     tm = time.strftime('%Y%m%d%H%M',time.localtime())
@@ -807,13 +805,11 @@ def Redis_alarm():
             pool.map(check_slave,set(redis_m))
             pool.close()
             pool.join()
-    except Exception as e:
-        logging.error(e)
     finally:
         db_idc.DB.session.remove()
         loging.write("%s complete !" % Redis_alarm.__name__)
 
-@tools.proce_lock
+@tools.proce_lock()
 def rsync_comment():
     try:
         #获取服务器信息

@@ -47,23 +47,20 @@ def _flow_log(Msg):
     except Exception as e:
         logging.error(e)
 
-def download_war(object,version,redis_key):
+def download_war(object,version,run_args,redis_key):
     #下载对应项目的最新代码包
     try:
         #包名需要规范
-        try:
-            project_file = object
-            object = object.split('.')
-            dm_name = object[0]
-            if dm_name in Files:
-                project_file = Files[dm_name]
-            dm_type = project_file.split('.')[-1]
-            if len(project_file.split('.')) >2:
-                dm_type = '.'.join(project_file.split('.')[1:])
-            package = '%s-%s.%s'% (dm_name, version, dm_type)
-            project_path = '%s/%s/%s' % (dockerfile_path, dm_name, project_file)
-        except Exception as e:
-            logging.error(e)
+        project_file = object
+        object = object.split('.')
+        dm_name = object[0]
+        if dm_name in Files:
+            project_file = Files[dm_name]
+        dm_type = project_file.split('.')[-1]
+        if len(project_file.split('.')) >2:
+            dm_type = '.'.join(project_file.split('.')[1:])
+        package = '%s-%s.%s'% (dm_name, version, dm_type)
+        project_path = '%s/%s/%s' % (dockerfile_path, dm_name, project_file)
         if not os.path.exists(project_path):
             try:
                 Redis.lpush(redis_key, '%s package download from oss ......' %package)
@@ -112,12 +109,23 @@ def download_war(object,version,redis_key):
                 dockerfile = '%s/%s/Dockerfile' %(dockerfile_path,dm_name)
                 if os.path.exists(dockerfile):
                     os.remove(dockerfile)
-                with open('%s/../conf/dockerfile_%s.template'%(app.root_path,dm_type)) as F:
-                    for line in F:
-                        with open(dockerfile,'a+') as f:
+                with open(dockerfile, 'a+') as f:
+                    with open('%s/../conf/dockerfile_%s.template'%(app.root_path,dm_type)) as F:
+                        for line in F:
                             if '<PROJECT>' in line:
                                 line = line.replace('<PROJECT>',project_file)
                             f.write('%s\n'%line)
+                #生成docker_run启动脚本文件
+                if run_args:
+                    runfile = '%s/%s/run.sh' % (dockerfile_path, dm_name)
+                    if os.path.exists(runfile):
+                        os.remove(runfile)
+                    with open(runfile, 'a+') as f:
+                        with open('%s/../conf/docker_run.template' %app.root_path) as F:
+                            for line in F:
+                                f.write('%s\n' % line)
+                        for line in run_args:
+                            f.write('%s\n' % line)
                 Redis.lpush(redis_key, '%s package download success!' %package)
                 _flow_log('%s package download success!' %package)
                 return package
@@ -190,7 +198,7 @@ def make_image(image,redis_key):
         return False
 
 class k8s_object(object):
-    def __init__(self,dm_name,image,container_port,replicas,re_requests={},re_limits={}):
+    def __init__(self,dm_name,image,container_port,replicas,mounts,healthcheck,sidecar,re_requests={},re_limits={}):
         config.load_kube_config(config_file, context=contexts[0])
         self.namespace = "default"
         self.config_file = config_file
@@ -198,6 +206,9 @@ class k8s_object(object):
         self.image = image
         self.container_port = container_port
         self.replicas = replicas
+        self.mounts = mounts
+        self.healthcheck = healthcheck
+        self.sidecar = sidecar
         self.re_requests = {'cpu':1,'memory': '2G'}
         self.re_limits = {'cpu':2,'memory': '4G'}
         if re_requests and re_limits:
@@ -206,34 +217,64 @@ class k8s_object(object):
     def export_deployment(self):
         # Configureate Pod template container
         volume_mounts = []
-        volume_mounts.append(client.V1VolumeMount(mount_path='/opt/logs',name='logs'))
-        if self.dm_name == 'launch':
-            volume_mounts.append(client.V1VolumeMount(mount_path='/opt/%s/conf'%self.dm_name, name=self.dm_name))
+        containers = []
+        volumes = []
+        volume_mounts.append(client.V1VolumeMount(mount_path='/docker/logs', name='logs'))
+        volumes.append(client.V1Volume(name='logs',
+                                       host_path=client.V1HostPathVolumeSource(path='/opt/logs',
+                                                                               type='DirectoryOrCreate')))
+        if self.mounts:
+            for path in self.mounts:
+                volume_mounts.append(client.V1VolumeMount(mount_path=path, name=self.mounts[path]))
+                volumes.append(client.V1Volume(name=self.mounts[path],
+                                               host_path=client.V1HostPathVolumeSource(path=path,
+                                                                                       type='DirectoryOrCreate')))
+        liveness_probe = client.V1Probe(initial_delay_seconds=15,
+                                        tcp_socket=client.V1TCPSocketAction(port=int(self.container_port[0])))
+        readiness_probe = client.V1Probe(initial_delay_seconds=15,
+                                         tcp_socket=client.V1TCPSocketAction(port=int(self.container_port[0])))
+        if self.healthcheck:
+            liveness_probe = client.V1Probe(initial_delay_seconds=15,
+                                            http_get=client.V1HTTPGetAction(path=self.healthcheck,
+                                                                            port=int(self.container_port[0])))
+            readiness_probe = client.V1Probe(initial_delay_seconds=15,
+                                             http_get=client.V1HTTPGetAction(path=self.healthcheck,
+                                                                             port=int(self.container_port[0])))
+        Env = [client.V1EnvVar(name='LANG', value='en_US.UTF-8'),
+                 client.V1EnvVar(name='LC_ALL', value='en_US.UTF-8'),
+                 client.V1EnvVar(name='POD_NAME',value_from=client.V1EnvVarSource(
+                     field_ref=client.V1ObjectFieldSelector(field_path='metadata.name'))),
+                 client.V1EnvVar(name='POD_IP', value_from=client.V1EnvVarSource(
+                     field_ref=client.V1ObjectFieldSelector(field_path='status.podIP'))),
+                 ]
         container = client.V1Container(
             name=self.dm_name,
             image=self.image,
             ports=[client.V1ContainerPort(container_port=int(port)) for port in self.container_port],
             image_pull_policy='Always',
-            env= [client.V1EnvVar(name='LANG',value='en_US.UTF-8'),
-                  client.V1EnvVar(name='LC_ALL', value='en_US.UTF-8')
-                  ],
+            env=Env,
             resources=client.V1ResourceRequirements(limits=self.re_limits,
                                                     requests=self.re_requests),
-            volume_mounts = volume_mounts,
-            liveness_probe=client.V1Probe(initial_delay_seconds=30,
-                tcp_socket=client.V1TCPSocketAction(port=int(self.container_port[0]))
-            ),
-            readiness_probe=client.V1Probe(initial_delay_seconds=30,
-                tcp_socket=client.V1TCPSocketAction(port=int(self.container_port[0])))
+            volume_mounts=volume_mounts,
+            liveness_probe=liveness_probe,
+            readiness_probe=readiness_probe
         )
+        containers.append(container)
+        if self.sidecar:
+            sidecar_container = client.V1Container(
+                name= 'sidecar-%s' %self.dm_name,
+                image = self.sidecar,
+                image_pull_policy='Always',
+                env=Env,
+                resources=client.V1ResourceRequirements(limits=self.re_limits,
+                                                        requests=self.re_requests),
+                volume_mounts=volume_mounts)
+            containers.append(sidecar_container)
         # Create and configurate a spec section
         secrets = client.V1LocalObjectReference('registrysecret')
-        volumes = []
-        volume = client.V1Volume(name='logs', host_path=client.V1HostPathVolumeSource(path='/opt/logs'))
-        volumes.append(volume)
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(labels={"project": self.dm_name}),
-            spec=client.V1PodSpec(containers=[container],
+            spec=client.V1PodSpec(containers=containers,
               image_pull_secrets=[secrets],
               volumes=volumes,
               affinity=client.V1Affinity(
@@ -419,22 +460,24 @@ def delete_pod(dm_name):
 def object_deploy(args):
     try:
         namespace = "default"
-        project, object, version, image, container_port, ingress_port, replicas, domain,re_requests, re_limits,redis_key = args
+        (project, object, version, image,run_args, container_port, ingress_port, replicas,
+         domain,re_requests,mounts,healthcheck,sidecar,re_limits,redis_key) = args
         dm_name = object.split('.')[0]
         db_k8s = db_op.k8s_deploy
         values = db_k8s.query.filter(db_k8s.image == image).all()
         if values:
             _flow_log('%s image already exists!' %image)
             raise Redis.lpush(redis_key, '%s image already exists!' %image)
-        war = download_war(object,version,redis_key)
+        war = download_war(object,version,run_args,redis_key)
         if war:
             # 制作docker镜像并上传至仓库
             if make_image(image,redis_key):
                 db_k8s = db_op.k8s_deploy
+                db_docker_run = db_op.docker_run
                 #部署deployment
                 Redis.lpush(redis_key,'start deploy deployment %s......' %dm_name)
                 _flow_log('start deploy deployment %s......' %dm_name)
-                k8s = k8s_object(dm_name, image, container_port, replicas, re_requests, re_limits)
+                k8s = k8s_object(dm_name, image, container_port, replicas,mounts,healthcheck,sidecar,re_requests,re_limits)
                 api_instance = client.ExtensionsV1beta1Api()
                 try:
                     deployment = k8s.export_deployment()
@@ -495,8 +538,8 @@ def object_deploy(args):
                                                            serviceName=dm_name,servicePort=int(ingress_port))
                                             db_op.DB.session.add(v)
                                             db_op.DB.session.commit()
-                                #部署日志记录
                                 try:
+                                    # 部署日志记录
                                     v = db_k8s(project=project, deployment=dm_name, image=image,war = war,
                                                container_port=','.join([str(port) for port in container_port]),
                                                replicas=replicas,
@@ -504,6 +547,10 @@ def object_deploy(args):
                                                re_limits=str(re_limits).replace("'",'"'), action='create',
                                                update_date=time.strftime('%Y-%m-%d', time.localtime()),
                                                update_time=time.strftime('%H:%M:%S', time.localtime()))
+                                    db_op.DB.session.add(v)
+                                    db_op.DB.session.commit()
+                                    #记录docker启动参数
+                                    v = db_docker_run(deployment=dm_name,run_args=run_args)
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                 except Exception as e:
@@ -534,16 +581,23 @@ def object_deploy(args):
 def object_update(args):
     try:
         namespace = "default"
+        mounts = None
+        healthcheck= None
+        sidecar = None
         new_image, new_replicas,version,redis_key,channel = args
         if new_image and redis_key:
             db_k8s = db_op.k8s_deploy
+            db_docker_run = db_op.docker_run
             dm_name = new_image.split('/')[-1].split(':')[0]
             #生成新镜像
             values = db_k8s.query.with_entities(db_k8s.project, db_k8s.container_port, db_k8s.image,db_k8s.war,
                                                 db_k8s.replicas,db_k8s.re_requests, db_k8s.re_limits).filter(and_(
                 db_k8s.deployment == dm_name, db_k8s.action != 'delete')).order_by(desc(db_k8s.id)).limit(1).all()
             project, container_port,image,war,replicas, re_requests, re_limits = values[0]
-            war = download_war(dm_name,version,redis_key)
+            run_args = db_docker_run.query.with_entities(db_docker_run.run_args).filter(db_docker_run.deployment==dm_name).all()
+            if run_args:
+                run_args = eval(run_args[0][0])
+            war = download_war(dm_name,version,run_args,redis_key)
             if not war:
                 _flow_log("params error,update fail!")
                 raise Redis.lpush(redis_key, "params error,update fail!")
@@ -556,7 +610,7 @@ def object_update(args):
                 re_requests = eval(re_requests)
                 re_limits = eval(re_limits)
                 container_port = container_port.split(',')
-                k8s = k8s_object(dm_name, image, container_port, replicas, re_requests, re_limits)
+                k8s = k8s_object(dm_name, image, container_port, replicas,mounts,healthcheck,sidecar,re_requests,re_limits)
                 deployment = k8s.export_deployment()
                 # Update container image
                 deployment.spec.template.spec.containers[0].image = new_image

@@ -306,6 +306,20 @@ class k8s_deploy(DB.Model):
         values=(self.project,self.deployment,self.image,self.war,self.container_port,self.replicas,self.re_requests,self.re_limits,
                 self.action,self.update_date,self.update_time)
         return '%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s'%values
+
+class docker_run(DB.Model):
+    __tablename__ = 'docker_run'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    deployment = DB.Column(DB.String(50))
+    run_args = DB.Column(DB.String(500))
+    def __init__(self,deployment,run_args):
+        self.deployment = deployment
+        self.run_args = run_args
+    def __repr__(self):
+        values=(self.deployment,self.run_args)
+        return '%s,%s'%values
+
 class k8s_ingress(DB.Model):
     __tablename__ = 'k8s_ingress'
     __bind_key__='op'

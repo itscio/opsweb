@@ -7,7 +7,6 @@ import redis
 import time
 import datetime
 import requests
-import socket
 from influxdb import InfluxDBClient
 from multiprocessing.dummy import Pool as ThreadPool
 from module import loging,db_op,db_idc,SSH,ip_adress,Mysql,tools,Md5
@@ -26,7 +25,6 @@ app.config.from_pyfile('../conf/oss.conf')
 app.config.from_pyfile('../conf/assets.conf')
 app.config.from_pyfile('../conf/jump.conf')
 logging = loging.Error()
-HOST = socket.gethostbyname(socket.gethostname())
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -309,7 +307,7 @@ def server_per():
     finally:
         db_idc.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def get_server_info():
     db_store = db_idc.idc_store
     db_server = db_idc.idc_servers
@@ -478,7 +476,7 @@ def get_server_info():
         loging.write("get server infos complete!")
         db_idc.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def auto_discovery():
     try:
         loging.write("start %s ......" % auto_discovery.__name__)
@@ -583,7 +581,7 @@ def auto_discovery():
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def get_app_service():
     def app_service(info):
         apps = defaultdict()
@@ -780,7 +778,7 @@ def get_app_service():
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def get_project_app():
     def get_third_app(app_list):
         try:
@@ -875,7 +873,7 @@ def get_project_app():
         db_op.DB.session.remove()
         db_idc.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def es_get_log_status():
     lte_date = datetime.datetime.now()
     gte_date = lte_date - datetime.timedelta(minutes=1)
@@ -907,7 +905,7 @@ def es_get_log_status():
     except Exception as e:
         logging.error(e)
 
-@tools.proce_lock
+@tools.proce_lock()
 def es_get_log_time():
     lte_date = datetime.datetime.now()
     gte_date = lte_date - datetime.timedelta(minutes=1)
@@ -937,7 +935,7 @@ def es_get_log_time():
     except Exception as e:
         logging.error(e)
 
-@tools.proce_lock
+@tools.proce_lock()
 def cron_run_task():
     loging.write("start run %s ......" %cron_run_task.__name__)
     try:
@@ -990,7 +988,7 @@ def cron_run_task():
         MY_SQL.Close()
         db_idc.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def get_project_lists():
     try:
         loging.write("start %s ......" %get_project_lists.__name__)
@@ -1071,7 +1069,7 @@ def get_project_lists():
         loging.write("complete %s !" %get_project_lists.__name__)
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def business_performance():
     #获取业务接口性能数据
     loging.write("start business_performance ......")
@@ -1228,11 +1226,11 @@ def business_performance():
                                                     #环比大于50%以上或者同比大于50%以上
                                                     if alart_old > 0.5 or alart_bef > 0.5:
                                                         values[key] = {
-                                                                        'old':float('%.2f' %alart_old),
-                                                                        'old_val':float('%.2f' %old_val),
-                                                                        'bef':float('%.2f' %alart_bef),
-                                                                        'bef_val':float('%.2f' %bef_val),
-                                                                        'now':float('%.2f' %now_val),
+                                                                        'old':round(alart_old,1),
+                                                                        'old_val':round(old_val,1),
+                                                                        'bef':round(alart_bef,1),
+                                                                        'bef_val':round(bef_val,1),
+                                                                        'now':round(now_val,1),
                                                                         'sample': t
                                                                        }
                                                 except Exception as e:
@@ -1241,11 +1239,11 @@ def business_performance():
                                                     #环比减少50%以上，同比减少50%以上
                                                     if alart_old < -0.5 and alart_bef < -0.5:
                                                         values[key] = {
-                                                                       'old':float('%.2f' %alart_old),
-                                                                        'old_val':float('%.2f' %old_val),
-                                                                        'bef':float('%.2f' %alart_bef),
-                                                                        'bef_val':float('%.2f' %bef_val),
-                                                                        'now':float('%.2f' %now_val),
+                                                                       'old':round(alart_old,1),
+                                                                        'old_val':round(old_val,1),
+                                                                        'bef':round(alart_bef,1),
+                                                                        'bef_val':round(bef_val,1),
+                                                                        'now':round(now_val,1),
                                                                         'sample': t
                                                                        }
                                                 except Exception as e:
@@ -1325,32 +1323,32 @@ def business_performance():
                                         info = '当前占比:{0}%'.format('%.2f' %vals['now'])
                                     if float(vals['bef']) >=0:
                                         if key =='mean_avg_resp':
-                                            bef_info = '同比增长:{0}%(昨天数值:{1}s)'.format('%.2f' %(vals['bef']* 100),'%.2f' %vals['bef_val'])
+                                            bef_info = '同比增长:{0}%(昨天数值:{1}s)'.format(round(vals['bef']* 100,1),round(vals['bef_val'],1))
                                         elif key =='mean_pv':
-                                            bef_info = '同比增长:{0}%(昨天pv:{1})'.format('%.2f' %(vals['bef']* 100),int(vals['bef_val']))
+                                            bef_info = '同比增长:{0}%(昨天pv:{1})'.format(round(vals['bef']* 100,1),round(vals['bef_val']))
                                         else:
-                                            bef_info = '同比增长:{0}%(昨天占比:{1}%)'.format('%.2f' %(vals['bef']* 100),'%.2f' %vals['bef_val'])
+                                            bef_info = '同比增长:{0}%(昨天占比:{1}%)'.format(round(vals['bef']* 100,1),round(vals['bef_val'],1))
                                     else:
                                         if key =='mean_avg_resp':
-                                            bef_info = '同比减少:{0}%(昨天数值:{1}s)'.format('%.2f' %(vals['bef']* 100),'%.2f' %vals['bef_val'])
+                                            bef_info = '同比减少:{0}%(昨天数值:{1}s)'.format(round(vals['bef']* 100,1),round(vals['bef_val'],1))
                                         elif key =='mean_pv':
-                                            bef_info = '同比减少:{0}%(昨天pv:{1})'.format('%.2f' %(vals['bef']* 100),int(vals['bef_val']))
+                                            bef_info = '同比减少:{0}%(昨天pv:{1})'.format(round(vals['bef']* 100,1),round(vals['bef_val']))
                                         else:
-                                            bef_info = '同比减少:{0}%(昨天占比:{1}%)'.format('%.2f' %(vals['bef']* 100),'%.2f' %vals['bef_val'])
+                                            bef_info = '同比减少:{0}%(昨天占比:{1}%)'.format(round(vals['bef']* 100,1),round(vals['bef_val'],1))
                                     if float(vals['old']) >=0:
                                         if key =='mean_avg_resp':
-                                            old_info = '环比增长:{0}%(三分钟前数值:{1}s)'.format('%.2f' %(vals['old']* 100),'%.2f' %vals['old_val'])
+                                            old_info = '环比增长:{0}%(三分钟前数值:{1}s)'.format(round(vals['old']* 100,1),round(vals['old_val'],1))
                                         elif key == 'mean_pv':
-                                            old_info = '环比增长:{0}%(三分钟前pv:{1})'.format('%.2f' %(vals['old']* 100),int(vals['old_val']))
+                                            old_info = '环比增长:{0}%(三分钟前pv:{1})'.format(round(vals['old']* 100,1),round(vals['old_val']))
                                         else:
-                                            old_info = '环比增长:{0}%(三分钟前占比:{1}%)'.format('%.2f' %(vals['old']* 100),'%.2f' %vals['old_val'])
+                                            old_info = '环比增长:{0}%(三分钟前占比:{1}%)'.format(round(vals['old']* 100,1),round(vals['old_val'],1))
                                     else:
                                         if key == 'mean_avg_resp':
-                                            old_info = '环比减少:{0}%(三分钟前数值:{1}s)'.format('%.2f' %(vals['old']* 100),'%.2f' %vals['old_val'])
+                                            old_info = '环比减少:{0}%(三分钟前数值:{1}s)'.format(round(vals['old']* 100,1),round(vals['old_val'],1))
                                         elif key == 'mean_pv':
-                                            old_info = '环比减少:{0}%(三分钟前pv:{1})'.format('%.2f' %(vals['old']* 100),int(vals['old_val']))
+                                            old_info = '环比减少:{0}%(三分钟前pv:{1})'.format(round(vals['old']* 100,1),round(vals['old_val']))
                                         else:
-                                            old_info = '环比减少:{0}%(三分钟前占比:{1}%)'.format('%.2f' %(vals['old']* 100),'%.2f' %vals['old_val'])
+                                            old_info = '环比减少:{0}%(三分钟前占比:{1}%)'.format(round(vals['old']* 100,1),round(vals['old_val'],1))
                                     text = ['**线上业务:%s**' % alarm_values[url]['business'],"业务接口:%s" % url,'**详情:**',
                                             '性能指标:%s,%s' %(Keys[key],info),bef_info,old_info
                                             ,'采样数据:{0}分钟,持续时间:{1}分钟'.format(vals['sample'],int(alarm_values[url]['incr'])*3),
@@ -1391,7 +1389,7 @@ def business_performance():
         db_op.DB.session.remove()
         loging.write("complete business_performance !")
 
-@tools.proce_lock
+@tools.proce_lock()
 def reboot_tomcat():
     try:
         loging.write("start %s ......" %reboot_tomcat.__name__)
@@ -1536,7 +1534,7 @@ def reboot_tomcat():
         loging.write("complete %s !" % reboot_tomcat.__name__)
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def business_monitor(check_url=None):
     try:
         td = time.strftime("%Y-%m-%d %H:%M:00", time.localtime())
@@ -1659,7 +1657,7 @@ def business_monitor(check_url=None):
     finally:
         db_op.DB.session.remove()
 
-@tools.proce_lock
+@tools.proce_lock()
 def es_get_data():
     tm = datetime.datetime.now()
     tt = tm.strftime('%H:%M')
@@ -1729,7 +1727,7 @@ def es_get_data():
     except Exception as e:
         logging.error(e)
 
-@tools.proce_lock
+@tools.proce_lock()
 def influxdb_counts():
     dt = datetime.datetime.now()
     tt = dt - datetime.timedelta(hours=1)
@@ -1764,7 +1762,7 @@ def influxdb_counts():
                 logging.error(e)
                 continue
 
-@tools.proce_lock
+@tools.proce_lock()
 def influxdb_alarm():
     dt = datetime.datetime.now()
     tt = dt - datetime.timedelta(days=3)
@@ -1802,7 +1800,7 @@ def influxdb_alarm():
     except Exception as e:
         logging.error(e)
 
-@tools.proce_lock
+@tools.proce_lock()
 def zabbix_counts():
     dict_load = defaultdict()
     dict_mem = defaultdict()

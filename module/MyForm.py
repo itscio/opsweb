@@ -215,7 +215,14 @@ class FormK8sDeploy(Form):
         ingress_port = IntegerField('ingress_port', id='ingress_port')
         replicas = IntegerField('replicas', validators=[DataRequired()],id='replicas')
         dm_name = StringField('dm_name', validators=[DataRequired()],id='dm_name')
+        run_args = TextAreaField(validators=[DataRequired()], id='run_args')
+        healthcheck = StringField('healthcheck',id='healthcheck')
+        mount_path1 = StringField('mount_path1', id='mount_path1')
+        mount_name1 = StringField('mount_name1', id='mount_name1')
+        mount_path2 = StringField('mount_path2', id='mount_path2')
+        mount_name2 = StringField('mount_name2', id='mount_name2')
         domain = StringField('domain', id='domain')
+        sidecar = StringField('sidecar', id='sidecar')
         request_cpu = IntegerField('request_cpu',id='request_cpu')
         request_mem = IntegerField('request_mem',id='request_mem')
         limit_cpu = IntegerField('limit_cpu',id='limit_cpu')
@@ -321,3 +328,11 @@ class MyFormOtherWork(Form):
     finally:
         db_op.DB.session.remove()
     submit = SubmitField('提交',id='btn1')
+
+class MyFormWorkOrderReport(Form):
+    input = StringField('input', validators=[DataRequired()],id='input')
+    input2 = StringField('input2', validators=[DataRequired()], id='input2')
+    choices = [('ensure_application','代码上线工单'),('ensure_server_auth','机器权限工单'),('ensure_sql_execute','SQL执行工单'),('ensure_project_offline','项目下线工单'),
+                ('ensure_other_work','其它事项工单')]
+    titles = SelectField(choices=choices, id='titles')
+    submit = SubmitField('生成报告',id='btn1')
