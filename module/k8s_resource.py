@@ -33,7 +33,6 @@ Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True
 logging = loging.Error()
 config,contexts,config_file = tools.k8s_conf()
 flow_number = time.strftime('%Y%m%d%H%M%S',time.localtime())
-Files = tools.get_k8s_packages()
 #流水日志记录
 def _flow_log(Msg):
     try:
@@ -51,6 +50,7 @@ def download_war(object,version,run_args,redis_key):
     #下载对应项目的最新代码包
     try:
         #包名需要规范
+        Files = tools.get_k8s_packages()
         project_file = object
         object = object.split('.')
         dm_name = object[0]
@@ -163,6 +163,7 @@ def make_image(image,redis_key):
                     _flow_log('fail:%s' % e)
             else:
                 try:
+                    Files = tools.get_k8s_packages()
                     response = [line for line in client.push(image, stream=True,auth_config={'username':docker_user,'password':docker_password})]
                     result = eval(response[-1])['aux']['Tag']
                     version = image.split(':')[-1]
@@ -550,7 +551,7 @@ def object_deploy(args):
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                     #记录docker启动参数
-                                    v = db_docker_run(deployment=dm_name,run_args=run_args,side_car=sidecar)
+                                    v = db_docker_run(deployment=dm_name,run_args=str(run_args),side_car=sidecar)
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                 except Exception as e:
