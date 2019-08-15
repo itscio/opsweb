@@ -72,7 +72,6 @@
         ├── k8s_deploy.py
         ├── k8s_manage.py
         ├── k8s.py
-        ├── mobile.py
         ├── publish.py
         ├── report.py
         ├── sch_list.py
