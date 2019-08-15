@@ -16,67 +16,67 @@
   - Ansible版本：2.6+
   - web运行：Nginx + Gunicron
 # 组织框架 #
-sparrow
-├── api     #api接口
-│   ├── ajax_api.py
-│   ├── assets_query.py
-│   ├── __init__.py
-│   ├── k8s_project_update.py
-├── conf    #配置文件夹
-├── conf.py       #全局配置
-├── index.py      #主页面
-├── login.py      #登录页面
-├── logout.py     #注销接口
-├── main.py       #网站入口
-├── module        #功能模块
-│   ├── db_idc.py
-│   ├── db_op.py
-│   ├── __init__.py
-│   ├── ip_adress.py
-│   ├── k8s_resource.py
-│   ├── loging.py
-│   ├── Md5.py
-│   ├── MyForm.py
-│   ├── Mysql.py
-│   ├── produce.py
-│   ├── SSH.py
-│   ├── Task2.py
-│   ├── task_publish.py
-│   ├── Task.py
-│   ├── tools.py
-│   └── user_auth.py
-├── operation    #管理模块
-│   ├── assets_manage.py
-│   ├── examine.py
-│   ├── __init__.py
-│   └── resource_pool.py
-├── sso_cas      #sso单点登录模块
-├── static       #静态目录
-│   ├── css
-│   ├── doc
-│   ├── font
-│   ├── images
-│   ├── js
-│   └── webfonts
-├── templates   #页面模版
-└── views       #页面视图
-    ├── approval.py
-    ├── app_service.py
-    ├── Assets.py
-    ├── business_m.py
-    ├── business.py
-    ├── chart_center.py
-    ├── deploy.py
-    ├── influxdb_m.py
-    ├── __init__.py
-    ├── k8s_deploy.py
-    ├── k8s_manage.py
-    ├── k8s.py
-    ├── mobile.py
-    ├── publish.py
-    ├── report.py
-    ├── sch_list.py
-    └── work_order.py
+    sparrow
+    ├── api     #api接口
+    │   ├── ajax_api.py
+    │   ├── assets_query.py
+    │   ├── __init__.py
+    │   ├── k8s_project_update.py
+    ├── conf    #配置文件夹
+    ├── conf.py       #全局配置
+    ├── index.py      #主页面
+    ├── login.py      #登录页面
+    ├── logout.py     #注销接口
+    ├── main.py       #网站入口
+    ├── module        #功能模块
+    │   ├── db_idc.py
+    │   ├── db_op.py
+    │   ├── __init__.py
+    │   ├── ip_adress.py
+    │   ├── k8s_resource.py
+    │   ├── loging.py
+    │   ├── Md5.py
+    │   ├── MyForm.py
+    │   ├── Mysql.py
+    │   ├── produce.py
+    │   ├── SSH.py
+    │   ├── Task2.py
+    │   ├── task_publish.py
+    │   ├── Task.py
+    │   ├── tools.py
+    │   └── user_auth.py
+    ├── operation    #管理模块
+    │   ├── assets_manage.py
+    │   ├── examine.py
+    │   ├── __init__.py
+    │   └── resource_pool.py
+    ├── sso_cas      #sso单点登录模块
+    ├── static       #静态目录
+    │   ├── css
+    │   ├── doc
+    │   ├── font
+    │   ├── images
+    │   ├── js
+    │   └── webfonts
+    ├── templates   #页面模版
+    └── views       #页面视图
+        ├── approval.py
+        ├── app_service.py
+        ├── Assets.py
+        ├── business_m.py
+        ├── business.py
+        ├── chart_center.py
+        ├── deploy.py
+        ├── influxdb_m.py
+        ├── __init__.py
+        ├── k8s_deploy.py
+        ├── k8s_manage.py
+        ├── k8s.py
+        ├── mobile.py
+        ├── publish.py
+        ├── report.py
+        ├── sch_list.py
+        └── work_order.py
 # 主要功能： #
     - 全新架构优化调整
     - 由sso单点登录系统进行统一鉴权
