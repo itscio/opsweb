@@ -31,11 +31,15 @@ def assets_get(action=None):
     db = db_idc.idc_servers
     db_idc_id = db_idc.idc_id
     db_zabbix = db_idc.zabbix_info
+    db_project = db_op.project_list
+    db_busi = db_op.business
+    db_project_third = db_op.project_third
     idc_vals = db_idc_id.query.with_entities(db_idc_id.id, db_idc_id.aid,db_idc_id.cid).all()
     idc_val = {val[0]: val[1] for val in idc_vals}
     cid_val = {val[0]: val[-1] for val in idc_vals}
     values = []
-    tables = ['机房','机柜','IP', 'ssh端口', '主机名', '服务器型号', '操作系统', 'CPU', '内存', '磁盘数', '磁盘总量', '远程管理IP','购买日期','状态']
+    tables = ['机房','机柜','IP', 'ssh端口', '主机名', '服务器型号', '操作系统', 'CPU', '内存',
+              '磁盘数', '磁盘总量', '远程管理IP','购买日期','状态']
     try:
         # 导出数据功能
         if action:
@@ -74,7 +78,9 @@ def assets_get(action=None):
                         end_time = ts.split('to')[-1].strip()
                         values = db.query.with_entities(db.idc_id, db.ip, db.ssh_port, db.hostname,
                                                             db.productname, db.system, db.cpu_core, db.mem,
-                                                            db.disk_count, db.disk_size, db.idrac, db.purch_date,db.status).filter(and_(db.purch_date>=start_time,db.purch_date <= end_time,db.host_type=='physical')).all()
+                                                            db.disk_count, db.disk_size, db.idrac, db.purch_date,
+                                                        db.status).filter(and_(db.purch_date>=start_time,
+                                                                               db.purch_date <= end_time,db.host_type=='physical')).all()
                     if form.select.data in ('sn','hostname','ip','status'):
                         val = db.query.with_entities(db.ip,db.ssh_port).filter(Infos[form.select.data] == ts).all()
                         #优先进行精确匹配
@@ -85,7 +91,8 @@ def assets_get(action=None):
                             #精确匹配不到结果后进行模糊匹配
                             values = db.query.with_entities(db.idc_id, db.ip, db.ssh_port, db.hostname,
                                                                 db.productname, db.system, db.cpu_core, db.mem,
-                                                                db.disk_count, db.disk_size, db.idrac,db.purch_date, db.status).filter(Infos[form.select.data].like('%{0}%'.format(ts))).all()
+                                                                db.disk_count, db.disk_size, db.idrac,db.purch_date,
+                                                            db.status).filter(Infos[form.select.data].like('%{0}%'.format(ts))).all()
                 except Exception as e:
                     logging.error(e)
                 else:
@@ -105,6 +112,7 @@ def assets_get(action=None):
                     return render_template('server_list.html', values=values, tables=tables,form=form,export=True,assets_type = 'server')
         #获取API接口参数
         if Args:
+            idc_ids = ()
             try:
                 if Args['aid']:
                     aid = Args['aid']
@@ -126,7 +134,9 @@ def assets_get(action=None):
                             if Args['host_type']:
                                 host_type = Args['host_type']
                                 if idc_ids:
-                                    values = db.query.with_entities(db.idc_id,db.ip, db.ssh_port, db.hostname, db.productname,db.system, db.cpu_core, db.mem,db.disk_count,db.disk_size,db.idrac,db.purch_date,db.status).filter(and_(db.idc_id.in_(idc_ids), db.host_type == host_type)).all()
+                                    values = db.query.with_entities(db.idc_id,db.ip, db.ssh_port, db.hostname, db.productname,db.system,
+                                                                    db.cpu_core, db.mem,db.disk_count,db.disk_size,db.idrac,db.purch_date,
+                                                                    db.status).filter(and_(db.idc_id.in_(idc_ids), db.host_type == host_type)).all()
                         if action == 'expire':
                             values = db.query.with_entities(db.idc_id,db.ip, db.ssh_port, db.hostname, db.productname,
                                                             db.system, db.cpu_core, db.mem, db.disk_count,db.disk_size, db.idrac,db.purch_date,
@@ -137,6 +147,13 @@ def assets_get(action=None):
                                                             db.system, db.cpu_core, db.mem, db.disk_count,db.disk_size, db.idrac,db.purch_date,
                                                             db.status).filter(
                                 and_(db.host_type == 'physical', db.expird_date >= tt,db.expird_date <= dt,db.idc_id !=0)).order_by(db.idc_id).all()
+                        if action == 'server_off':
+                            values = db_zabbix.query.with_entities(db_zabbix.hostname).filter(db_zabbix.icmpping==0).all()
+                            if values:
+                                values = [value[0] for value in values]
+                                values = db.query.with_entities(db.idc_id,db.ip, db.ssh_port, db.hostname, db.productname,
+                                                            db.system, db.cpu_core, db.mem, db.disk_count,db.disk_size, db.idrac,db.purch_date,
+                                                            db.status).filter(db.hostname.in_(tuple(values))).order_by(db.idc_id).all()
                         if action == 'search':
                             if Redis.exists(search_key):
                                 values = eval(Redis.get(search_key))
@@ -151,106 +168,115 @@ def assets_get(action=None):
                         logging.error(e)
                     return render_template('server_list.html', values=values, tables=tables,form=form,export=True,assets_type = Args['type'])
                 if (Args['ip'] and Args['port']) or Args['hostname']:
+                    total_infos = defaultdict()
                     try:
-                        total_infos = defaultdict()
                         ip = Args['ip']
                         ssh_port = Args['port']
                         hostname = Args['hostname']
                         total_infos['ssh_port'] = ssh_port
+                        server_info = None
                         #获取服务器硬件信息
                         db_server = db_idc.idc_servers
                         if ip and ssh_port:
                             total_infos['ip'] = ip
-                            server_info = db_server.query.with_entities(db_server.idc_id,db_server.ip,db_server.ssh_port,db_server.s_ip,db_server.host_type,db_server.hostname,
-                                                                    db_server.sn,db_server.manufacturer,db_server.productname,db_server.system,db_server.cpu_info,
-                                                                    db_server.cpu_core,db_server.mem,db_server.disk_count,db_server.disk_size,db_server.idrac,db_server.purch_date,db_server.expird_date,
-                                                                    db_server.status,db_server.comment).filter(and_(db_server.ip==ip,db_server.ssh_port==ssh_port)).all()
+                            server_info = db_server.query.with_entities(db_server.idc_id,db_server.ip,db_server.ssh_port,db_server.s_ip,
+                                                                        db_server.host_type,db_server.hostname,
+                                                                    db_server.sn,db_server.manufacturer,db_server.productname,
+                                                                        db_server.system,db_server.cpu_info,
+                                                                    db_server.cpu_core,db_server.mem,db_server.disk_count,
+                                                                        db_server.disk_size,db_server.idrac,db_server.purch_date,db_server.expird_date,
+                                                                    db_server.status,db_server.comment).filter(and_(db_server.ip==ip,
+                                                                    db_server.ssh_port==ssh_port)).all()
                         if hostname:
                             total_infos['ip'] = hostname
-                            server_info = db_server.query.with_entities(db_server.idc_id,db_server.ip,db_server.ssh_port,db_server.s_ip,db_server.host_type,db_server.hostname,
-                                                                    db_server.sn,db_server.manufacturer,db_server.productname,db_server.system,db_server.cpu_info,
-                                                                    db_server.cpu_core,db_server.mem,db_server.disk_count,db_server.disk_size,db_server.idrac,db_server.purch_date,db_server.expird_date,
+                            server_info = db_server.query.with_entities(db_server.idc_id,db_server.ip,db_server.ssh_port,
+                                                                        db_server.s_ip,db_server.host_type,db_server.hostname,
+                                                                    db_server.sn,db_server.manufacturer,db_server.productname,
+                                                                        db_server.system,db_server.cpu_info,
+                                                                    db_server.cpu_core,db_server.mem,db_server.disk_count,
+                                                                        db_server.disk_size,db_server.idrac,db_server.purch_date,
+                                                                        db_server.expird_date,
                                                                     db_server.status,db_server.comment).filter(db_server.hostname==hostname).all()
                             ip = server_info[0][1]
                             ssh_port = int(server_info[0][2])
                     except Exception as e:
                         logging.error(e)
-                    if server_info:
-                        try:
-                            server_info = list(server_info[0])
-                            # 获取服务器机房机柜信息
-                            idc_info = db_idc_id.query.with_entities(db_idc_id.aid,db_idc_id.cid).filter(db_idc_id.id==int(server_info[0])).all()
-                            server_info.pop(0)
-                            if idc_info:
-                                server_info.insert(0,idc_info[0][1])
-                                server_info.insert(0, idc_info[0][0])
-                            else:
-                                server_info.insert(0,None)
-                                server_info.insert(0,None)
-                            table_info = ['机房','机柜','IP','SSH_PORT','附属ip','主机类型','hostname','sn','生产厂家','服务器型号','操作系统','cpu信息','cpu核数','内存','磁盘数','磁盘总量','idrac','采购日期','过保日期','状态','管理','备注']
-                            total_infos['server_info'] = [table_info,server_info]
-                        except Exception as e:
-                            logging.error(e)
-                        try:
-                            tt = datetime.datetime.now() - datetime.timedelta(minutes=15)
-                            tt = tt.strftime('%Y-%m-%d %H:%M:%S')
-                            zabbix_infos =[0,0,0,0,0]
-                            vals = db_zabbix.query.with_entities(db_zabbix.icmpping, db_zabbix.cpu_load,
-                                                                 db_zabbix.mem_use, db_zabbix.disk_io,
-                                                                 db_zabbix.openfile).filter(
-                                and_(db_zabbix.ip == server_info[2], db_zabbix.ssh_port == server_info[3],db_zabbix.update_time>tt)).all()
-                            if vals:
-                                zabbix_infos = [float(val) for val in list(vals[0])]
-                            total_infos['zabbix_infos'] = zabbix_infos
-                        except Exception as e:
-                            logging.error(e)
-                        try:
-                            # 获取第三方资源信息
-                            third_table = ['应用服务', '应用端口', '所属项目', '集群类型', '业务使用','所属部门','负责人', '联系方式']
-                            project_table = ['应用服务', '应用端口', '所属项目', '域名', '开发语言', '环境', '状态','所属业务']
+                    else:
+                        if server_info:
+                            try:
+                                server_info = list(server_info[0])
+                                # 获取服务器机房机柜信息
+                                idc_info = db_idc_id.query.with_entities(db_idc_id.aid,db_idc_id.cid).filter(db_idc_id.id==int(server_info[0])).all()
+                                server_info.pop(0)
+                                if idc_info:
+                                    server_info.insert(0,idc_info[0][1])
+                                    server_info.insert(0, idc_info[0][0])
+                                else:
+                                    server_info.insert(0,None)
+                                    server_info.insert(0,None)
+                                table_info = ['机房','机柜','IP','SSH_PORT','附属ip','主机类型','hostname','sn','生产厂家',
+                                              '服务器型号','操作系统','cpu信息','cpu核数','内存','磁盘数','磁盘总量',
+                                              'idrac','采购日期','过保日期','状态','管理','备注']
+                                total_infos['server_info'] = [table_info,server_info]
+                            except Exception as e:
+                                logging.error(e)
+                            try:
+                                stt = datetime.datetime.now() - datetime.timedelta(minutes=15)
+                                stt = stt.strftime('%Y-%m-%d %H:%M:%S')
+                                zabbix_infos =[0,0,0,0,0]
+                                vals = db_zabbix.query.with_entities(db_zabbix.icmpping, db_zabbix.cpu_load,
+                                                                     db_zabbix.mem_use, db_zabbix.disk_io,
+                                                                     db_zabbix.openfile).filter(
+                                    and_(db_zabbix.ip == server_info[2], db_zabbix.ssh_port == server_info[3],db_zabbix.update_time>stt)).all()
+                                if vals:
+                                    zabbix_infos = [float(val) for val in list(vals[0])]
+                                total_infos['zabbix_infos'] = zabbix_infos
+                            except Exception as e:
+                                logging.error(e)
+                            third_table = ['应用服务', '应用端口', '所属项目', '集群类型', '业务使用', '所属部门', '负责人', '联系方式']
+                            project_table = ['应用服务', '应用端口', '所属项目', '域名', '开发语言', '环境', '状态', '所属业务']
                             total_infos['pool_project'] = True
-                            db_third = db_idc.third_resource
-                            db_project = db_op.project_list
-                            db_busi = db_op.business
-                            db_project_third = db_op.project_third
-                            busis = db_busi.query.with_entities(db_busi.id,db_busi.business).all()
-                            busis = {int(busi[0]):busi[1] for busi in busis}
-                            busis[0] = '未知业务'
-                            project_third = db_project_third.query.with_entities(db_project_third.third_id,db_project_third.project).all()
-                            if project_third:
-                                project_third = {info[0]:info[1] for info in project_third}
-                            third_info = db_third.query.with_entities(db_third.id,db_third.resource_type, db_third.app_port, db_third.cluster_type,db_third.busi_id ,db_third.department, db_third.person,db_third.contact).filter(
-                                and_(db_third.ip == ip, db_third.ssh_port == ssh_port,)).all()
-                            if third_info:
-                                third_info = [list(info) for info in third_info]
-                                third_id= [info[0] for info in third_info]
-                                for i,info in enumerate(third_info):
-                                    info = list(info)
-                                    info[4] = busis[int(info[4])]
-                                    if project_third:
-                                        if third_id[i] in project_third.keys():
-                                            info.insert(3,project_third[third_id[i]])
+                            try:
+                                # 获取第三方资源信息
+                                db_third = db_idc.third_resource
+                                busis = db_busi.query.with_entities(db_busi.id,db_busi.business).all()
+                                busis = {int(busi[0]):busi[1] for busi in busis}
+                                busis[0] = '未知业务'
+                                project_third = db_project_third.query.with_entities(db_project_third.third_id,db_project_third.project).all()
+                                if project_third:
+                                    project_third = {info[0]:info[1] for info in project_third}
+                                third_info = db_third.query.with_entities(db_third.id,db_third.resource_type, db_third.app_port, db_third.cluster_type,db_third.busi_id ,db_third.department, db_third.person,db_third.contact).filter(
+                                    and_(db_third.ip == ip, db_third.ssh_port == ssh_port,)).all()
+                                if third_info:
+                                    third_info = [list(info) for info in third_info]
+                                    third_id= [info[0] for info in third_info]
+                                    for i,info in enumerate(third_info):
+                                        info = list(info)
+                                        info[4] = busis[int(info[4])]
+                                        if project_third:
+                                            if third_id[i] in project_third.keys():
+                                                info.insert(3,project_third[third_id[i]])
+                                            else:
+                                                info.insert(3,'')
                                         else:
-                                            info.insert(3,'')
-                                    else:
-                                        info.insert(3, '')
-                                    third_info[i] = info
-                                third_info.insert(0, third_table)
-                                total_infos['third_info'] = third_info
-                        except Exception as e:
-                            logging.error(e)
-                        try:
-                            #获取自有资源信息
-                            project_info = db_project.query.with_entities(db_project.id,db_project.resource,db_project.app_port,db_project.project,db_project.domain,db_project.sys_args,db_project.env,db_project.status,db_project.business_id).filter(and_(db_project.ip==ip,db_project.ssh_port==ssh_port)).all()
-                            project_info = [list(info) for info in project_info]
-                            if project_info:
-                                for info in project_info:
-                                    business = db_busi.query.with_entities(db_busi.business).filter(db_busi.id == int(info[-1])).all()
-                                    info[-1] = '%s:%s'%(info[-1],business[0][0])
-                                project_info.insert(0,project_table)
-                                total_infos['project_info'] = project_info
-                        except Exception as e:
-                            logging.error(e)
+                                            info.insert(3, '')
+                                        third_info[i] = info
+                                    third_info.insert(0, third_table)
+                                    total_infos['third_info'] = third_info
+                            except Exception as e:
+                                logging.error(e)
+                            try:
+                                #获取自有资源信息
+                                project_info = db_project.query.with_entities(db_project.id,db_project.resource,db_project.app_port,db_project.project,db_project.domain,db_project.sys_args,db_project.env,db_project.status,db_project.business_id).filter(and_(db_project.ip==ip,db_project.ssh_port==ssh_port)).all()
+                                project_info = [list(info) for info in project_info]
+                                if project_info:
+                                    for info in project_info:
+                                        business = db_busi.query.with_entities(db_busi.business).filter(db_busi.id == int(info[-1])).all()
+                                        info[-1] = '%s:%s'%(info[-1],business[0][0])
+                                    project_info.insert(0,project_table)
+                                    total_infos['project_info'] = project_info
+                            except Exception as e:
+                                logging.error(e)
                     return render_template('server_infos.html',total_infos=total_infos)
             #判断是否是存储设备
             try:
@@ -330,8 +356,8 @@ def assets():
             else:
                 total.append(0)
             total.append(int(v_val[0][0]))
-            Key = "op_disconnet_assets_count"
-            d_val = Redis.smembers(Key)
+            db_zabbix = db_idc.zabbix_info
+            d_val = db_zabbix.query.with_entities(db_zabbix.hostname).filter(db_zabbix.icmpping==0).all()
             if d_val:
                 total.append(len(d_val))
             else:

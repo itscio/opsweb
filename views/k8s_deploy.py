@@ -7,6 +7,7 @@ import os
 from kubernetes import client
 from importlib import reload
 import redis
+from sqlalchemy import distinct
 from collections import defaultdict
 app = Flask(__name__)
 DB = SQLAlchemy(app)
@@ -207,31 +208,49 @@ def ingress_apply():
             service_name = form.service_name.data
             db_ingress = db_op.k8s_ingress
             api_instance = client.ExtensionsV1beta1Api()
-            domains = [domain.strip() for domain in domains.split(',') if domain]
+            domains = [domain.strip() for domain in domains.splitlines() if domain]
             try:
-                Rules = []
-                Rules_infos = db_ingress.query.with_entities(db_ingress.domain,db_ingress.serviceName,db_ingress.servicePort).all()
-                if Rules_infos:
-                    for infos in Rules_infos:
-                        domain,serviceName,servicePort = infos
-                        Rules.append(client.V1beta1IngressRule(host=domain,
-                                          http=client.V1beta1HTTPIngressRuleValue(
-                                              paths=[client.V1beta1HTTPIngressPath(client.V1beta1IngressBackend(
-                                                  service_name=serviceName,
-                                                  service_port=int(servicePort)
-                                              ))])
-                                          ))
+                # ingress信息写入数据库
                 for ingress_domain in domains:
-                    Rules.append(client.V1beta1IngressRule(host=ingress_domain,
-                                              http=client.V1beta1HTTPIngressRuleValue(
-                                                  paths=[client.V1beta1HTTPIngressPath(client.V1beta1IngressBackend(
-                                                      service_name=service_name,
-                                                      service_port=int(ingress_port)
-                                                  ))])
-                                              ))
+                    if '/' in ingress_domain:
+                        domain = ingress_domain.split('/')[0]
+                        path = '/{}'.format('/'.join(ingress_domain.split('/')[1:]))
+                        v = db_ingress(name='nginx-ingress', namespace=namespace, domain=domain, path=path,
+                                       serviceName=service_name, servicePort=int(ingress_port))
+                        db_op.DB.session.add(v)
+                        db_op.DB.session.commit()
             except Exception as e:
                 logging.error(e)
             else:
+                # 从数据库读取ingress信息
+                Rules = []
+                domain_infos = db_ingress.query.with_entities(distinct(db_ingress.domain)).all()
+                for domain in domain_infos:
+                    paths = []
+                    Rules_infos = db_ingress.query.with_entities(db_ingress.path,
+                                                                 db_ingress.serviceName, db_ingress.servicePort
+                                                                 ).filter(db_ingress.domain == domain[0]).all()
+                    path, serviceName, servicePort = Rules_infos[0]
+                    for infos in Rules_infos:
+                        path, serviceName, servicePort = infos
+                        if path:
+                            paths.append(client.V1beta1HTTPIngressPath(client.V1beta1IngressBackend(
+                                service_name=serviceName,
+                                service_port=int(servicePort)
+                            ), path=path))
+                    if paths:
+                        Rules.append(client.V1beta1IngressRule(host=domain,
+                                                               http=client.V1beta1HTTPIngressRuleValue(
+                                                                   paths=paths)))
+                    else:
+                        Rules.append(client.V1beta1IngressRule(host=domain,
+                                                               http=client.V1beta1HTTPIngressRuleValue(
+                                                                   paths=[client.V1beta1HTTPIngressPath(
+                                                                       client.V1beta1IngressBackend(
+                                                                           service_name=serviceName,
+                                                                           service_port=int(servicePort)
+                                                                       ))])
+                                                               ))
                 spec = client.V1beta1IngressSpec(rules=Rules)
                 ingress = client.V1beta1Ingress(
                     api_version='extensions/v1beta1',
@@ -244,12 +263,6 @@ def ingress_apply():
             logging.error(e)
             msg = 'ingress配置失败!'
         else:
-            # ingress信息写入数据库
-            for domain in domains:
-                v = db_ingress(name='nginx-ingress', namespace=namespace, domain=domain,
-                               serviceName=service_name, servicePort=int(ingress_port))
-                db_op.DB.session.add(v)
-                db_op.DB.session.commit()
             msg = 'ingress配置完成!'
         finally:
             db_op.DB.session.remove()

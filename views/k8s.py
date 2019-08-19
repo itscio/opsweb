@@ -1,9 +1,9 @@
 #-*- coding: utf-8 -*-
-from flask import Blueprint,render_template,g,request
+from flask import Blueprint,render_template,g,request,make_response
 from module import user_auth,loging,tools,MyForm,db_idc,db_op
 from flask import Flask
-from kubernetes import client, config
-from collections import defaultdict,OrderedDict
+from kubernetes import client
+from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
 import time
 from tcpping import tcpping
@@ -22,38 +22,31 @@ logging = loging.Error()
 config,contexts,config_file = tools.k8s_conf()
 page_k8s = Blueprint('k8s',__name__)
 @page_k8s.route('/k8s/pods')
-@page_k8s.route('/k8s/pods/<context>')
-def pods(context=None):
-    form = MyForm.FormK8sContexts()
+def pods():
     valus = defaultdict()
-    if context:
-        config.load_kube_config(config_file,context)
-    else:
-        _,active_contexts = config.list_kube_config_contexts(config_file)
-        context = active_contexts['name']
     v1 = client.CoreV1Api()
     namespace = []
     image = []
     phases = []
     ret = v1.list_pod_for_all_namespaces()
     for i in ret.items:
+        phase = 'unknown'
+        pod_ports = 'None'
         try:
-            pod_ports = []
-            tables = ('POD_NAME','POD_IP','POD_PORTS','namespace','containers','NODE','镜像地址','运行状态','管理')
+            podports = []
+            tables = ('POD_NAME','POD_IP','POD_PORTS','namespace','containers','NODE','镜像地址','状态','管理')
             keys = ('pod_ip','ports','namespace','container','node_name','image','phase')
             if i.spec.containers[0].ports:
                 for ports in i.spec.containers:
                     if ports.ports:
                         for port in ports.ports:
-                            pod_ports.append(str(port.container_port))
-            if pod_ports:
-                pod_ports = ','.join(pod_ports)
-            else:
-                pod_ports = 'None'
+                            podports.append(str(port.container_port))
+            if podports:
+                pod_ports = ','.join(podports)
+
         except Exception as e:
             logging.error(e)
         try:
-            phase = 'unknown'
             if i.status.container_statuses:
                 if i.status.container_statuses[-1].state.running:
                     phase = 'Running'
@@ -81,20 +74,12 @@ def pods(context=None):
         except Exception as e:
             logging.error(e)
     counts = [len(valus),len(set(namespace)),len(set(image)),float('%.2f' %((float(phases.count('Running'))/len(valus))*100))]
-    return render_template('k8s-resource.html', valus=valus, tables=tables, keys=keys, counts=counts, form=form,
-                           context=context, resource='Pods')
+    return render_template('k8s-resource.html', valus=valus, tables=tables, keys=keys, counts=counts, resource='Pods')
 
 @page_k8s.route('/k8s/deployment')
-@page_k8s.route('/k8s/deployment/<context>')
-def deployment(context=None):
+def deployment():
     try:
-        form = MyForm.FormK8sContexts()
         valus = defaultdict()
-        if context:
-            config.load_kube_config(config_file, context)
-        else:
-            _, active_contexts = config.list_kube_config_contexts(config_file)
-            context = active_contexts['name']
         v1 = client.AppsV1Api()
         tables = ('name','namespace', 'replicas', 'strategy', 'containers','cpu_limit','mem_limit','available')
         keys  = ('namespace', 'replicas', 'strategy', 'containers','cpu_limit','mem_limit','available')
@@ -130,19 +115,12 @@ def deployment(context=None):
                 logging.error(e)
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,form=form,context= context,resource='Deployment')
+    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,resource='Deployment')
 
 @page_k8s.route('/k8s/daemonset')
-@page_k8s.route('/k8s/daemonset/<context>')
-def daemonset(context=None):
+def daemonset():
     try:
-        form = MyForm.FormK8sContexts()
         valus = defaultdict()
-        if context:
-            config.load_kube_config(config_file, context)
-        else:
-            _, active_contexts = config.list_kube_config_contexts(config_file)
-            context = active_contexts['name']
         v1 = client.AppsV1Api()
         tables = ('name','namespace', 'images', 'mount_path', 'cpu_limit','mem_limit','number_ready')
         keys  = ('namespace', 'images', 'mount_path', 'cpu_limit','mem_limit','number_ready')
@@ -175,22 +153,15 @@ def daemonset(context=None):
                 logging.error(e)
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,form=form,context= context,resource='Daemonset')
+    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,resource='Daemonset')
 
 @page_k8s.route('/k8s/service')
-@page_k8s.route('/k8s/service/<context>')
-def service(context=None):
+def service():
     try:
-        form = MyForm.FormK8sContexts()
         valus = defaultdict()
-        if context:
-            config.load_kube_config(config_file, context)
-        else:
-            _, active_contexts = config.list_kube_config_contexts(config_file)
-            context = active_contexts['name']
         v1 = client.CoreV1Api()
         tables = ('name','namespace', 'cluster_ip', 'port', 'target_port','node_port','selector')
-        keys  = ('namespace', 'cluster_ip', 'port', 'target_port', 'node_port', 'selector')
+        keys = ('namespace', 'cluster_ip', 'port', 'target_port', 'node_port', 'selector')
         ret = v1.list_service_for_all_namespaces()
         for i in ret.items:
             try:
@@ -213,19 +184,12 @@ def service(context=None):
                 logging.error(e)
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,form=form,context= context,resource='Service')
+    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,resource='Service')
 
 @page_k8s.route('/k8s/ingress')
-@page_k8s.route('/k8s/ingress/<context>')
-def ingress(context=None):
+def ingress():
     try:
-        form = MyForm.FormK8sContexts()
         valus = []
-        if context:
-            config.load_kube_config(config_file, context)
-        else:
-            _, active_contexts = config.list_kube_config_contexts(config_file)
-            context = active_contexts['name']
         v1 = client.ExtensionsV1beta1Api()
         keys = tables = ('name','request','domain', 'service_name', 'service_port')
         ret = v1.list_ingress_for_all_namespaces()
@@ -242,20 +206,13 @@ def ingress(context=None):
                 logging.error(e)
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,form=form,context= context,resource='Ingress')
+    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,resource='Ingress')
 
 @page_k8s.route('/k8s/hpa')
-@page_k8s.route('/k8s/hpa/<context>')
-def hpa(context=None):
+def hpa():
     try:
         td = time.strftime("%Y-%m-%d", time.localtime())
-        form = MyForm.FormK8sContexts()
         valus = []
-        if context:
-            config.load_kube_config(config_file, context)
-        else:
-            _, active_contexts = config.list_kube_config_contexts(config_file)
-            context = active_contexts['name']
         db_k8s_deploy = db_op.k8s_deploy
         db_project = db_op.project_list
         Key = 'op_k8s_ingress_log'
@@ -291,7 +248,7 @@ def hpa(context=None):
             except Exception as e:
                 logging.error(e)
         td = time.strftime('%Y-%m-%d', time.localtime())
-        Key = 'op_hpa_chart_%s' % td
+        Key = 'op_hpa_chart_%s_%s' % (g.context,td)
         infos = RC.hgetall(Key)
         infos = sorted(infos.items(), key=lambda item: item[0].split('_')[-1])
         line = Line('HPA动态伸缩实时状态', width='110%', height='250px', title_pos='8%', title_text_size=14)
@@ -307,20 +264,16 @@ def hpa(context=None):
                              datazoom_type='both',)
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,form=form,line=line,context= context,resource='HPA')
+    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,line=line,resource='HPA')
 
 @page_k8s.route('/k8s/nodes')
 @page_k8s.route('/k8s/nodes/<context>')
 def nodes(context=None):
     NODES = defaultdict()
-    if context:
-        config.load_kube_config(config_file,context)
-    else:
-        _,active_contexts = config.list_kube_config_contexts(config_file)
-        context = active_contexts['name']
-    nodes = OrderedDict()
-    config.load_kube_config(config_file, context)
     try:
+        if context:
+            g.context = context
+            config.load_kube_config(config_file, context)
         v1 = client.CoreV1Api()
         ret = v1.list_node(watch=False)
         tables = ('节点','角色','flannel','CPU','CPU使用率','内存','内存使用率','硬盘','标签','版本','状态')
@@ -348,7 +301,7 @@ def nodes(context=None):
                 lables = ','.join(lables)
             else:
                 lables = 'None'
-            nodes[i.metadata.name] = {
+            NODES[i.metadata.name] = {
                 'node_type':node_type,
                 'flannel':flannel,
                 'cpu':i.status.allocatable['cpu'],
@@ -360,20 +313,20 @@ def nodes(context=None):
                 'version':i.status.node_info.kubelet_version,
                 'status':i.status.conditions[-1].type
             }
-        NODES[context] = nodes
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-nodes.html',NODES=NODES,tables=tables,keys=keys)
+    app_resp = make_response(render_template('k8s-nodes.html',NODES=NODES,tables=tables,keys=keys))
+    if context:
+        app_resp.set_cookie('active_context', context, path='/')
+    return app_resp
+
+@page_k8s.route('/k8s/nodes_show')
+def nodes_show():
+    form = MyForm.FormK8sContexts()
+    return render_template('k8s-nodes-show.html',form=form)
 
 @page_k8s.route('/k8s/endpoints')
-@page_k8s.route('/k8s/endpoints/<context>')
-def endpoints(context=None):
-    if context:
-        config.load_kube_config(config_file,context)
-    else:
-        _,active_contexts = config.list_kube_config_contexts(config_file)
-        context = active_contexts['name']
-    config.load_kube_config(config_file, context)
+def endpoints():
     tables = ('endpoints', 'host', 'port', '状态')
     VAULES = defaultdict()
     try:
@@ -408,6 +361,11 @@ def endpoints(context=None):
 @user_auth.login_required(grade=1)
 def check_login(error=None):
     tools.Async_log(g.user, request.url)
+    _, active_contexts = config.list_kube_config_contexts(config_file)
+    g.context = active_contexts['name']
+    if 'active_context' in request.cookies:
+        g.context = request.cookies['active_context']
+    config.load_kube_config(config_file, g.context)
 
 @page_k8s.teardown_request
 def db_remove(error=None):
