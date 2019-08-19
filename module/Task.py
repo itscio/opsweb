@@ -265,6 +265,7 @@ def server_per():
             mem_use = 0
             cpu_load = 0
             openfile = 0
+            icmpping = 0
             if tcpping(host=host, port=ssh_port, timeout=15):
                 try:
                     Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
@@ -284,24 +285,37 @@ def server_per():
                 except:
                     continue
                 else:
-                    try:
-                        # 写入数据库
-                        val = db_zabbix.query.filter(and_(db_zabbix.ip==host,db_zabbix.ssh_port==ssh_port,db_zabbix.hostname==hostname)).all()
-                        if val:
-                            db_zabbix.query.filter(and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port, db_zabbix.hostname == hostname)).update({db_zabbix.icmpping:1,db_zabbix.cpu_load:cpu_load,
-                                                                                        db_zabbix.mem_use:mem_use,db_zabbix.disk_io:disk_io,db_zabbix.openfile:openfile,db_zabbix.update_time:tm})
-                            db_idc.DB.session.commit()
-                        else:
-                            v = db_zabbix(ip=host,ssh_port=ssh_port,hostname=hostname,icmpping=1,cpu_load=cpu_load,
-                                        mem_use=mem_use,disk_io=disk_io,openfile=openfile,update_time=tm)
-                            db_idc.DB.session.add(v)
-                            db_idc.DB.session.commit()
-                        # 写入influxdb数据库
-                        json_body = [{"measurement": "server_infos", "tags": {"ip": host, "ssh_port": ssh_port,"hostname":hostname},
-                                          "fields": {'cpu_load':cpu_load,'mem_use':mem_use,'openfile':openfile}, "time": dm}]
-                        Influx_cli.write_points(json_body)
-                    except Exception as e:
-                        logging.error(e)
+                    icmpping = 1
+            try:
+                # 写入数据库
+                val = db_zabbix.query.filter(
+                    and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port, db_zabbix.hostname == hostname)).all()
+                if val:
+                    db_zabbix.query.filter(and_(db_zabbix.ip == host, db_zabbix.ssh_port == ssh_port,
+                                                db_zabbix.hostname == hostname)).update(
+                        {db_zabbix.icmpping: icmpping, db_zabbix.cpu_load: cpu_load,
+                         db_zabbix.mem_use: mem_use, db_zabbix.disk_io: disk_io, db_zabbix.openfile: openfile,
+                         db_zabbix.update_time: tm})
+                    db_idc.DB.session.commit()
+                else:
+                    v = db_zabbix(ip=host, ssh_port=ssh_port, hostname=hostname, icmpping=icmpping, cpu_load=cpu_load,
+                                  mem_use=mem_use, disk_io=disk_io, openfile=openfile, update_time=tm)
+                    db_idc.DB.session.add(v)
+                    db_idc.DB.session.commit()
+                # 写入influxdb数据库
+                json_body = [
+                    {"measurement": "server_infos", "tags": {"ip": host, "ssh_port": ssh_port, "hostname": hostname},
+                     "fields": {'cpu_load': cpu_load, 'mem_use': mem_use, 'openfile': openfile}, "time": dm}]
+                Influx_cli.write_points(json_body)
+                #修改服务器状态
+                if icmpping == 1:
+                    db_server.query.filter(and_(db_server.status=='疑似下架',db_server.hostname==hostname)).update({db_server.status:'使用中'})
+                    db_idc.DB.session.commit()
+                else:
+                    db_server.query.filter(db_server.hostname==hostname).update({db_server.status:'疑似下架'})
+                    db_idc.DB.session.commit()
+            except Exception as e:
+                logging.error(e)
     except Exception as e:
         logging.error(e)
     finally:
@@ -493,11 +507,6 @@ def auto_discovery():
         exist_hosts = ["%s:%s"%(info[1],info[2]) for info in exist_infos]
         hosts_list = tools.get_server_list()
         dt = time.strftime('%Y-%m-%d', time.localtime())
-        server_ensure = []
-        Key = "op_disconnet_assets_count"
-        RC.delete(Key)
-        if RC.exists('server_ensure'):
-            server_ensure = RC.smembers('server_ensure')
         def discovery(info):
             ip, ssh_port, hostname,idc = info
             aid = aids[idc]
@@ -565,10 +574,6 @@ def auto_discovery():
                                     for cmd in ("yum -y install dmidecode","chmod +s /usr/sbin/dmidecode"):
                                         Ssh.Run(cmd)
                                     loging.write("auto discovery new server %s %s" %(ip,hostname))
-                    else:
-                        if '%s:%s' % (ip, ssh_port) not in server_ensure:
-                            RC.hset('ssh_port_fault_%s'%dt, '%s:%s' % (ip, ssh_port),aid)
-                            RC.sadd(Key,hostname)
         if hosts_list:
             pool = ThreadPool(10)
             pool.map(discovery,hosts_list)
@@ -938,9 +943,9 @@ def es_get_log_time():
 @tools.proce_lock()
 def cron_run_task():
     loging.write("start run %s ......" %cron_run_task.__name__)
+    MY_SQL = Mysql.MYSQL(db='mysql')
     try:
         # 清理资产资源表残留信息
-        MY_SQL = Mysql.MYSQL(db='mysql')
         cmds = ("delete FROM op.project_third where project not in (select DISTINCT(project)from op.project_list);",
                 "delete FROM op.project_other where server_id not in (select id from idc.servers);",
                 "delete FROM op.project_third where third_id not in (select id from idc.third_resource);",
@@ -966,9 +971,6 @@ def cron_run_task():
             if not MY_SQL.Run(cmd):
                 cmd = "delete from op.project_list where ip='%s' and ssh_port=%i" % (ip, ssh_port)
                 MY_SQL.Run(cmd)
-        #清理zabbix信息表
-        cmd = "delete FROM idc.zabbix_info where update_time not like '{0} %';".format(time.strftime('%Y-%m-%d'),time.localtime())
-        MY_SQL.Run(cmd)
         #清理redis信息表
         db_third = db_idc.third_resource
         db_servers = db_idc.idc_servers
@@ -1401,7 +1403,7 @@ def reboot_tomcat():
         Msg = []
         def action(reboot_lists, text, reboot=False):
             try:
-                cmds = {6695: "tomcat-w5", 6696: "tomcat-w6", 5661: "tomcat-L1", 5662: "tomcat-L2",6671:'tomcat-whapi1'}
+                cmds = {6695: "weather_v3", 5661: "tomcat-L1", 5662: "tomcat-L2",6671:'tomcat-whapi1'}
                 # 判断ip是否在自有服务列表
                 for host, app_port in reboot_lists:
                     if host and app_port:
@@ -1428,7 +1430,7 @@ def reboot_tomcat():
                                             logging.error(e)
                                             continue
                                         else:
-                                            text.append("%s:%s -> %s" % (host, app_port, project))
+                                            text.append("%s:%s -> %s:%s" % (host,ssh_port,app_port,project))
                             if not reboot and vals:
                                 text.append("%s:%s -> %s" % (host, app_port, project))
             except Exception as e:
@@ -1442,6 +1444,7 @@ def reboot_tomcat():
                                 "size": 5,"order": {"_count": "desc"}}}}}
             indexs = ('logstash-nginx-log-whv3*',)
             text = ["**自动重启tomcat以下实例:**"]
+            reboot_lists = []
             for index in indexs:
                 res = es.search(index=index, body=body)
                 reboot_lists = [info['key'].split(':') for info in res['aggregations']['hosts']['buckets'] if info['doc_count'] > 60 if len(info['key'].split(':'))==2]
@@ -1508,6 +1511,7 @@ def reboot_tomcat():
 
         #5xx状态码
         try:
+            reboot_lists = []
             body = {"size": 0,
                     "query": {"bool": {"must": [{"range": {"status": {"gte": 500, "lte": 599}}}, {"range": {"time_iso8601": {
                         "gte": gte_date, "lte": lte_date}}}]}},
@@ -1590,19 +1594,19 @@ def business_monitor(check_url=None):
                             error_alarm = 'error_%s_%s'%(URL,ip)
                             recovery_alarm = 'recovery_%s_%s' % (URL, ip)
                             text = ['项目:%s' % project, "线上版本:%s" % version,'监控接口:%s' % URL,'解析IP:%s' % ip, 'ISP线路:%s' % isp,'**健康检测失败!**']
-                            if method == 'post':
-                                resp = requests.post(url, data={'src': 1}, headers=headers,timeout=5)
-                            else:
-                                resp = requests.get(url,headers=headers,timeout=5)
-                        except Exception as e:
-                            loging.write(e)
-                            if check_url:
-                                checks.append(ip)
-                            else:
-                                text.insert(5,"故障原因:%s" %str(e).split(':')[-1])
-                                alarm()
-                        else:
                             try:
+                                if method == 'post':
+                                    resp = requests.post(url, data={'src': 1}, headers=headers,timeout=5)
+                                else:
+                                    resp = requests.get(url,headers=headers,timeout=5)
+                            except Exception as e:
+                                loging.write(e)
+                                if check_url:
+                                    checks.append(ip)
+                                else:
+                                    text.insert(5, "故障原因:%s" % str(e).split(':')[-1])
+                                    alarm()
+                            else:
                                 if int(resp.status_code) in (200,301,302,304):
                                     result = resp.json()
                                     ver = ''
@@ -1641,8 +1645,8 @@ def business_monitor(check_url=None):
                                     else:
                                         text.insert(5,'故障原因:status code %s' % resp.status_code)
                                         alarm()
-                            except Exception as e:
-                                logging.error(e)
+                        except Exception as e:
+                            logging.error(e)
             except Exception as e:
                 logging.error(e)
         if values:
@@ -1658,7 +1662,7 @@ def business_monitor(check_url=None):
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def es_get_data():
+def es_business_data():
     tm = datetime.datetime.now()
     tt = tm.strftime('%H:%M')
     td = time.strftime("%Y-%m-%d", time.localtime())

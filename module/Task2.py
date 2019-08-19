@@ -81,11 +81,13 @@ def task_run():
     try:
         td = time.strftime('%Y-%m-%d',time.localtime())
         th = time.strftime('%H:%M',time.localtime())
-        v1 = client.AutoscalingV1Api()
-        ret = v1.list_horizontal_pod_autoscaler_for_all_namespaces()
-        Key = 'op_hpa_chart_%s' %td
-        for i in ret.items:
-            RC.hset(Key,'%s_%s'%(i.metadata.name,th),i.status.current_replicas)
+        for context in contexts:
+            config.load_kube_config(config_file, context=context)
+            v1 = client.AutoscalingV1Api()
+            ret = v1.list_horizontal_pod_autoscaler_for_all_namespaces()
+            Key = 'op_hpa_chart_%s_%s' %(context,td)
+            for i in ret.items:
+                RC.hset(Key,'%s_%s'%(i.metadata.name,th),i.status.current_replicas)
     except Exception as e:
         logging.error(e)
 
@@ -95,6 +97,7 @@ def get_other_info():
     db_crontabs = db_idc.crontabs
     db_servers = db_idc.idc_servers
     db_hosts = db_idc.hosts
+    update_date = time.strftime('%Y-%m-%d', time.localtime())
     infos = db_servers.query.with_entities(db_servers.id,db_servers.ip,db_servers.ssh_port).filter(and_(db_servers.status !='维护中',db_servers.comment !='跳过')).all()
     try:
         for info in infos:
@@ -106,7 +109,6 @@ def get_other_info():
                     continue
                 else:
                     try:
-                        update_date = time.strftime('%Y-%m-%d', time.localtime())
                         #收集crontab信息
                         results = Ssh.Run("ls /var/spool/cron/")
                         if results['stdout']:
@@ -147,7 +149,8 @@ def get_other_info():
                                 result = db_project_other.query.filter(and_(db_project_other.project==val,db_project_other.server_id==server_id)).all()
                                 if not result:
                                     business_id = 0
-                                    business = db_project_other.query.with_entities(db_project_other.business_id).filter(and_(db_project_other.project == val,db_project_other.business_id != 0)).all()
+                                    business = db_project_other.query.with_entities(db_project_other.business_id).filter(and_(
+                                        db_project_other.project == val,db_project_other.business_id != 0)).all()
                                     if business:
                                         business_id = business[0][0]
                                     c = db_project_other(lable='java', project=val, server_id=server_id,business_id=business_id, update_time=update_date)
@@ -270,6 +273,7 @@ def get_redis_info():
                                         if Infos['role'] == 'slave':
                                             redis_type['slave'] = '是'
                                         counts = int((Infos['connected_slaves']))
+                                        Ssh.Close()
                                     except:
                                         pass
                                     else:
@@ -355,8 +359,6 @@ def get_redis_info():
                                             db_idc.DB.session.commit()
                                 except:
                                     db_idc.DB.session.rollback()
-                finally:
-                    Ssh.Close()
             else:
                 loging.write("delete not exist redis %s  %s  ......" %(ip,app_port))
                 v = db_redis.query.filter(and_(db_redis.server_id==server_ids['%s:%s' %(ip,ssh_port)],db_redis.port==app_port)).all()
@@ -379,44 +381,46 @@ def get_redis_info():
 
 @tools.proce_lock()
 def k8s_health_check():
-    v1 = client.CoreV1Api()
-    try:
-        #nodes健康检测
-        ret = v1.list_node(watch=False)
-        for i in ret.items:
-            if 'node-role.kubernetes.io/master' in i.metadata.labels:
-                node_type = 'master'
-            else:
-                node_type = 'node'
-            status = i.status.conditions[-1].type
-            if status != 'Ready':
-                text = ['**容器平台NODE报警:%s**' % i.metadata.name,'节点类型:%s' %node_type,'节点状态:%s' %status,'需及时处理!']
-                tools.dingding_msg(text,token=ops_token)
-    except Exception as e:
-        logging.error(e)
-    try:
-        # endpoints健康检测
-        ret = v1.list_namespaced_endpoints('default')
-        for i in ret.items:
-            try:
-                for infos in i.subsets:
-                    try:
-                        for info in infos.addresses:
-                            try:
-                                ip_header = '.'.join(str(info.ip).split('.')[:2])
-                                if '{}.'.format(ip_header) in ('172.16.', '10.10.'):
-                                    if not tcpping(host=info.ip, port=infos.ports[0].port, timeout=5):
-                                        text = ['**容器平台endpoints报警:**', 'IP:%s' % info.ip,
-                                                '服务端口:%s' % infos.ports[0].port, '服务端口不可用,需及时处理!']
-                                        tools.dingding_msg(text)
-                            except:
-                                continue
-                    except:
-                        continue
-            except:
-                continue
-    except Exception as e:
-        logging.error(e)
+    for context in contexts:
+        config.load_kube_config(config_file, context=context)
+        v1 = client.CoreV1Api()
+        try:
+            #nodes健康检测
+            ret = v1.list_node(watch=False)
+            for i in ret.items:
+                if 'node-role.kubernetes.io/master' in i.metadata.labels:
+                    node_type = 'master'
+                else:
+                    node_type = 'node'
+                status = i.status.conditions[-1].type
+                if status != 'Ready':
+                    text = ['**容器平台NODE报警:%s**' % i.metadata.name,'节点类型:%s' %node_type,'节点状态:%s' %status,'需及时处理!']
+                    tools.dingding_msg(text,token=ops_token)
+        except Exception as e:
+            logging.error(e)
+        try:
+            # endpoints健康检测
+            ret = v1.list_namespaced_endpoints('default')
+            for i in ret.items:
+                try:
+                    for infos in i.subsets:
+                        try:
+                            for info in infos.addresses:
+                                try:
+                                    ip_header = '.'.join(str(info.ip).split('.')[:2])
+                                    if '{}.'.format(ip_header) in ('172.16.', '10.10.'):
+                                        if not tcpping(host=info.ip, port=infos.ports[0].port, timeout=5):
+                                            text = ['**容器平台endpoints报警:**', 'IP:%s' % info.ip,
+                                                    '服务端口:%s' % infos.ports[0].port, '服务端口不可用,需及时处理!']
+                                            tools.dingding_msg(text)
+                                except:
+                                    continue
+                        except:
+                            continue
+                except:
+                    continue
+        except Exception as e:
+            logging.error(e)
 
 @tools.proce_lock()
 def alarm_load():
@@ -496,6 +500,8 @@ def alarm_load():
                                     logging.error(e)
                                 if Project:
                                     try:
+                                        text = None
+                                        token = ops_token
                                         # 判断是否是tomcat项目
                                         ret = db_project.query.filter(and_(db_project.ip == host, db_project.ssh_port == ssh_port)).all()
                                         if ret:
@@ -507,7 +513,7 @@ def alarm_load():
                                             else:
                                                 text = ['**线上服务重启:%s**' % hostname, "CPU持续{0}分钟平均使用率:{1}%".format(ctime,cpu_load),
                                                         "相关进程:{0}".format(Project), '**服务重启成功!**']
-                                                ops_token = None
+                                                token = None
 
                                         else:
                                             # 判断是否是jar项目
@@ -518,7 +524,7 @@ def alarm_load():
                                                     text = ['**线上服务器预警:%s**' % hostname, "CPU持续{0}分钟平均使用率:{1}%".format(ctime,cpu_load),
                                                     "相关进程:{0}".format(Project), '**请及时进行处理!**']
                                         if text and not hostname.startswith('nj'):
-                                            tools.dingding_msg(text,ops_token)
+                                            tools.dingding_msg(text,token)
                                     except Exception as e:
                                         logging.error(e)
                     finally:
@@ -545,21 +551,24 @@ def k8s_ingress_log():
     def auto_delete_pod(pod_name,text):
         try:
             namespace = "default"
-            api_instance = client.CoreV1Api()
-            ret = api_instance.list_namespaced_pod(namespace=namespace)
-            for i in ret.items:
-                if i.metadata.name.startswith(pod_name):
-                    RC.incr(delete_pod_key, 1)
-                    api_instance.delete_namespaced_pod(name=i.metadata.name,
-                                                   namespace=namespace,
-                                                   body=client.V1DeleteOptions())
-                    time.sleep(30)
+            for context in contexts:
+                config.load_kube_config(config_file,context)
+                api_instance = client.CoreV1Api()
+                ret = api_instance.list_namespaced_pod(namespace=namespace)
+                for i in ret.items:
+                    if i.metadata.name.startswith(pod_name):
+                        RC.incr(delete_pod_key, 1)
+                        api_instance.delete_namespaced_pod(name=i.metadata.name,
+                                                       namespace=namespace,
+                                                       body=client.V1DeleteOptions())
+                        time.sleep(30)
         except Exception as e:
             logging.error(e)
         finally:
             counts = RC.get(delete_pod_key)
             RC.delete(delete_pod_key)
-            text.append('**自动处理问题pod数量:{}**'.format(counts))
+            if counts:
+                text.append('**自动处理问题pod数量:{}**'.format(counts))
             return text
     try:
         loging.write('start %s ......' % k8s_ingress_log.__name__)

@@ -342,17 +342,19 @@ class k8s_ingress(DB.Model):
     name = DB.Column(DB.String(50),default='nginx-ingress')
     namespace = DB.Column(DB.String(45),default='default')
     domain = DB.Column(DB.String(100))
+    path = DB.Column(DB.String(100))
     serviceName = DB.Column(DB.String(100))
     servicePort = DB.Column(DB.Integer)
-    def __init__(self,name,namespace,domain,serviceName,servicePort):
+    def __init__(self,name,namespace,domain,path,serviceName,servicePort):
         self.name = name
         self.namespace = namespace
         self.domain = domain
+        self.path = path
         self.serviceName = serviceName
         self.servicePort = servicePort
     def __repr__(self):
-        values=(self.name,self.namespace,self.domain,self.serviceName,self.servicePort)
-        return '%s,%s,%s,%s,%i'%values
+        values=(self.name,self.namespace,self.domain,self.path,self.serviceName,self.servicePort)
+        return '%s,%s,%s,%s,%s,%i'%values
 
 class webssh_records(DB.Model):
     __tablename__ = 'webssh_records'

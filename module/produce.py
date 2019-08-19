@@ -35,7 +35,7 @@ def scheduler_tasks():
     scheduler.add_job(Task.business_monitor, 'cron', second='0', minute='*', id=Task.business_monitor.__name__,replace_existing=True)
     scheduler.add_job(Task.es_get_log_status, 'cron', second='0', minute='*', id=Task.es_get_log_status.__name__,replace_existing=True)
     scheduler.add_job(Task.es_get_log_time, 'cron', second='0', minute='*', id=Task.es_get_log_time.__name__,replace_existing=True)
-    scheduler.add_job(Task.es_get_data, 'cron', second='0', minute='*', id=Task.es_get_data.__name__, replace_existing=True)
+    scheduler.add_job(Task.es_business_data, 'cron', second='0', minute='*', id=Task.es_business_data.__name__, replace_existing=True)
     scheduler.add_job(Task.get_server_info, 'cron', second='0', minute='30',hour='4',id=Task.get_server_info.__name__,replace_existing=True)
     scheduler.add_job(Task.auto_discovery, 'cron', second='0', minute='0', hour='*/4',id=Task.auto_discovery.__name__,replace_existing=True)
     scheduler.add_job(Task.get_app_service, 'cron', second='0', minute='0', hour='*',id=Task.get_app_service.__name__, replace_existing=True)

@@ -8,9 +8,9 @@ def Md5_make(string):
         m = hashlib.md5()
         m.update(str(string).encode('utf-8'))
         md5value = m.hexdigest()
+        return md5value
     except Exception as e:
         logging.error(e)
-    return md5value
 
 def Md5_file(path):
     try:
@@ -22,6 +22,6 @@ def Md5_file(path):
             bytes = file.read(1024)
         file.close()
         md5value = m.hexdigest()
+        return md5value
     except Exception as e:
         logging.error(e)
-    return md5value

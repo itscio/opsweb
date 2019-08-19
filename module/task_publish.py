@@ -51,8 +51,8 @@ def _console_out(channel,Msg_key,Msg):
 #结果汇总模块
 def _result_handle(result,server_lists_counts,INFOS):
     # 将执行信息写入数据库
+    channel = INFOS['channel']
     try:
-        channel = INFOS['channel']
         if result in ('Fail','Success'):
             package_url = INFOS['package_url']
             package = package_url.split('/')[-1]
