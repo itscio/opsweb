@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="margin-bottom: 0.2%;text-align: left">
+        选择开始时间:{{ form.input }}&nbsp;
+        选择结束时间:{{ form.input2 }}&nbsp;
+        选择工单类型:{{ form.titles }} &nbsp;
+        {{ form.submit (onclick="javascript:work_order_report()",style="font-weight: bold") }}</div>
+    <div class="style_hr" style="margin-bottom: 1%"></div>
+    <div id="html_show"></div>
+    <div style="clear:both"></div>
+    <div class="style_hr" style="margin-top: 2%"></div>
+    <script>
+        "use strict";
+        ajax_html_show("/work_order_report","html_show");
+        $("#input").flatpickr({dateFormat: "Y-m-d",locale: "zh",maxDate:"today",minDate:new Date().fp_incr(-365)});
+        $("#input2").flatpickr({dateFormat: "Y-m-d",locale: "zh",maxDate:"today",minDate:new Date().fp_incr(-365)});
+        function work_order_report() {
+            var start_time = $('#input').val();
+            var end_time = $('#input2').val();
+            console.log(start_time);
+            if (start_time==""||end_time==""){
+                js_msg('请选择开始或者结束日期',3000,'error');
+            }else{
+                var source = $('#titles').val();
+                var url= "/work_order_report"+'/'+start_time+'/'+end_time+'/'+source;
+                ajax_html_show(url,"html_show");
+            }
+        }
+        $(document).ready(function () {
+            $('#input').val("{{ tt[0]|safe }}");
+            $('#input2').val("{{ tt[1]|safe }}");
+        });
+    </script>
+{% endblock page %}

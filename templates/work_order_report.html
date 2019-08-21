@@ -1,0 +1,21 @@
+<div class="div">运维工单自{{ tt[0] }}至{{ tt[1] }}期间统计报告</div>
+<div>
+    {% if INFOS %}
+        {% for info in INFOS %}
+            <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
+                <div style="height: 330px;margin-left: 20px">
+                    {{ echarts_js_dependencies(info) }}
+                    {{ echarts_container(info) }}
+                    {{ echarts_js_content(info) }}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <script>
+            js_msg('暂时没有相关数据展示!',3000,'error');
+            setTimeout(function () {
+                location.href = '/index';
+            },3000);
+        </script>
+    {% endif %}
+</div>

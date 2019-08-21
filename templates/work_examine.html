@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block page %}
-    <strong style="font-weight: bold;font-size: large">工单申请进度查询</strong>
-    {% set tables = ('工单号','申请日期','工单类型','工单进度') %}
+    <strong style="font-weight: bold;font-size: large">运维工单进度查询</strong>
+    {% set tables = ('工单号','申请日期','工单类型','工单详情','工单进度') %}
     <div style="margin-left: 1%;margin-right: 2%">
         <table class="table table-hover table-striped table-condensed table-bordered" style="margin-top: 1%" id="table">
             <thead>
@@ -16,10 +16,15 @@
                     {% for value in work_lists %}
                         <tr>
                             <td class="td_style" style="vertical-align: middle;">
-                                <a href="/{{ work_types[value[2]] }}?action=query&work_number={{ value[0] }}">{{ value[0] }}</a>
+                            <a href="/{{ value[2] }}?action=query&work_number={{ value[0] }}" class="mintip" title="工单操作">{{ value[0] }}</a>
                             </td>
                             <td class="td_style" style="vertical-align: middle;">{{ value[1] }}</td>
                             <td class="td_style" style="vertical-align: middle;">{{ source_types[value[2]] }}</td>
+                            <td class="td_style" style="vertical-align: middle;">
+                                <a href="#" onclick="work_details_iframe('/work_details/{{ order_types[value[2]] }}/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
+                                    <i class="fas fa-align-left"></i>
+                                </a>
+                            </td>
                             <td align="center">
                                 <div style="width:800px;">
                                     <div id="{{ value[0] }}"></div>

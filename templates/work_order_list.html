@@ -36,7 +36,7 @@
                                 </a>
                             </td>
                             <td class="td_style" style="text-align: center">
-                                {% if value[2] in ['未审核','未受理','已退回','已拒绝'] %}
+                                {% if value[2] in ['未审核','未受理','已退回'] %}
                                     <a href="/work_order_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单申请"><i class="fas fa-redo"></i>可撤销</a>
                                 {% elif value[2] == '受理中' %}
                                     <i class="fas fa-spinner fa-spin"></i>{{ value[2] }}
