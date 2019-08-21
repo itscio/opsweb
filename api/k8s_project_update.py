@@ -22,19 +22,23 @@ def k8s_project_update():
     version = None
     try:
         if params:
-            if 'project' in params and 'version' in params and 'access_token' in params:
+            if 'project' in params and 'version' in params and 'access_token' in params and 'context' in params:
                 token = params['access_token']
                 project = params['project']
                 version = params['version']
+                context = params['context']
                 new_image = "%s/%s:%s" %(docker_registry,project.split('.')[0],version)
                 if 'replicas' in params:
                     new_replicas = params['replicas']
                 # 验证token是否有效
-                vals = db_token.query.filter(and_(db_token.token == token, db_token.expire > time.strftime('%Y-%m-%d', time.localtime()))).all()
+                vals = db_token.query.filter(and_(db_token.token == token, db_token.expire > time.strftime('%Y-%m-%d',
+                                                            time.localtime()))).all()
                 if vals:
                     redis_key = 'op_k8s_update_%s' %time.strftime('%Y%m%d%H%M%S', time.localtime())
-                    Scheduler = produce.Scheduler_publish()
-                    Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [new_image, new_replicas,version,redis_key,'api'])
+                    Scheduler = produce.SchedulerPublish()
+                    Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [context,new_image,
+                                                                                     new_replicas,version,
+                                                                                     redis_key,'api'])
                     Scheduler.start()
                 else:
                     msg = '授权验证不通过!'
