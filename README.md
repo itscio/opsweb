@@ -105,7 +105,7 @@
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/5.jpg)
 # 问题解答： #
     - 关于sql配置文件格式问题，请参考下面示例：
-      SQLALCHEMY_BINDS = {'库名': 'mysql://用户名:密码@IP地址:端口/idc?charset=utf8'}
+      SQLALCHEMY_BINDS = {'库名': 'mysql://用户名:密码@IP地址:端口/库名?charset=utf8'}
       SQLALCHEMY_ECHO = False
       SQLALCHEMY_TRACK_MODIFICATIONS = False
       MYSQL_USER = ''
