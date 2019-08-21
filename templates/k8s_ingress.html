@@ -7,6 +7,7 @@
         <div class="panel-body" style="margin-top: 5%">
             <form action="/ingress_apply" method="post">
                 {{ form.csrf_token }}
+                <p>选择集群:{{ form.contexts (style="width:207px")}}</p>
                 <p>service_name:{{ form.service_name (style="width:175px")}}</p>
                 <p>service_port:&nbsp;&nbsp;{{ form.service_port (style="width:175px")}}</p>
                 <p>{{ form.domains (rows = 3,style="width:266px",placeholder="多个域名以逗号分割")}}</p>

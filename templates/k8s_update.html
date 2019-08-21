@@ -7,6 +7,7 @@
         <div class="panel-body" style="margin-top: 5%">
             <form action="/image_update" method="post">
                 {{ form.csrf_token }}
+                <p>选择集群:{{ form.contexts (style="width:190px")}}</p>
                 <p>镜像名称:{{ form.deployment (style="width:190px",onchange="select_deployment()")}}</p>
                 <p>选择版本:{{ form.version (style="width:190px")}}</p>
                 <p>副本数量:{{ form.replicas (style="width:190px",placeholder="可不填写")}}</p>

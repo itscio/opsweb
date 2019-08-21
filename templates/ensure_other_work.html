@@ -15,7 +15,7 @@
                     {% for value in work_orders %}
                         <tr>
                             <td class="td_style" style="text-align: center;vertical-align: middle">
-                                <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ value[0] }}</div>
+                                <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}"><a href="/work_examine/{{ value[0] }}" class="mintip" title="查看工单进度">{{ value[0] }}</a></div>
                             </td>
                             {% for val in value[3:5] %}
                                 <td class="td_style" style="text-align: center;vertical-align: middle">
@@ -32,16 +32,6 @@
                                 <a href="#" onclick="work_details_iframe('/work_details/other_work/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
                                     <i class="fas fa-align-left"></i>
                                 </a>
-                            </td>
-                            <td class="td_style" style="text-align: center;vertical-align: middle">
-                                {% if value[2] == '受理中' %}
-                                    <i class="fas fa-spinner fa-spin"></i>{{ value[2] }}
-                                {% else %}
-                                    {{ value[2] }}
-                                {% endif %}
-                                {% if value[0]|string in new_work_number %}
-                                    <span class="badge" style="color:red;background-color:white">新</span>
-                                {% endif %}
                             </td>
                             <td class="td_style" style="text-align: center;vertical-align: middle">
                                 {% if value[2] == '待审批' %}

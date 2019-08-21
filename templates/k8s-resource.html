@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block page %}
-    <div class="div"><p>{{ context }}集群{{ resource }}资源信息</p></div>
+    <div class="div"><p>{{ g.context }}集群{{ resource }}资源信息</p></div>
     {% if resource == 'Pods' %}
         <div style="margin-left: 0.5%;width:97.7%;">
             <table class="table table-bordered">
@@ -9,7 +9,6 @@
                     <td class="pod_span" style="text-align: center;vertical-align: middle;">namespace:{{ counts[1] }}</td>
                     <td class="pod_span" style="text-align: center;vertical-align: middle;">镜像数量:{{ counts[2] }}</td>
                     <td class="pod_span" style="text-align: center;vertical-align: middle;">POD正常率:{{ counts[3] }}%</td>
-                    <td class="pod_span" style="text-align: center;vertical-align: middle;">集群选择:{{ form.select (style="background-color:#d9edf7;margin-top: 3%",onchange="select_contexts()") }}</td>
                 </tbody>
             </table>
         </div>
@@ -26,9 +25,9 @@
                 {% for val in valus %}
                     {% if resource == 'Pods' %}
                         <tr>
-                            <td style="vertical-align: middle;">{{ val }}</td>
+                            <td style="vertical-align: middle;table-layout: fixed;word-wrap:break-word;word-break:break-all;">{{ val }}</td>
                             {% for key in keys[:-2] %}
-                                <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
+                                <td style="text-align: center;vertical-align: middle;table-layout: fixed;word-wrap:break-word;word-break:break-all;">{{ valus[val][key] }}</td>
                             {% endfor %}
                             {% set images = valus[val][keys[-2]].split(';') %}
                             <td style="vertical-align: middle;">
@@ -129,12 +128,7 @@
     </div>
     <script>
         "use strict";
-        $('#contexts').val('{{ context|safe }}');
         $(document).ready(table_order("tabledata",1));
-        function select_contexts() {
-            var context = $('#contexts').val();
-            location.href= "/k8s/pods/"+context;
-        }
     </script>
     <style>
     .pod_span{color:#3a87ad;font-weight: bold;background-color: #d9edf7;}

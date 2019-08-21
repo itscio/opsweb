@@ -7,6 +7,7 @@
         <div class="panel-body" style="margin-top: 5%">
             <form action="/hpa_apply" method="post">
                 {{ form.csrf_token }}
+                <p>选择集群:&nbsp;{{ form.contexts (style="width:211px")}}</p>
                 <p>Deployment:&nbsp;{{ form.deployment (style="width:188px")}}</p>
                 <p>最大副本数:&nbsp;&nbsp;{{ form.max_replica (style="width:194px")}}</p>
                 <p>最小副本数:&nbsp;&nbsp;{{ form.min_replica (style="width:194px")}}</p>
