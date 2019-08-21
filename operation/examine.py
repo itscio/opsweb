@@ -57,18 +57,18 @@ def op_log():
 
 @page_examine.route('/ensure_application')
 def ensure_application():
+    db_work_order = db_op.work_order
+    db_publish_application = db_op.publish_application
+    db_sso = db_op.user_sso
+    msg = None
+    source = 'ensure_application'
+    Key = 'new_application_work_number_%s' % dt
+    # 验证票据
+    actions = {'complete': '已完成', 'deny': '已拒绝', 'rollback': '已回滚'}
+    ticket = tools.http_args(request, 'ticket')
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
     try:
-        db_work_order = db_op.work_order
-        db_publish_application = db_op.publish_application
-        db_sso = db_op.user_sso
-        msg = None
-        source = 'ensure_application'
-        Key = 'new_application_work_number_%s' % dt
-        #验证票据
-        actions = {'complete': '已完成', 'deny': '已拒绝', 'rollback': '已回滚'}
-        ticket = tools.http_args(request,'ticket')
-        action = tools.http_args(request,'action')
-        work_number = tools.http_args(request,'work_number')
         if ticket or (action == 'activate' and work_number):
             if ticket:
                 work_number = Redis.get('work_order_ticket_%s' %ticket)
@@ -108,7 +108,10 @@ def ensure_application():
                         dingid = db_publish_application.query.with_entities(db_publish_application.dingid).filter(db_publish_application.work_number==work_number).all()
                         mailer = db_sso.query.with_entities(db_sso.mail).filter(db_sso.dingunionid==dingid[0][0]).all()
                         if mailer:
-                            Msg = Message("%s工单进度通知"%work_number, sender=sender, recipients=[mailer[0][0]],cc=[receiver],charset='utf-8')
+                            cc_mail = [receiver]
+                            if Redis.exists('op_cc_test_mail_%s' % work_number):
+                                cc_mail.append(Redis.get('op_cc_test_mail_%s' % work_number))
+                            Msg = Message("%s工单进度通知"%work_number, sender=sender, recipients=[mailer[0][0]],cc=cc_mail,charset='utf-8')
                             mail_html = Redis.get('op_send_mail_html_%s' %work_number)
                             alarm_html = '<p style="color:red">工单当前进度:%s</p>' %actions[action]
                             if action == 'deny':
@@ -128,7 +131,7 @@ def ensure_application():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','项目名称','版本','描述','申请人','执行人','详情','状态','操作')
+        tables = ('工单号','日期','项目名称','版本','描述','申请人','详情','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         projects = db_publish_application.query.with_entities(db_publish_application.work_number,db_publish_application.date,
@@ -137,7 +140,7 @@ def ensure_application():
         projects = {info[0]: info[1:] for info in projects}
         work_orders = db_work_order.query.with_entities(db_work_order.work_number,
                                                         db_work_order.dingid,
-                                                        db_work_order.status).filter(db_work_order.source==source).order_by(desc(db_work_order.id)).all()
+                                                        db_work_order.status).filter(db_work_order.source==source).order_by(desc(db_work_order.id)).limit(500).all()
         if action and work_number:
             if action == 'query':
                 work_orders = db_work_order.query.with_entities(db_work_order.work_number,
@@ -149,27 +152,23 @@ def ensure_application():
             for info in work_orders:
                 info.extend(projects[info[0]][:-1])
                 info.extend(users[projects[info[0]][-1]])
-                if info[1]:
-                    info.append(users[info[1]][0])
-                else:
-                    info.append('')
         new_work_number = Redis.smembers(Key)
     return render_template('ensure_work_order.html',tables=tables,work_orders=work_orders,msg=msg,new_work_number=new_work_number,total='代码上线工单管理')
 
 @page_examine.route('/ensure_server_auth')
 def ensure_server_auth():
+    db_work_order = db_op.work_order
+    db_server_auth = db_op.server_auth
+    db_sso = db_op.user_sso
+    msg = None
+    source = 'ensure_server_auth'
+    Key = 'new_server_auth_work_number_%s' % dt
+    actions = {'complete': '已完成', 'deny': '审批拒绝', 'agree': '审批通过'}
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
+    # 验证票据
+    ticket = tools.http_args(request, 'ticket')
     try:
-        db_work_order = db_op.work_order
-        db_server_auth = db_op.server_auth
-        db_sso = db_op.user_sso
-        msg = None
-        source = 'ensure_server_auth'
-        Key = 'new_server_auth_work_number_%s' % dt
-        actions = {'complete':'已完成','deny':'审批拒绝','agree':'审批通过'}
-        action = tools.http_args(request,'action')
-        work_number = tools.http_args(request,'work_number')
-        #验证票据
-        ticket = tools.http_args(request,'ticket')
         if ticket or (action == 'activate' and work_number):
             if ticket:
                 work_number = Redis.get('work_order_ticket_%s' %ticket)
@@ -237,7 +236,7 @@ def ensure_server_auth():
             msg = "未知异常错误!"
     finally:
         #获取最新数据
-        tables = ('工单号','日期','申请人','部门','服务器列表','申请权限','所属用途','执行人','详情','状态','操作')
+        tables = ('工单号','日期','申请人','部门','服务器列表','申请权限','所属用途','详情','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
         users = {info[0]: info[1:] for info in users}
         servers = db_server_auth.query.with_entities(db_server_auth.work_number,
@@ -250,7 +249,7 @@ def ensure_server_auth():
         work_orders = db_work_order.query.with_entities(db_work_order.work_number,
                                                         db_work_order.dingid,
                                                         db_work_order.status).filter(
-            db_work_order.source == source).order_by(desc(db_work_order.id)).all()
+            db_work_order.source == source).order_by(desc(db_work_order.id)).limit(500).all()
         if action and work_number:
             if action == 'query':
                 work_orders = db_work_order.query.with_entities(db_work_order.work_number,
@@ -263,27 +262,23 @@ def ensure_server_auth():
                 info.extend(servers[info[0]][:-1])
                 info.insert(4, users[servers[info[0]][-1]][0])
                 info.insert(5, users[servers[info[0]][-1]][-1])
-                if info[1]:
-                    info.append(users[info[1]][0])
-                else:
-                    info.append('')
         new_work_number = Redis.smembers(Key)
     return render_template('ensure_server_auth.html',tables=tables,work_orders=work_orders,msg=msg,new_work_number=new_work_number,total='服务器权限工单管理')
 
 @page_examine.route('/ensure_sql_execute')
 def ensure_sql_execute():
+    db_work_order = db_op.work_order
+    db_sql_execute = db_op.sql_execute
+    db_sso = db_op.user_sso
+    msg = None
+    source = 'ensure_sql_execute'
+    Key = 'new_sql_execute_work_number_%s' % dt
+    # 验证票据
+    actions = {'complete': '已完成', 'deny': '已拒绝'}
+    ticket = tools.http_args(request, 'ticket')
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
     try:
-        db_work_order = db_op.work_order
-        db_sql_execute = db_op.sql_execute
-        db_sso = db_op.user_sso
-        msg = None
-        source = 'ensure_sql_execute'
-        Key = 'new_sql_execute_work_number_%s' % dt
-        #验证票据
-        actions = {'complete': '已完成', 'deny': '已拒绝'}
-        ticket = tools.http_args(request,'ticket')
-        action = tools.http_args(request,'action')
-        work_number = tools.http_args(request,'work_number')
         if ticket or (action == 'activate' and work_number):
             if ticket:
                 work_number = Redis.get('work_order_ticket_%s' %ticket)
@@ -345,7 +340,7 @@ def ensure_sql_execute():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','服务器','端口','数据库','变更描述','申请人','执行人','详情','状态','操作')
+        tables = ('工单号','日期','服务器','端口','数据库','变更描述','申请人','详情','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         sql_executes = db_sql_execute.query.with_entities(db_sql_execute.work_number,db_sql_execute.date,
@@ -355,7 +350,8 @@ def ensure_sql_execute():
         sql_executes = {info[0]: info[1:] for info in sql_executes}
         work_orders = db_work_order.query.with_entities(db_work_order.work_number,
                                                         db_work_order.dingid,
-                                                        db_work_order.status).filter(db_work_order.source==source).order_by(desc(db_work_order.id)).all()
+                                                        db_work_order.status).filter(db_work_order.source==source
+                                                                                     ).order_by(desc(db_work_order.id)).limit(500).all()
         if action and work_number:
             if action == 'query':
                 work_orders = db_work_order.query.with_entities(db_work_order.work_number,
@@ -367,10 +363,6 @@ def ensure_sql_execute():
             for info in work_orders:
                 info.extend(sql_executes[info[0]][:-1])
                 info.extend(users[sql_executes[info[0]][-1]])
-                if info[1]:
-                    info.append(users[info[1]][0])
-                else:
-                    info.append('')
         new_work_number = Redis.smembers(Key)
     return render_template('ensure_sql_execute.html',tables=tables,work_orders=work_orders,msg=msg,new_work_number=new_work_number,total='线上SQL执行工单管理')
 
@@ -447,7 +439,7 @@ def ensure_project_offline():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','项目名称','描述','申请人','执行人','详情','状态','操作')
+        tables = ('工单号','日期','项目名称','描述','申请人','详情','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         projects = db_project_offline.query.with_entities(db_project_offline.work_number,db_project_offline.date,
@@ -467,27 +459,23 @@ def ensure_project_offline():
             for info in work_orders:
                 info.extend(projects[info[0]][:-1])
                 info.extend(users[projects[info[0]][-1]])
-                if info[1]:
-                    info.append(users[info[1]][0])
-                else:
-                    info.append('')
         new_work_number = Redis.smembers(Key)
     return render_template('ensure_project_offline.html',tables=tables,work_orders=work_orders,msg=msg,new_work_number=new_work_number,total='项目下线工单管理')
 
 @page_examine.route('/ensure_other_work')
 def ensure_other_work():
+    db_work_order = db_op.work_order
+    db_other_work = db_op.other_work
+    db_sso = db_op.user_sso
+    msg = None
+    source = 'ensure_other_work'
+    Key = 'new_other_work_work_number_%s' % dt
+    # 验证票据
+    actions = {'complete': '已完成', 'deny': '已拒绝', 'refuse': '审批拒绝', 'agree': '审批通过'}
+    ticket = tools.http_args(request, 'ticket')
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
     try:
-        db_work_order = db_op.work_order
-        db_other_work = db_op.other_work
-        db_sso = db_op.user_sso
-        msg = None
-        source = 'ensure_other_work'
-        Key = 'new_other_work_work_number_%s' % dt
-        #验证票据
-        actions = {'complete': '已完成', 'deny': '已拒绝','refuse':'审批拒绝','agree':'审批通过'}
-        ticket = tools.http_args(request,'ticket')
-        action = tools.http_args(request,'action')
-        work_number = tools.http_args(request,'work_number')
         if ticket or (action == 'activate' and work_number):
             if ticket:
                 work_number = Redis.get('work_order_ticket_%s' %ticket)
@@ -495,7 +483,7 @@ def ensure_other_work():
                 val = db_work_order.query.filter(db_work_order.work_number == int(work_number)).all()
                 if val:
                     val = db_work_order.query.filter(and_(db_work_order.work_number == int(work_number),
-                                                    db_work_order.source == source,db_work_order.status=='审批通过')).all()
+                                                    db_work_order.source == source,db_work_order.status.in_(('审批通过','未受理')))).all()
                     if val:
                         db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                         db_work_order.source==source)).update({db_work_order.dingid:g.dingId,
@@ -560,7 +548,7 @@ def ensure_other_work():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','事项标题','事项描述','申请人','执行人','详情','状态','操作')
+        tables = ('工单号','日期','事项标题','事项描述','申请人','详情','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         other_works = db_other_work.query.with_entities(db_other_work.work_number,db_other_work.date,db_other_work.title,
@@ -569,7 +557,8 @@ def ensure_other_work():
         other_works = {info[0]: info[1:] for info in other_works}
         work_orders = db_work_order.query.with_entities(db_work_order.work_number,
                                                         db_work_order.dingid,
-                                                        db_work_order.status).filter(db_work_order.source==source).order_by(desc(db_work_order.id)).all()
+                                                        db_work_order.status).filter(db_work_order.source==source
+                                                                                     ).order_by(desc(db_work_order.id)).limit(500).all()
         if action and work_number:
             if action == 'query':
                 work_orders = db_work_order.query.with_entities(db_work_order.work_number,
@@ -581,10 +570,6 @@ def ensure_other_work():
             for info in work_orders:
                 info.extend(other_works[info[0]][:-1])
                 info.extend(users[other_works[info[0]][-1]])
-                if info[1]:
-                    info.append(users[info[1]][0])
-                else:
-                    info.append('')
         new_work_number = Redis.smembers(Key)
     return render_template('ensure_other_work.html',tables=tables,work_orders=work_orders,msg=msg,new_work_number=new_work_number,total='运维其它事项工单管理')
 
