@@ -3,6 +3,7 @@ from flask import Flask,request,render_template_string,session
 import requests
 from functools import wraps
 import time
+import os
 import re
 import datetime
 import pytz
@@ -19,11 +20,13 @@ from kubernetes import config
 app = Flask(__name__)
 logging = loging.Error()
 DB = SQLAlchemy(app)
+app.config.from_pyfile('../conf/main.conf')
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/tokens.conf')
 app.config.from_pyfile('../conf/zabbix.conf')
 app.config.from_pyfile('../conf/jump.conf')
 app.config.from_pyfile('../conf/security.conf')
+EnvPath = app.config.get('ENVPATH')
 zabbix_url = app.config.get('ZABBIX_URL')
 zabbix_user = app.config.get('ZABBIX_USER')
 zabbix_pw = app.config.get('ZABBIX_PW')
@@ -205,8 +208,8 @@ def get_server_list():
         return list(set(hosts))
 
 def modify_jumpserver_comment(hostname,comment):
+    status_code = None
     try:
-        status_code = None
         res = requests.post(tokenUrl, data={
             "username": username,
             "password": password
@@ -234,6 +237,13 @@ def http_args(request,arg):
         return args[arg]
     else:
         return None
+
+def check_env():
+    if os.path.exists(EnvPath):
+        with open(EnvPath, 'r') as f:
+            ENV = f.read().strip()
+        return ENV
+    return None
 
 def real_ip(ip):
     try:

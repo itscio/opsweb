@@ -207,6 +207,8 @@ class FormK8sContexts(Form):
 class FormK8sDeploy(Form):
     try:
         db_project = db_op.project_list
+        _, contexts, _ = tools.k8s_conf()
+        contexts = SelectField(choices=[(context, context) for context in contexts], id='contexts')
         projects = db_project.query.with_entities(distinct(db_project.project)).all()
         projects = SelectField(choices=[(project[0],project[0]) for project in projects],id='projects')
         object = StringField('object', validators=[DataRequired()],id='object')
@@ -235,6 +237,10 @@ class FormK8sDeploy(Form):
 
 class FormK8sUpdate(Form):
     try:
+        _, contexts, _ = tools.k8s_conf()
+        choices = [(context, context) for context in contexts]
+        choices.insert(0,('--all-cluster--','--all-cluster--'))
+        contexts = SelectField(choices=choices, id='contexts')
         db_k8s_deploy = db_op.k8s_deploy
         values = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
         deployment = SelectField(choices=[(val[0],val[0]) for val in values],id='deployment')
@@ -248,6 +254,8 @@ class FormK8sUpdate(Form):
 
 class FormK8sHpa(Form):
     try:
+        _, contexts, _ = tools.k8s_conf()
+        contexts = SelectField(choices=[(context, context) for context in contexts], id='contexts')
         db_k8s_deploy = db_op.k8s_deploy
         values = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
         deployment = SelectField(choices=[(val[0],val[0]) for val in values],id='deployment')
@@ -261,6 +269,8 @@ class FormK8sHpa(Form):
         db_op.DB.session.remove()
 
 class FormK8sIngress(Form):
+    _, contexts, _ = tools.k8s_conf()
+    contexts = SelectField(choices=[(context, context) for context in contexts], id='contexts')
     service_name = StringField(validators=[DataRequired()], id='service_name')
     service_port = IntegerField(validators=[DataRequired()],id='service_port')
     domains = TextAreaField(validators=[DataRequired()],id='domains')
@@ -314,7 +324,7 @@ class MyFormOtherWork(Form):
     assign = SelectField(choices=[], id='assign')
     text = TextAreaField(validators=[DataRequired()],id='text')
     choices = [('OPS开通申请', 'OPS开通申请'),
-               ('办公VPN申请','办公VPN申请'),
+               ('VPN开通申请', 'VPN开通申请'),
                ('大数据相关申请','大数据相关申请'),
                ('权限相关申请','权限相关申请'),
                 ('新项目部署申请', '新项目部署申请'),

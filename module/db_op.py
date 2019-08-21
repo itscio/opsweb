@@ -279,6 +279,7 @@ class k8s_deploy(DB.Model):
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
     project = DB.Column(DB.String(50))
+    context = DB.Column(DB.String(45))
     deployment = DB.Column(DB.String(45))
     image = DB.Column(DB.String(100))
     war = DB.Column(DB.String(45))
@@ -289,9 +290,10 @@ class k8s_deploy(DB.Model):
     action = DB.Column(DB.String(45))
     update_date = DB.Column(DB.String(45))
     update_time = DB.Column(DB.String(45))
-    def __init__(self,project,deployment,image,war,container_port,replicas,re_requests,re_limits,
+    def __init__(self,project,context,deployment,image,war,container_port,replicas,re_requests,re_limits,
                  action,update_date,update_time):
         self.project = project
+        self.context = context
         self.deployment = deployment
         self.image = image
         self.war = war
@@ -303,9 +305,9 @@ class k8s_deploy(DB.Model):
         self.update_date = update_date
         self.update_time = update_time
     def __repr__(self):
-        values=(self.project,self.deployment,self.image,self.war,self.container_port,self.replicas,self.re_requests,self.re_limits,
+        values=(self.project,self.context,self.deployment,self.image,self.war,self.container_port,self.replicas,self.re_requests,self.re_limits,
                 self.action,self.update_date,self.update_time)
-        return '%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s'%values
+        return '%s,%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s'%values
 
 class docker_run(DB.Model):
     __tablename__ = 'docker_run'
@@ -340,21 +342,23 @@ class k8s_ingress(DB.Model):
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
     name = DB.Column(DB.String(50),default='nginx-ingress')
+    context = DB.Column(DB.String(45),default='context')
     namespace = DB.Column(DB.String(45),default='default')
     domain = DB.Column(DB.String(100))
     path = DB.Column(DB.String(100))
     serviceName = DB.Column(DB.String(100))
     servicePort = DB.Column(DB.Integer)
-    def __init__(self,name,namespace,domain,path,serviceName,servicePort):
+    def __init__(self,name,context,namespace,domain,path,serviceName,servicePort):
         self.name = name
+        self.context = context
         self.namespace = namespace
         self.domain = domain
         self.path = path
         self.serviceName = serviceName
         self.servicePort = servicePort
     def __repr__(self):
-        values=(self.name,self.namespace,self.domain,self.path,self.serviceName,self.servicePort)
-        return '%s,%s,%s,%s,%s,%i'%values
+        values=(self.name,self.context,self.namespace,self.domain,self.path,self.serviceName,self.servicePort)
+        return '%s,%s,%s,%s,%s,%s,%i'%values
 
 class webssh_records(DB.Model):
     __tablename__ = 'webssh_records'

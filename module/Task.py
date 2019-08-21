@@ -1416,23 +1416,22 @@ def reboot_tomcat():
                             #获取服务器ssh端口
                             vals = db_project.query.with_entities(db_project.ssh_port, db_project.project).filter(
                                 and_(db_project.ip == host, db_project.app_port == app_port)).all()
-                            if vals and host not in ('192.168.1.15', '192.168.1.16'):
+                            if vals:
                                 if len(vals[0]) == 2:
                                     ssh_port, project = vals[0]
-                                    if reboot:
-                                        try:
-                                            # 远程进行tomcat重启操作
-                                            Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
-                                            Ssh.Run("supervisorctl  restart  {0}".format(cmds[int(app_port)]))
-                                            Ssh.Close()
-                                            time.sleep(15)
-                                        except Exception as e:
-                                            logging.error(e)
-                                            continue
-                                        else:
-                                            text.append("%s:%s -> %s:%s" % (host,ssh_port,app_port,project))
-                            if not reboot and vals:
-                                text.append("%s:%s -> %s" % (host, app_port, project))
+                                    if host not in ('192.168.1.15', '192.168.1.16'):
+                                        if reboot:
+                                            try:
+                                                # 远程进行tomcat重启操作
+                                                Ssh = SSH.ssh(ip=host, ssh_port=ssh_port)
+                                                Ssh.Run("supervisorctl  restart  {0}".format(cmds[int(app_port)]))
+                                                Ssh.Close()
+                                                time.sleep(15)
+                                            except Exception as e:
+                                                logging.error(e)
+                                                continue
+                                        text.append("%s:%s -> %s:%s" % (host,ssh_port,app_port,project))
+
             except Exception as e:
                 logging.error(e)
             finally:
