@@ -6,7 +6,7 @@ from pyecharts.conf import PyEchartsConfig
 from flask_limiter import Limiter
 from flask_limiter.util import get_ipaddr
 from flask_assets import Bundle
-class web_limiter(object):
+class WebLimiter(object):
     def __init__(self,global_limits=["1000/minute"]):
         self.app = Flask(__name__)
         self.global_limits = global_limits
@@ -33,6 +33,7 @@ def js_files():
                 'js/minigrid.js',
                 'js/dynamics.js',
                 'js/zh.js',
+                'js/jquery.step.min.js',
                 filters='jsmin',
                 output='js/js_packed.js'
                 )
@@ -48,6 +49,7 @@ def css_files():
                 'css/buttons.css',
                 'css/radar.css',
                 'css/font-awesome.min.css',
+                'css/jquery.step.css',
                 filters='cssmin',
                 output='css/css_packed.css'
                 )
