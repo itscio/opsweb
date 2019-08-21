@@ -97,9 +97,25 @@
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
 # 资产管理
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
-# 工单系统
-![show](https://github.com/wylok/opsweb/blob/master/static/images/04.jpg)
-![show](https://github.com/wylok/opsweb/blob/master/static/images/05.jpg)
 # K8s平台管理
+![show](https://github.com/wylok/opsweb/blob/master/static/images/6.jpg)
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/03.jpg)
+# 工单系统
+![show](https://github.com/wylok/opsweb/blob/master/static/images/4.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/5.jpg)
+# 问题解答： #
+    - 关于sql配置文件格式问题，请参考下面示例：
+      SQLALCHEMY_BINDS = {'库名': 'mysql://用户名:密码@IP地址:端口/idc?charset=utf8'}
+      SQLALCHEMY_ECHO = False
+      SQLALCHEMY_TRACK_MODIFICATIONS = False
+      MYSQL_USER = ''
+      MYSQL_PASSWORD = ''
+      MYSQL_HOST = ''
+      MYSQL_PORT = 
+      INFLUXDB_HOST = ''
+      INFLUXDB_PORT = 
+      INFLUXDB_USER = ''
+      INFLUXDB_PASSWORD = ''
+      INFLUXDB_DB = ''
+    - 关于启动报Failed to find Flask application or factory in module ‘opweb.conf’报错问题,在最新的版本中已经修复。
 author:wylok@126.com
