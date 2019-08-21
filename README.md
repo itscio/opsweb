@@ -99,6 +99,7 @@
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
 # 工单系统
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/04.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/05.jpg)
 # K8s平台管理
 ![show](https://github.com/wylok/opsweb/blob/master/static/images/03.jpg)
 author:wylok@126.com
