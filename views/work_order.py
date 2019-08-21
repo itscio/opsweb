@@ -79,7 +79,6 @@ def work_norun():
                                                         db_work_order.date,
                                                         db_work_order.source,
                                                         db_work_order.applicant,
-                                                        db_work_order.dingid,
                                                         db_work_order.status).filter(
             db_work_order.status.in_(('未审核','未受理', '受理中', '待审批', '审批通过'))).order_by(desc(db_work_order.work_number)).all()
         if work_lists:
@@ -89,13 +88,59 @@ def work_norun():
                     info[3] = users[info[3]]
                 else:
                     info[3] = ''
-                if info[4] in users:
-                    info[4] = users[info[4]]
-                else:
-                    info[4] = ''
+        return render_template('work_norun.html', work_lists=work_lists, source_types=source_types)
     except Exception as e:
         logging.error(e)
-    return render_template('work_norun.html',work_lists=work_lists,source_types=source_types)
+
+@page_work_order.route('/work_examine')
+@page_work_order.route('/work_examine/<int:work_id>')
+def work_examine(work_id=None):
+    try:
+        # 工单流程进度
+        INDEXS = {'待审批':2,'审批通过':3,'审批拒绝':2,'未受理':3,'已退回':2,
+                  '受理中':3,'已拒绝':4,'已完成':4,'已回滚':4,'未审核':2}
+        db_work_order = db_op.work_order
+        db_sso = db_op.user_sso
+        infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName,db_sso.mail).all()
+        users = {info[0]: info[1] for info in infos}
+        mails = {info[-1]: info[1] for info in infos}
+        work_lists = []
+        if work_id:
+            infos = db_work_order.query.with_entities(db_work_order.work_number,
+                                                      db_work_order.date,
+                                                      db_work_order.source,
+                                                      db_work_order.applicant,
+                                                      db_work_order.reviewer,
+                                                      db_work_order.dingid,
+                                                      db_work_order.status).filter(db_work_order.work_number==work_id).all()
+        else:
+            infos = db_work_order.query.with_entities(db_work_order.work_number,
+                                                        db_work_order.date,
+                                                        db_work_order.source,
+                                                        db_work_order.applicant,
+                                                        db_work_order.reviewer,
+                                                        db_work_order.dingid,
+                                                        db_work_order.status).order_by(desc(db_work_order.work_number)).limit(500).all()
+        if infos:
+            infos = [list(info) for info in infos]
+            for info in infos:
+                Infos=[]
+                applicant = ''
+                reviewer = ''
+                operater = ''
+                Infos.extend(info[:3])
+                if info[3] in users:
+                    applicant = users[info[3]]
+                if info[4] in mails:
+                    reviewer = mails[info[4]]
+                if info[5] in users:
+                    operater = users[info[5]]
+                Infos.append(["填写申请表", "申请人:%s"%applicant, "审核人:%s" %reviewer, "执行人:%s"%operater, "工单状态:%s" %info[-1]])
+                Infos.append(INDEXS[info[-1]])
+                work_lists.append(Infos)
+        return render_template('work_examine.html', work_lists=work_lists,order_types=order_types,source_types=source_types)
+    except Exception as e:
+        logging.error(e)
 
 @page_work_order.route('/work_review')
 def work_review():
@@ -178,9 +223,10 @@ def work_review():
                     info[3] = users[info[3]]
                 else:
                     info[3] = ''
+        return render_template('work_review.html', work_lists=work_lists, msg=msg, source_types=source_types,
+                               order_types=order_types)
     except Exception as e:
         logging.error(e)
-    return render_template('work_review.html',work_lists=work_lists,msg=msg,source_types=source_types,order_types=order_types)
 
 @page_work_order.route('/application',methods = ['GET', 'POST'])
 def application():
@@ -380,14 +426,14 @@ def application():
 
 @page_work_order.route('/server_auth',methods = ['GET', 'POST'])
 def server_auth():
+    td = time.strftime('%Y-%m-%d', time.localtime())
+    tt = time.strftime('%H:%M:%S', time.localtime())
+    form = MyForm.MyFormServerAuth()
+    db_server_auth = db_op.server_auth
+    db_work_order = db_op.work_order
+    Msg = []
+    source = 'ensure_server_auth'
     try:
-        td = time.strftime('%Y-%m-%d', time.localtime())
-        tt = time.strftime('%H:%M:%S', time.localtime())
-        form = MyForm.MyFormServerAuth()
-        db_server_auth = db_op.server_auth
-        db_work_order = db_op.work_order
-        Msg = []
-        source = 'ensure_server_auth'
         if form.submit.data:
             work_number = int(time.time())
             leader = form.leader.data.strip()
@@ -719,16 +765,14 @@ def other_work():
     Msg = []
     source = 'ensure_other_work'
     receiver = app.config.get('DEFAULT_RECEIVER')
+    review_url = '<p>审核地址:<a href="https://{0}/work_review">https://{0}/work_review</a></p>'.format(request.host)
     try:
         if form.submit.data:
-            try:
-                work_number = int(time.time())
-                describe = form.text.data
-                title = form.titles.data
-                leader = form.input.data
-                assign = form.assign.data
-            except Exception as e:
-                logging.error(e)
+            work_number = int(time.time())
+            describe = form.text.data
+            title = form.titles.data
+            leader = form.input.data
+            assign = form.assign.data
             if '@' not in leader:
                 raise Msg.extend(('error', '邮箱格式错误!'))
             if not check_mail(leader):
@@ -741,7 +785,6 @@ def other_work():
             if val:
                 raise Msg.extend(('error', '提交的内容工单已存在!'))
             try:
-                review_url = '<p>审核地址:<a href="https://{0}/work_review">https://{0}/work_review</a></p>'.format(request.host)
                 url = 'https://{0}/{1}?ticket={2}'.format(request.host, source, ticket)
                 ensure_url = '<p>工单受理(运维专属链接):<a href="%s">%s</a></p>' %(url,url)
                 msg_url = '工单受理:%s' % url
@@ -755,56 +798,57 @@ def other_work():
                             <p>申请人:%s</p><br>' % (work_number,title, describe, g.user)
             except Exception as e:
                 logging.error(e)
-            text.append("##### 申请人:%s" %g.user)
-            # 记录工单受理凭证
-            Redis.set('work_order_ticket_%s' % ticket, work_number)
-            # 记录发送邮件内容
-            Redis.set('op_send_mail_html_%s' % work_number, mail_html)
-            # 记录发送钉钉内容
-            Redis.set('op_send_dingding_msg_%s' % work_number, text)
-            # 记录受理工单链接
-            Redis.set('op_send_ensure_url_%s' % work_number, ensure_url)
-            Redis.set('op_send_msg_url_%s' % work_number, msg_url)
-            try:
-                describe = ''.join([line for line in describe.splitlines() if line])
-                c = db_other_work(date=td,time=tt,dingid=g.dingId,title=title,describe=describe,md5=md5,work_number=work_number)
-                db_op.DB.session.add(c)
-                db_op.DB.session.commit()
-                # 记录任务流水状态
-                c = db_work_order(date=td,work_number=work_number, source=source,applicant=g.dingId,reviewer =leader, dingid='',
-                                  status='未审核')
-                if 'VPN' in title:
-                    c = db_work_order(date=td, work_number=work_number, source=source, applicant=g.dingId,
-                                      reviewer=leader, dingid='',
-                                      status='待审批')
-                db_op.DB.session.add(c)
-                db_op.DB.session.commit()
-            except Exception as e:
-                Msg.extend(('error', '申请提交失败!'))
-                logging.error(e)
             else:
+                text.append("##### 申请人:%s" %g.user)
+                # 记录工单受理凭证
+                Redis.set('work_order_ticket_%s' % ticket, work_number)
+                # 记录发送邮件内容
+                Redis.set('op_send_mail_html_%s' % work_number, mail_html)
+                # 记录发送钉钉内容
+                Redis.set('op_send_dingding_msg_%s' % work_number, text)
+                # 记录受理工单链接
+                Redis.set('op_send_ensure_url_%s' % work_number, ensure_url)
+                Redis.set('op_send_msg_url_%s' % work_number, msg_url)
                 try:
-                    if assign != 'default':
-                        receiver = assign
-                    #记录受理人邮箱
-                    Redis.set('op_other_work_receiver_%s' % work_number, receiver)
-                    msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver,leader],
-                                  cc=[g.mail],charset='utf-8')
-                    msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
+                    describe = ''.join([line for line in describe.splitlines() if line])
+                    c = db_other_work(date=td,time=tt,dingid=g.dingId,title=title,describe=describe,md5=md5,work_number=work_number)
+                    db_op.DB.session.add(c)
+                    db_op.DB.session.commit()
+                    # 记录任务流水状态
+                    c = db_work_order(date=td,work_number=work_number, source=source,applicant=g.dingId,reviewer =leader, dingid='',
+                                      status='未审核')
                     if 'VPN' in title:
-                        msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver],
-                                      cc=[g.mail], charset='utf-8')
-                        msg.html = '%s%s' % (mail_html, '<p style="color:red">审核人审批后自动邮件通知</p>')
-                    with app.app_context():
-                        mail.send(msg)
-                    # 发送钉钉
-                    text.append('##### 审核人审核后自动消息通知')
-                    tools.dingding_msg(text, token=work_token)
+                        c = db_work_order(date=td, work_number=work_number, source=source, applicant=g.dingId,
+                                          reviewer=leader, dingid='',
+                                          status='待审批')
+                    db_op.DB.session.add(c)
+                    db_op.DB.session.commit()
                 except Exception as e:
+                    Msg.extend(('error', '申请提交失败!'))
                     logging.error(e)
-                    Msg.extend(('error', '申请通知失败!'))
                 else:
-                    Msg.extend(('success', '申请通知完成!'))
+                    try:
+                        if assign != 'default':
+                            receiver = assign
+                        #记录受理人邮箱
+                        Redis.set('op_other_work_receiver_%s' % work_number, receiver)
+                        msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver,leader],
+                                      cc=[g.mail],charset='utf-8')
+                        msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
+                        if 'VPN' in title:
+                            msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver],
+                                          cc=[g.mail], charset='utf-8')
+                            msg.html = '%s%s' % (mail_html, '<p style="color:red">审核人审批后自动邮件通知</p>')
+                        with app.app_context():
+                            mail.send(msg)
+                        # 发送钉钉
+                        text.append('##### 审核人审核后自动消息通知')
+                        tools.dingding_msg(text, token=work_token)
+                    except Exception as e:
+                        logging.error(e)
+                        Msg.extend(('error', '申请通知失败!'))
+                    else:
+                        Msg.extend(('success', '申请通知完成!'))
     except Exception as e:
         Msg.extend(('error', '内部未知错误!'))
         logging.error(e)
@@ -812,8 +856,8 @@ def other_work():
 
 @page_work_order.route('/work_details/application/<work_number>')
 def work_application_details(work_number=None):
+    publish_info = defaultdict()
     try:
-        publish_info = defaultdict()
         db_sso = db_op.user_sso
         db_publish_application = db_op.publish_application
         db_sql_execute = db_op.sql_execute
@@ -854,8 +898,8 @@ def work_application_details(work_number=None):
 
 @page_work_order.route('/work_details/server_auth/<work_number>')
 def server_auth_details(work_number=None):
+    publish_info = defaultdict()
     try:
-        publish_info = defaultdict()
         db_sso = db_op.user_sso
         db_server_auth = db_op.server_auth
         if work_number:
@@ -876,8 +920,8 @@ def server_auth_details(work_number=None):
 
 @page_work_order.route('/work_details/sql_execute/<work_number>')
 def work_sql_execute_details(work_number=None):
+    publish_info = defaultdict()
     try:
-        publish_info = defaultdict()
         db_sso = db_op.user_sso
         db_sql_execute = db_op.sql_execute
         db_work_order = db_op.work_order
@@ -907,8 +951,8 @@ def work_sql_execute_details(work_number=None):
 
 @page_work_order.route('/work_details/project_offline/<work_number>')
 def project_offline_details(work_number=None):
+    publish_info = defaultdict()
     try:
-        publish_info = defaultdict()
         db_sso = db_op.user_sso
         db_project_offline = db_op.project_offline
         db_work_order = db_op.work_order
@@ -936,8 +980,8 @@ def project_offline_details(work_number=None):
 
 @page_work_order.route('/work_details/other_work/<work_number>')
 def work_other_work_details(work_number=None):
+    publish_info = defaultdict()
     try:
-        publish_info = defaultdict()
         db_sso = db_op.user_sso
         db_other_work = db_op.other_work
         db_work_order = db_op.work_order
@@ -963,16 +1007,19 @@ def work_other_work_details(work_number=None):
 
 @page_work_order.route('/work_order_list')
 def work_order_list():
-    # 获取最新数据
+    tables = ('工单号', '日期', '项目名称', '版本', '描述', '申请人', '执行人', '详情', '状态')
+    db_work_order = db_op.work_order
+    db_publish_application = db_op.publish_application
+    db_sql_execute = db_op.sql_execute
+    db_sso = db_op.user_sso
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
+    Msg = None
+    work_orders = []
+    projects = defaultdict()
+    source = 'ensure_application'
     try:
-        db_work_order = db_op.work_order
-        db_publish_application = db_op.publish_application
-        db_sql_execute = db_op.sql_execute
-        db_sso = db_op.user_sso
-        action = tools.http_args(request, 'action')
-        work_number = tools.http_args(request, 'work_number')
-        Msg = None
-        source = 'ensure_application'
+
         if action and work_number:
             if action == 'repeal':
                 try:
@@ -1028,7 +1075,6 @@ def work_order_list():
                 except Exception as e:
                     logging.error(e)
         try:
-            tables = ('工单号','日期', '项目名称', '版本', '描述', '申请人', '执行人', '详情', '状态')
             users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
             users = {info[0]: info[1:] for info in users}
             projects = db_publish_application.query.with_entities(db_publish_application.work_number,
@@ -1069,15 +1115,16 @@ def work_order_list():
 
 @page_work_order.route('/server_auth_list')
 def server_auth_list():
+    tables = ('工单号', '日期', '申请人', '部门', '服务器列表', '申请权限', '所属用途', '执行人', '详情', '状态')
+    db_work_order = db_op.work_order
+    db_server_auth = db_op.server_auth
+    db_sso = db_op.user_sso
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
+    Msg = None
+    work_orders = []
+    source = 'ensure_server_auth'
     try:
-        # 获取最新数据
-        db_work_order = db_op.work_order
-        db_server_auth = db_op.server_auth
-        db_sso = db_op.user_sso
-        action = tools.http_args(request, 'action')
-        work_number = tools.http_args(request, 'work_number')
-        Msg = None
-        source = 'ensure_server_auth'
         if action and work_number:
             if action == 'repeal':
                 try:
@@ -1126,7 +1173,6 @@ def server_auth_list():
                         Msg = '无效的工单撤销操作!'
                 except Exception as e:
                     logging.error(e)
-        tables = ('工单号','日期', '申请人', '部门', '服务器列表', '申请权限', '所属用途', '执行人', '详情', '状态')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
         users = {info[0]: info[1:] for info in users}
         servers = db_server_auth.query.with_entities(db_server_auth.work_number,
@@ -1162,16 +1208,17 @@ def server_auth_list():
 
 @page_work_order.route('/sql_execute_list')
 def sql_execute_list():
-    # 获取最新数据
+    tables = ('工单号', '日期', '服务器', '端口', '数据库', '变更描述', '申请人', '执行人', '详情', '状态')
+    db_work_order = db_op.work_order
+    db_sql_execute = db_op.sql_execute
+    db_publish_application = db_op.publish_application
+    db_sso = db_op.user_sso
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
+    Msg = None
+    work_orders = []
+    source = 'ensure_sql_execute'
     try:
-        db_work_order = db_op.work_order
-        db_sql_execute = db_op.sql_execute
-        db_publish_application = db_op.publish_application
-        db_sso = db_op.user_sso
-        action = tools.http_args(request, 'action')
-        work_number = tools.http_args(request, 'work_number')
-        Msg = None
-        source = 'ensure_sql_execute'
         if action and work_number:
             if action == 'repeal':
                 try:
@@ -1225,7 +1272,6 @@ def sql_execute_list():
                         Msg = '无效的工单撤销操作!'
                 except Exception as e:
                     logging.error(e)
-        tables = ('工单号','日期','服务器','端口','数据库','变更描述','申请人','执行人','详情','状态')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         sql_executes = db_sql_execute.query.with_entities(db_sql_execute.work_number,db_sql_execute.date,
@@ -1259,14 +1305,16 @@ def sql_execute_list():
 @page_work_order.route('/project_offline_list')
 def project_offline_list():
     # 获取最新数据
+    tables = ('工单号', '日期', '项目名称', '描述', '申请人', '执行人', '详情', '状态')
+    db_work_order = db_op.work_order
+    db_project_offline = db_op.project_offline
+    db_sso = db_op.user_sso
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
+    Msg = None
+    work_orders = []
+    source = 'ensure_project_offline'
     try:
-        db_work_order = db_op.work_order
-        db_project_offline = db_op.project_offline
-        db_sso = db_op.user_sso
-        action = tools.http_args(request, 'action')
-        work_number = tools.http_args(request, 'work_number')
-        Msg = None
-        source = 'ensure_project_offline'
         if action and work_number:
             if action == 'repeal':
                 try:
@@ -1314,7 +1362,7 @@ def project_offline_list():
                         Msg = '无效的工单撤销操作!'
                 except Exception as e:
                     logging.error(e)
-        tables = ('工单号','日期', '项目名称', '描述', '申请人', '执行人', '详情', '状态')
+
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         projects = db_project_offline.query.with_entities(db_project_offline.work_number,
@@ -1348,15 +1396,16 @@ def project_offline_list():
 
 @page_work_order.route('/other_work_list')
 def other_work_list():
-    # 获取最新数据
+    tables = ('工单号', '日期', '事项标题', '事项描述', '申请人', '执行人', '详情', '状态')
+    db_work_order = db_op.work_order
+    db_other_work = db_op.other_work
+    db_sso = db_op.user_sso
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
+    Msg = None
+    work_orders = []
+    source = 'ensure_other_work'
     try:
-        db_work_order = db_op.work_order
-        db_other_work = db_op.other_work
-        db_sso = db_op.user_sso
-        action = tools.http_args(request, 'action')
-        work_number = tools.http_args(request, 'work_number')
-        Msg = None
-        source = 'ensure_other_work'
         if action and work_number:
             if action == 'repeal':
                 try:
@@ -1405,7 +1454,6 @@ def other_work_list():
                         Msg = '无效的工单撤销操作!'
                 except Exception as e:
                     logging.error(e)
-        tables = ('工单号','日期','事项标题','事项描述','申请人','执行人','详情','状态')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         other_works = db_other_work.query.with_entities(db_other_work.work_number,db_other_work.date,db_other_work.title,
@@ -1433,45 +1481,48 @@ def other_work_list():
                     info.append('')
     except Exception as e:
         logging.error(e)
-    return render_template('other_work_list.html', tables=tables, work_orders=work_orders,Msg=Msg,total='运维其它事项申请工单列表')
+    return render_template('other_work_list.html', tables=tables, work_orders=work_orders, Msg=Msg,
+                           total='运维其它事项申请工单列表')
+
 
 @page_work_order.route('/work_order_show')
 def work_order_show():
     try:
-        # 工单展示
-        tables = ('工单号', '申请日期', '工单类型', '申请人','审核人', '执行人', '状态')
+        # 工单流程进度
+        INDEXS = {'待审批':2,'未审核':2,'已退回':2,'审批拒绝':2,'未受理':3,'审批通过':3,'受理中':3,'已拒绝':4,'已完成':4,'已回滚':4}
         db_work_order = db_op.work_order
         db_sso = db_op.user_sso
-        work_orders = db_work_order.query.with_entities(db_work_order.work_number,
-                                                        db_work_order.date,
-                                                        db_work_order.source,
-                                                        db_work_order.applicant,
-                                                        db_work_order.reviewer,
-                                                        db_work_order.dingid,
-                                                        db_work_order.status).filter(
-            db_work_order.applicant==g.dingId).order_by(desc(db_work_order.work_number)).all()
-        if work_orders:
-            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.mail).all()
-            users = {info[0]: info[1] for info in infos}
+        infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName,db_sso.mail).all()
+        users = {info[0]: info[1] for info in infos}
+        mails = {info[-1]: info[1] for info in infos}
+        work_lists = []
+        infos = db_work_order.query.with_entities(db_work_order.work_number,
+                                                      db_work_order.date,
+                                                      db_work_order.source,
+                                                      db_work_order.applicant,
+                                                      db_work_order.reviewer,
+                                                      db_work_order.dingid,
+                                                      db_work_order.status).filter(db_work_order.applicant==g.dingId).all()
+        if infos:
+            infos = [list(info) for info in infos]
             for info in infos:
-                users[info[-1]] = info[1]
-            work_orders = [list(info) for info in work_orders]
-            for info in work_orders:
+                Infos=[]
+                applicant = ''
+                reviewer = ''
+                operater = ''
+                Infos.extend(info[:3])
                 if info[3] in users:
-                    info[3] = users[info[3]]
-                else:
-                    info[3] = ''
-                if info[4] in users:
-                    info[4] = users[info[4]]
-                else:
-                    info[4] = ''
+                    applicant = users[info[3]]
+                if info[4] in mails:
+                    reviewer = mails[info[4]]
                 if info[5] in users:
-                    info[5] = users[info[5]]
-                else:
-                    info[5] = ''
+                    operater = users[info[5]]
+                Infos.append(["填写申请表", "申请人:%s"%applicant, "审核人:%s" %reviewer, "执行人:%s"%operater, "工单状态:%s" %info[-1]])
+                Infos.append(INDEXS[info[-1]])
+                work_lists.append(Infos)
+        return render_template('work_order_show.html', work_lists=work_lists,work_types=work_types,source_types=source_types)
     except Exception as e:
         logging.error(e)
-    return render_template('work_order_show.html',work_orders=work_orders,source_types=source_types,tables=tables,work_types=work_types)
 
 @page_work_order.before_request
 @user_auth.login_required(grade=9)

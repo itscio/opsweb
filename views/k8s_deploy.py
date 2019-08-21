@@ -7,7 +7,7 @@ import os
 from kubernetes import client
 from importlib import reload
 import redis
-from sqlalchemy import distinct
+from sqlalchemy import distinct,and_
 from collections import defaultdict
 app = Flask(__name__)
 DB = SQLAlchemy(app)
@@ -24,7 +24,6 @@ logging = loging.Error()
 config,contexts,config_file = tools.k8s_conf()
 config.load_kube_config(config_file, context=contexts[0])
 page_k8s_deploy = Blueprint('k8s_deploy',__name__)
-db_k8s = db_op.k8s_deploy
 config,contexts,config_file = tools.k8s_conf()
 namespace = "default"
 @page_k8s_deploy.route('/deploy_query/<redis_key>')
@@ -56,6 +55,7 @@ def deployment_create():
     form = MyForm.FormK8sDeploy()
     mounts = defaultdict()
     if form.submit.data:
+        context = form.contexts.data
         project = form.projects.data
         version = form.version.data
         object = form.object.data
@@ -95,7 +95,7 @@ def deployment_create():
                             raise flash('域名配置后还需配置容器对外服务端口!')
                         redis_key = 'op_k8s_create_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
                         Scheduler = produce.SchedulerPublish()
-                        Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_deploy, [project,object,version, image,
+                        Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_deploy, [context,project,object,version, image,
                                                                                          run_args,container_port, ingress_port,
                                                                                          replicas,
                                                                                          domain,re_requests,mounts,
@@ -125,12 +125,13 @@ def image_update():
         if form.submit.data:
             deployment = form.deployment.data
             version = form.version.data
+            context = form.contexts.data
             if version:
                 new_image = "%s/%s:%s" %(docker_registry,deployment,version)
                 new_replicas = form.replicas.data
                 redis_key = 'op_k8s_update_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
                 Scheduler = produce.SchedulerPublish()
-                Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [new_image, new_replicas,version, redis_key,'web'])
+                Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [context,new_image, new_replicas,version, redis_key,'web'])
                 Scheduler.start()
                 return render_template('deploy_show.html',redis_key=redis_key)
     except Exception as e:
@@ -145,12 +146,14 @@ def hpa_apply():
         reload(MyForm)
         form = MyForm.FormK8sHpa()
         if form.submit.data:
+            context = form.contexts.data
             deployment = form.deployment.data
             max_replica = form.max_replica.data
             min_replica = form.min_replica.data
             cpu_value = form.cpu_value.data
             if max_replica and min_replica and cpu_value:
                 exist_hpa = []
+                config.load_kube_config(config_file,context)
                 api_instance = client.AutoscalingV1Api()
                 try:
                     ret = api_instance.list_horizontal_pod_autoscaler_for_all_namespaces()
@@ -206,7 +209,9 @@ def ingress_apply():
             domains = form.domains.data
             ingress_port = form.service_port.data
             service_name = form.service_name.data
+            context = form.contexts.data
             db_ingress = db_op.k8s_ingress
+            config.load_kube_config(config_file,context)
             api_instance = client.ExtensionsV1beta1Api()
             domains = [domain.strip() for domain in domains.splitlines() if domain]
             try:
@@ -215,7 +220,7 @@ def ingress_apply():
                     if '/' in ingress_domain:
                         domain = ingress_domain.split('/')[0]
                         path = '/{}'.format('/'.join(ingress_domain.split('/')[1:]))
-                        v = db_ingress(name='nginx-ingress', namespace=namespace, domain=domain, path=path,
+                        v = db_ingress(name='nginx-ingress', context=context,namespace=namespace, domain=domain, path=path,
                                        serviceName=service_name, servicePort=int(ingress_port))
                         db_op.DB.session.add(v)
                         db_op.DB.session.commit()
@@ -229,7 +234,8 @@ def ingress_apply():
                     paths = []
                     Rules_infos = db_ingress.query.with_entities(db_ingress.path,
                                                                  db_ingress.serviceName, db_ingress.servicePort
-                                                                 ).filter(db_ingress.domain == domain[0]).all()
+                                                                 ).filter(and_(db_ingress.domain == domain[0],
+                                                                               db_ingress.context==context)).all()
                     path, serviceName, servicePort = Rules_infos[0]
                     for infos in Rules_infos:
                         path, serviceName, servicePort = infos
