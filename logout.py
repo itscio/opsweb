@@ -14,12 +14,9 @@ redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 service_url = app.config.get('SERVICE_URL')
-ENV = None
-if os.path.exists('/etc/opweb.conf'):
-    with open('/etc/opweb.conf','r') as f:
-        ENV = f.read().strip()
-if ENV:
-    service_url = app.config.get('TEST_URL')
+ENV = tools.check_env()
+if ENV == 'dev':
+    service_url = app.config.get('SERVICE_TEST_URL')
 page_logout = Blueprint('logout',__name__)
 @page_logout.route('/logout')
 def logout():

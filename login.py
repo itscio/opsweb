@@ -11,7 +11,7 @@ app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('conf/redis.conf')
 app.config.from_pyfile('conf/cas.conf')
-limiter = conf.web_limiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
@@ -20,12 +20,9 @@ redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 cas_url = app.config.get('CAS_URL')
 service_url = app.config.get('SERVICE_URL')
-ENV = None
-if os.path.exists('/etc/opweb.conf'):
-    with open('/etc/opweb.conf','r') as f:
-        ENV = f.read().strip()
-if ENV:
-    service_url = app.config.get('TEST_URL')
+ENV = tools.check_env()
+if ENV == 'dev':
+    service_url = app.config.get('SERVICE_TEST_URL')
 cas_client = CASClient(cas_url)
 page_login = Blueprint('login', __name__)
 @page_login.route('/login')
