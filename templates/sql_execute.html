@@ -9,8 +9,8 @@
                 {{ form.csrf_token }}
                 <div>
                     <div>服务器:{{ form.sql_server(style="width:210px",autocomplete="off")}}&nbsp;端口:{{ form.sql_port(style="width:80px",autocomplete="off")}}&nbsp;数据库:{{ form.sql_database(style="width:150px",autocomplete="off")}}</div>
-                    <div style="margin-top: 1%">上传文件:{{ form.sql_file (style="width:138px")}}<span style="color: red;font-size: smaller">(只支持zip包文件)</span> &nbsp;文件MD5:{{ form.sql_md5(style="width:208px",autocomplete="off")}}</div>
-                    <div style="margin-top: 1%">审核人:{{ form.leader (style="width:400px",placeholder="部门leader邮箱") }} &nbsp;申请人: <input type="text" id="usr" style="width:68px;text-align: center"></div>
+                    <div style="margin-top: 1%">上传文件:{{ form.sql_file (style="width:138px")}}<span style="color: red;font-size: smaller">(只支持zip包文件)</span> &nbsp;文件MD5:{{ form.sql_md5(style="width:208px",placeholder="zip文件的MD5值",autocomplete="off")}}</div>
+                    <div style="margin-top: 1%">审核人:{{ form.leader (style="width:400px",placeholder="部门leader邮箱") }} &nbsp;申请人: <input type="text" id="usr" style="width:67px;text-align: center"></div>
                     <div style="margin-top: 1%">{{ form.sql_describe (rows = 4,style="width:570px;resize:vertical",placeholder="数据库变更描述:")}}</div>
                 </div>
                 <div style="margin-top: 1%">{{ form.submit(class="btn btn-primary") }}</div>
@@ -35,7 +35,6 @@
     {% endif %}
     <script>
         "use strict";
-        $('#usr').val('{{ g.user|safe }}');
-        $('#usr').attr("readonly","readonly");
+        $('#usr').val('{{ g.user|safe }}').attr("readonly","readonly");
     </script>
 {% endblock page %}

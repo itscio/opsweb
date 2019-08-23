@@ -1,4 +1,4 @@
-FROM 172.16.69.11/moji/centos7
+FROM x.x.x.x/x/centos7
 MAINTAINER yw
 RUN rm -rf /etc/localtime && ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 RUN mkdir -p /opt

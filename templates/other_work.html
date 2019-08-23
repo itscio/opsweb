@@ -2,7 +2,7 @@
 {% block page %}
     <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:950px;margin-left:15%;margin-top: 1%" id="other_work">
         <div class="panel-heading" style="background-color: #0480be">
-            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >运维其它事项申请工单</h4>
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >其它事项申请工单</h4>
         </div>
         <div class="panel-body" style="margin-bottom: 3%">
             <form action="/other_work" method="post" enctype=multipart/form-data>
@@ -30,21 +30,18 @@
     {% endif %}
     {% if not Main_Menu['submenu'] %}
         <script>
-            $('#application').css('margin-left','23%');
+            $('#other_work').css('margin-left','23%');
         </script>
     {% endif %}
     <script>
         "use strict";
         CKEDITOR.replace('text',{height:300});
-        $('#usr').val('{{ g.user|safe }}');
-        $('#usr').attr("readonly","readonly");
+        $('#usr').val('{{ g.user|safe }}').attr("readonly","readonly");
         function other_work_menu(){
         if ($('#titles').val().indexOf('VPN') >=0){
-            $('#input').val('hanlong.zhang@moji.com');
-            $('#input').attr("readonly","true");
+            $('#input').val('xxxx@xxx.com').attr("readonly","true");
         }else{
-            $('#input').val('');
-            $('#input').removeAttr("readonly");
+            $('#input').val('').removeAttr("readonly");
         }}
     </script>
 {% endblock page %}

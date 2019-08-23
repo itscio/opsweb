@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block page %}
     <div style="clear:both;"></div>
-    <div class="div"><h5>{{ total }}</h5></div>
-    <div style="text-align: center;width:98%;margin-left:1%">
+    <div style="font-weight: bolder">{{ total }}</div>
+    <div style="float: left;width:98%;margin-left:1%">
         <table class="table table-hover table-striped table-condensed table-bordered" id="table">
             <thead>
                 <tr>
@@ -38,7 +38,7 @@
                             </td>
                             <td class="td_style" style="text-align: center">
                                 {% if value[2] in ['待审批','未受理','审批拒绝'] %}
-                                    <a href="/server_auth_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单申请"><i class="fas fa-redo"></i>可撤销</a>
+                                    <a href="/server_auth_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单">可撤销</a>
                                 {% elif value[2] == '受理中' %}
                                     <i class="fas fa-spinner fa-spin"></i>{{ value[2] }}
                                 {% else %}
@@ -68,7 +68,7 @@
             "use strict";
             js_msg('{{ Msg|safe }}',3000,'info');
             setTimeout(function () {
-                location.href='/server_auth_list';
+                referrer_url();
             },4000);
         </script>
     {% endif %}

@@ -6,9 +6,9 @@
                 <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
                     <a href="/assets_get?type=server&hostname={{ info[0] }}">{{ info[0] }}</a> CPU持续使用率{{ info[1]|int }}%
                     {% if info[0] in whitelist %}
-                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')">取消知悉</a></span>
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')">取消知悉</a></span>
                     {% else %}
-                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
                     {% endif %}
                 </div>
             {% endfor %}
@@ -16,9 +16,9 @@
                 <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
                     <a href="/assets_get?type=server&hostname={{ info[0] }}">{{ info[0] }}</a> openfile持续达到{{ info[1]|int }}
                     {% if info[0] in whitelist %}
-                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')">取消知悉</a></span>
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')">取消知悉</a></span>
                     {% else %}
-                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_alarm_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
                     {% endif %}
                 </div>
             {% endfor %}

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block page %}
     <div style="clear:both;"></div>
-    <div style="font-weight: bolder">运维工单申请审核</div>
-    {% set tables = ('工单号','申请日期','工单类型','申请人','工单详情','状态','审核') %}
+    <div style="font-weight: bolder">可撤销工单列表</div>
+    {% set tables = ('工单号','申请日期','工单类型','工单详情','申请人','状态','操作') %}
     <div style="float: left;width:98%;margin-left:1%">
         <table class="table table-hover table-striped table-condensed table-bordered" style="margin-top: 1%" id="table">
             <thead>
@@ -12,30 +12,28 @@
                     {% endfor %}
                 </tr>
             </thead>
-            {% if work_lists %}
-                <tbody>
+            <tbody>
+                {% if work_lists %}
                     {% for value in work_lists %}
                         <tr>
                             <td class="td_style" style="text-align: center">{{ value[0] }}</td>
                             <td class="td_style" style="text-align: center">{{ value[1] }}</td>
                             <td class="td_style" style="text-align: center">{{ source_types[value[2]] }}</td>
-                            {% for val in value[3:-1] %}
-                                <td class="td_style" style="text-align: center">{{ val }}</td>
-                            {% endfor %}
                             <td class="td_style" style="text-align: center">
-                                <a href="#" onclick="work_details_show('/work_details/{{ order_types[value[2]] }}/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
+                                <a href="#" onclick="work_details_show('/work_details/{{ order_types[value[2]]|safe }}/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
                                     <i class="fas fa-align-left"></i>
                                 </a>
                             </td>
-                            <td class="td_style" style="text-align: center">{{ value[-1] }}</td>
+                            {% for val in value[3:] %}
+                                <td class="td_style" style="text-align: center">{{ val }}</td>
+                            {% endfor %}
                             <td class="td_style" style="text-align: center">
-                                    <a href="/work_review?action=review_pass&work_number={{ value[0] }}" class="mintip" title="通过工单"><i class="far fa-check-circle" style="color: darkgreen"></i>通过</a>|
-                                <a href="/work_review?action=review_deny&work_number={{ value[0] }}" class="mintip" title="退回工单"><i class="far fa-times-circle" style="color: darkred"></i>退回</a>
+                                <a href="/{{ work_types[value[2]] }}?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单">撤销</a>
                             </td>
                         </tr>
                     {% endfor %}
-                </tbody>
-            {% endif %}
+                {% endif %}
+            </tbody>
         </table>
     </div>
     <div class="ui-mask" id="mask" onselectstart="return false"></div>
@@ -50,13 +48,4 @@
     <script>
         $(document).ready(table_order('table',1));
     </script>
-    {% if msg %}
-        <script>
-            "use strict";
-            js_msg('{{ msg|safe }}',3000,'info');
-            setTimeout(function () {
-                location.href='/work_review';
-            },4000);
-        </script>
-    {% endif %}
 {% endblock %}

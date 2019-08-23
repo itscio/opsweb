@@ -20,8 +20,8 @@ page_resource_pool = Blueprint('resource_pool',__name__)
 @page_resource_pool.route('/resource_pool/<action>/<int:id>',methods = ['GET', 'POST'])
 def resource_pool(action=None,id=None):
     importlib.reload(MyForm)
-    form = MyForm.MyFrom_resource_pool()
-    form_third = MyForm.MyFrom_third_resource()
+    form = MyForm.MyFromResourcePool()
+    form_third = MyForm.MyFromThirdResource()
     db_project = db_op.project_list
     db_server = db_idc.idc_servers
     db_third = db_idc.third_resource
@@ -302,7 +302,7 @@ def resource_pool(action=None,id=None):
 @page_resource_pool.route('/resource_modify',methods = ['GET', 'POST'])
 def resource_modify():
     importlib.reload(MyForm)
-    form = MyForm.Form_resource_modify()
+    form = MyForm.FormResourceModify()
     INFOS = []
     if form.submit.data:
         try:

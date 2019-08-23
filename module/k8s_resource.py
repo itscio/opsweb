@@ -286,7 +286,7 @@ class k8s_object(object):
                               preference=client.V1NodeSelectorTerm(
                                   match_expressions=[client.V1NodeSelectorRequirement(
                                       key='project',
-                          operator='In',values=['moji'])
+                          operator='In',values=['xxx'])
                       ]),weight=30),
                           client.V1PreferredSchedulingTerm(
                               preference=client.V1NodeSelectorTerm(

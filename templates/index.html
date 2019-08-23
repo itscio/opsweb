@@ -3,9 +3,9 @@
     <div id="alarm_show"></div>
     <script>
         "use strict";
-        ajax_alarm_show("/alarm_show","alarm_show");
+        ajax_html_show("/alarm_show","alarm_show");
         setInterval(function(){
-            ajax_alarm_show("/alarm_show","alarm_show");
+            ajax_html_show("/alarm_show","alarm_show");
             },30000);
     </script>
     {% if BUSIS %}

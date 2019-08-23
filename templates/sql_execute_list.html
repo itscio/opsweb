@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block page %}
-    <div class="div"><h5>{{ total }}</h5></div>
-    <div style="text-align: center;width:99%;margin-right:0.5%">
+    <div style="clear:both;"></div>
+    <div style="font-weight: bolder">{{ total }}</div>
+    <div style="float: left;width:98%;margin-left:1%">
         <table class="table table-hover table-striped table-condensed table-bordered" id="table">
             <thead>
                 <tr>
@@ -34,8 +35,8 @@
                                 </a>
                             </td>
                             <td class="td_style" style="text-align: center">
-                                {% if value[2] in ['未受理','已拒绝','未审核','已退回'] %}
-                                    <a href="/sql_execute_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单申请"><i class="fas fa-redo"></i>可撤销</a>
+                                {% if value[2] in ['未受理','未审核','已退回'] %}
+                                    <a href="/sql_execute_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单">可撤销</a>
                                 {% elif value[2] == '受理中' %}
                                     <i class="fas fa-spinner fa-spin"></i>{{ value[2] }}
                                 {% else %}
@@ -71,7 +72,7 @@
             "use strict";
             js_msg('{{ msg|safe }}',3000,'info');
             setTimeout(function () {
-                location.href='/sql_execute_list';
+                referrer_url();
             },4000);
         </script>
     {% endif %}

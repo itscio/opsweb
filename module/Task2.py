@@ -239,7 +239,7 @@ def get_redis_info():
                                     try:
                                         result = results['stdout'][0].split()[-1]
                                         if '/' in result:
-                                            conf_file = "/usr/local/moji/redis/etc/{}".format(result.split('/')[-1])
+                                            conf_file = "/usr/local/xxxx/redis/etc/{}".format(result.split('/')[-1])
                                         if not conf_file.endswith('.conf'):
                                             cmd = "lsof -p {}|grep 'cwd'".format(pid)
                                             cwd = Ssh.Run(cmd)
@@ -489,7 +489,7 @@ def alarm_load():
 
                                     if results[-1].endswith('-rpc.jar'):
                                         pro_jar = results[-1]
-                                        if pro_jar in ['moji-location-rpc.jar']:
+                                        if pro_jar in ['xxxx-location-rpc.jar']:
                                             Project =pro_jar.split('.')[0]
                                     else:
                                         for line in results:

@@ -22,7 +22,7 @@ class MyFlask(Flask):
 app = MyFlask(__name__)
 DB = SQLAlchemy(app)
 mail = Mail(app)
-limiter = conf.web_limiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 moment = Moment(app)
 assets = Environment(app)
@@ -32,7 +32,7 @@ app.config.from_pyfile('conf/redis.conf')
 app.config.get('TRAP_HTTP_EXCEPTIONS')
 app.secret_key = app.config.get('SECRET_KEY')
 app.debug = False
-task_run = produce.Scheduler_backgroud()
+task_run = produce.SchedulerBackgroud()
 toolbar = DebugToolbarExtension(app)
 ssl._create_default_https_context = ssl._create_unverified_context
 app.register_blueprint(Assets.page_Assets)

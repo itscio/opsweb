@@ -15,29 +15,31 @@
         {% endfor %}
         {% for key in work_order_lists %}
             {% if key == 'work_order_show' %}
-                <div class="grid-item" style="height: 180px;background-color:seagreen">
+                <div class="grid-item" style="height: 180px;background-color:darkcyan">
                     <div style="margin-top: 25%">
                         <a class="grid-style" href="/{{ key }}"><i class="fas fa-search"></i>{{ work_order_lists[key] }}</a>
                         <ul class="social">
-                            <li>点击进入工单查询页</li>
+                            <li>点击进入进度查询页</li>
                         </ul>
                     </div>
                 </div>
-            {% elif key == 'work_review' %}
+            {% endif %}
+            {% if key == 'work_repeal' %}
+                <div class="grid-item" style="height: 180px;background-color:darkcyan">
+                    <div style="margin-top: 25%">
+                        <a class="grid-style" href="/{{ key }}"><i class="fas fa-redo"></i>{{ work_order_lists[key] }}</a>
+                        <ul class="social">
+                            <li>点击进入工单撤销页</li>
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+            {% if key == 'work_review' %}
                 <div class="grid-item" style="height: 180px;background-color:seagreen">
                     <div style="margin-top: 25%">
                         <a class="grid-style" href="/{{ key }}"><i class="fas fa-print"></i>{{ work_order_lists[key] }}</a>
                         <ul class="social">
                             <li>点击进入工单审核页</li>
-                        </ul>
-                    </div>
-                </div>
-            {% else %}
-                <div class="grid-item" style="height: 180px;background-color:seagreen">
-                    <div style="margin-top: 25%">
-                        <a class="grid-style" href="/{{ key }}">{{ work_order_lists[key] }}</a>
-                        <ul class="social">
-                            <li>点击进入工单操作页</li>
                         </ul>
                     </div>
                 </div>

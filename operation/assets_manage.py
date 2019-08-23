@@ -20,7 +20,7 @@ logging = loging.Error()
 page_assets_manage = Blueprint('assets_manage',__name__)
 @page_assets_manage.route('/assets_manage',methods = ['GET', 'POST'])
 def assets_manage():
-    form = MyForm.MyForm_assets_manage()
+    form = MyForm.MyFormAssetsManage()
     db_idc_id = db_idc.idc_id
     db_server = db_idc.idc_servers
     db_network = db_idc.idc_networks

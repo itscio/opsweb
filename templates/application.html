@@ -10,7 +10,7 @@
                 <div>
                     项目名称:{{ form.project (style="width:130px",autocomplete="off") }}
                     TAG:{{ form.tag (style="width:142px",autocomplete="off") }}
-                    审核人:{{ form.leader (style="width:154px",placeholder="项目负责人邮箱") }}
+                    审核人:{{ form.leader (style="width:151px",placeholder="项目负责人邮箱") }}
                 </div>
                 <div style="margin-top: 0.8%">GIT地址:{{ form.git_url (style="width:516px") }}</div>
                 <div style="margin-top: 0.8%">{{ form.describe (rows = 4,style="width:570px;resize:vertical",placeholder="代码变更描述:") }}</div>
@@ -18,7 +18,7 @@
                     {{ form.product(style="margin:0px") }}<span>产品已确认通过</span>
                     {{ form.test (style="margin:0px") }}<span>测试已确认通过</span>
                     {{ form.nottest (style="margin:0px") }}<span>无需测试确认</span>
-                    <span style="font-size: smaller;color: red;margin-left: 3%"><i class="fas fa-exclamation-triangle"></i>请确认产品、测试已通过!</span>
+                    <span style="font-size: smaller;color: red;margin-left: 3%"><i class="fas fa-exclamation-triangle"></i>产品、测试均为必选项!</span>
                 </div>
                 <div style="height:3px; border-bottom:1px dashed #afbdd8;width:570px;margin-left: 20%;"></div>
                 <div>
@@ -56,19 +56,13 @@
             function () {
                 if ($(this).prop("checked")) {
                     $('#run_sql_show').show();
-                    $('#sql_server').val("");
-                    $('#sql_server').attr('required',true);
-                    $('#sql_port').val("");
-                    $('#sql_port').attr('required',true);
+                    $('#sql_server').val("").attr('required',true);
+                    $('#sql_port').val("").attr('required',true);
                     $('#sql_file').attr('required',true);
-                    $('#sql_database').val("");
-                    $('#sql_database').attr('required',true);
-                    $('#sql_url').val("");
-                    $('#sql_url').attr('required',true);
-                    $('#sql_md5').val("");
-                    $('#sql_md5').attr('required',true);
-                    $('#sql_describe').val("");
-                    $('#sql_describe').attr('required',true);
+                    $('#sql_database').val("").attr('required',true);
+                    $('#sql_url').val("").attr('required',true);
+                    $('#sql_md5').val("").attr('required',true);
+                    $('#sql_describe').val("").attr('required',true);
                 } else {
                     $('#run_sql_show').hide();
                     $('#sql_server').attr('required',false);

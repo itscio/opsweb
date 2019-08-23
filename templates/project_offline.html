@@ -10,7 +10,7 @@
                 <div>
                     项目名称:{{ form.project (style="width:120px",autocomplete="off") }}
                     审核人:{{ form.leader (style="width:210px",placeholder="部门leader邮箱") }}
-                    申请人: <input type="text" id="usr" style="width:76px;text-align: center">
+                    申请人: <input type="text" id="usr" style="width:75px;text-align: center">
                 </div>
                 <div style="margin-top: 0.8%">GIT地址:{{ form.git_url (style="width:516px") }}</div>
                 <div style="margin-top: 0.8%">{{ form.describe (rows = 4,style="width:570px;resize:vertical",placeholder="下线原因描述:") }}</div>
@@ -33,8 +33,7 @@
     <script>
         "use strict";
         $.input_host('project',{{ projects|safe }});
-        $('#usr').val('{{ g.user|safe }}');
-        $('#usr').attr("readonly","readonly");
+        $('#usr').val('{{ g.user|safe }}').attr("readonly","readonly");
     </script>
     {% if not Main_Menu['submenu'] %}
         <script>
