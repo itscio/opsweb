@@ -62,9 +62,16 @@ def check_mail(mail):
 
 @page_work_order.route('/work_order')
 def work_order():
-    work_orders = {'application':'代码上线工单','server_auth':'服务器权限工单',
-                   'sql_execute':'SQL执行工单','project_offline':'项目下线工单','other_work':'其它事项工单'}
-    work_order_lists = {'work_order_show': '工单进度查询','work_repeal': '撤销工单申请','work_review': '工单申请审核'}
+    work_orders = {'application':'代码上线工单',
+                   'server_auth':'服务器权限工单',
+                   'sql_execute':'SQL执行工单',
+                   'project_offline':'项目下线工单',
+                   'other_work':'其它事项工单'
+                   }
+    work_order_lists = {'work_order_show': '工单进度查询',
+                        'work_repeal': '撤销工单申请',
+                        'work_review': '工单申请审核'
+                        }
     return render_template('work_order.html',work_orders=work_orders,work_order_lists=work_order_lists)
 
 @page_work_order.route('/work_norun')
@@ -124,6 +131,7 @@ def work_repeal():
 def work_examine(work_id=None):
     try:
         # 工单流程进度
+        title = '运维工单流程审查'
         INDEXS = {'待审批':2,'审批通过':3,'审批拒绝':2,'未受理':3,'已退回':2,
                   '受理中':3,'已拒绝':4,'已完成':4,'已回滚':4,'未审核':2}
         db_work_order = db_op.work_order
@@ -133,6 +141,7 @@ def work_examine(work_id=None):
         mails = {info[-1]: info[1] for info in infos}
         work_lists = []
         if work_id:
+            title = '运维工单流程查询'
             infos = db_work_order.query.with_entities(db_work_order.work_number,
                                                       db_work_order.date,
                                                       db_work_order.source,
@@ -165,7 +174,8 @@ def work_examine(work_id=None):
                 Infos.append(["填写申请表", "申请人:%s"%applicant, "审核人:%s" %reviewer, "执行人:%s"%operater, "工单状态:%s" %info[-1]])
                 Infos.append(INDEXS[info[-1]])
                 work_lists.append(Infos)
-        return render_template('work_examine.html', work_lists=work_lists,order_types=order_types,source_types=source_types)
+        return render_template('work_examine.html', work_lists=work_lists,
+                               order_types=order_types,source_types=source_types,title=title)
     except Exception as e:
         logging.error(e)
 
@@ -524,7 +534,7 @@ def server_auth():
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
                 # 记录任务流水状态
-                c = db_work_order(date=td,work_number = work_number, source=source,applicant=g.dingId,reviewer='xxxx@xxxx.com', dingid='',
+                c = db_work_order(date=td,work_number = work_number, source=source,applicant=g.dingId,reviewer='hanlong.zhang@moji.com', dingid='',
                                   status='待审批')
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
@@ -898,11 +908,9 @@ def work_application_details(work_number=None):
         db_sso = db_op.user_sso
         db_publish_application = db_op.publish_application
         db_sql_execute = db_op.sql_execute
-        db_work_order = db_op.work_order
         if work_number:
-            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department,db_sso.mail).all()
-            users = {info[0]: info[1:-1] for info in infos}
-            mails = {info[-1]: info[1] for info in infos}
+            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
+            users = {info[0]: info[1:] for info in infos}
             task_records = db_publish_application.query.with_entities(db_publish_application.date,
                                                                       db_publish_application.time,
                                                                       db_publish_application.project,
@@ -925,10 +933,6 @@ def work_application_details(work_number=None):
                     publish_info['sql_execute'] = sql_execute[0]
                 publish_info['reviewer'] = None
                 publish_info['user_info'] = users[task_records[0][-1]]
-                reviewer = db_work_order.query.with_entities(db_work_order.reviewer).filter(
-                    db_work_order.work_number==int(work_number)).all()
-                if reviewer:
-                    publish_info['reviewer'] = mails[reviewer[0][0]]
     except Exception as e:
         logging.error(e)
     return render_template('work_application_details.html', publish_info = publish_info)
@@ -961,11 +965,9 @@ def work_sql_execute_details(work_number=None):
     try:
         db_sso = db_op.user_sso
         db_sql_execute = db_op.sql_execute
-        db_work_order = db_op.work_order
         if work_number:
-            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department,db_sso.mail).all()
-            users = {info[0]: info[1:-1] for info in infos}
-            mails = {info[-1]: info[1] for info in infos}
+            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
+            users = {info[0]: info[1:] for info in infos}
             sql_execute= db_sql_execute.query.with_entities(db_sql_execute.date,
                                                             db_sql_execute.time,
                                                             db_sql_execute.host,
@@ -978,10 +980,6 @@ def work_sql_execute_details(work_number=None):
             if sql_execute:
                 publish_info['sql_execute'] = sql_execute[0]
                 publish_info['user_info'] = users[sql_execute[0][-1]]
-            reviewer = db_work_order.query.with_entities(db_work_order.reviewer).filter(
-                db_work_order.work_number == int(work_number)).all()
-            if reviewer:
-                publish_info['reviewer'] = mails[reviewer[0][0]]
     except Exception as e:
         logging.error(e)
     return render_template('sql_execute_details.html', publish_info=publish_info)
@@ -992,11 +990,9 @@ def project_offline_details(work_number=None):
     try:
         db_sso = db_op.user_sso
         db_project_offline = db_op.project_offline
-        db_work_order = db_op.work_order
         if work_number:
-            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department,db_sso.mail).all()
-            users = {info[0]: info[1:-1] for info in infos}
-            mails = {info[-1]: info[1] for info in infos}
+            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName,db_sso.department).all()
+            users = {info[0]: info[1:] for info in infos}
             task_records = db_project_offline.query.with_entities(db_project_offline.date,
                                                                       db_project_offline.time,
                                                                       db_project_offline.project,
@@ -1007,10 +1003,6 @@ def project_offline_details(work_number=None):
             if task_records:
                 publish_info['task_records'] = task_records[0][:-1]
                 publish_info['user_info'] = users[task_records[0][-1]]
-            reviewer = db_work_order.query.with_entities(db_work_order.reviewer).filter(
-                db_work_order.work_number == int(work_number)).all()
-            if reviewer:
-                publish_info['reviewer'] = mails[reviewer[0][0]]
     except Exception as e:
         logging.error(e)
     return render_template('project_offline_details.html', publish_info=publish_info)
@@ -1021,11 +1013,9 @@ def work_other_work_details(work_number=None):
     try:
         db_sso = db_op.user_sso
         db_other_work = db_op.other_work
-        db_work_order = db_op.work_order
         if work_number:
-            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department,db_sso.mail).all()
-            users = {info[0]: info[1:-1] for info in infos}
-            mails = {info[-1]: info[1] for info in infos}
+            infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName,db_sso.department).all()
+            users = {info[0]: info[1:] for info in infos}
             other_work= db_other_work.query.with_entities(db_other_work.date,
                                                            db_other_work.time,
                                                           db_other_work.title,
@@ -1034,10 +1024,6 @@ def work_other_work_details(work_number=None):
             if other_work:
                 publish_info['other_work'] = other_work[0]
                 publish_info['user_info'] = users[other_work[0][-1]]
-            reviewer = db_work_order.query.with_entities(db_work_order.reviewer).filter(
-                db_work_order.work_number == int(work_number)).all()
-            if reviewer:
-                publish_info['reviewer'] = mails[reviewer[0][0]]
     except Exception as e:
         logging.error(e)
     return render_template('other_work_details.html', publish_info = publish_info)
@@ -1062,7 +1048,7 @@ def work_order_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source == source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回')))).all()
+                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number==int(work_number)).all()
@@ -1250,7 +1236,7 @@ def sql_execute_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source==source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回')))).all()
+                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number == int(work_number)).all()
@@ -1342,7 +1328,7 @@ def project_offline_list():
                 try:
                     val = db_work_order.query.filter(and_(db_work_order.work_number==int(work_number),
                                                           db_work_order.source == source,
-                                                          db_work_order.status.in_(('未审核','未受理','已退回')))).all()
+                                                          db_work_order.status.in_(('未审核','未受理','已退回','已拒绝')))).all()
                     if val:
                         try:
                             c = db_work_order.query.filter(db_work_order.work_number==int(work_number)).all()
@@ -1497,7 +1483,6 @@ def other_work_list():
         logging.error(e)
     return render_template('other_work_list.html', tables=tables, work_orders=work_orders, Msg=Msg,
                            total='其它事项申请工单列表')
-
 
 @page_work_order.route('/work_order_show')
 def work_order_show():

@@ -12,7 +12,7 @@ app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/sql.conf')
-limiter = conf.web_limiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_data = app.config.get('REDIS_DATA')

@@ -6,16 +6,18 @@ import redis
 import urllib
 import oss2
 import conf
+from kubernetes import client
 from flask_sqlalchemy import SQLAlchemy
 from module import user_auth
 from sqlalchemy import distinct,desc
+from collections import defaultdict
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/oss.conf')
 app.config.from_pyfile('../conf/sql.conf')
 logging = loging.Error()
-limiter = conf.web_limiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -28,6 +30,42 @@ page_ajax_api = Blueprint('ajax_api', __name__)
 oss_id = app.config.get('OSS_ID')
 oss_key = app.config.get('OSS_KEY')
 oss_url = app.config.get('OSS_URL')
+@page_ajax_api.route('/get_k8s_deployment/<context>')
+@limiter.limit("60/minute")
+def get_k8s_deployment(context=None):
+    deployments = []
+    db_deploy = db_op.k8s_deploy
+    try:
+        deployments = db_deploy.query.with_entities(distinct(db_deploy.deployment)).filter(
+            db_deploy.context==context).all()
+        if deployments:
+            deployments = [deploy[0] for deploy in deployments]
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_op.DB.session.remove()
+        return jsonify({'values': deployments})
+
+@page_ajax_api.route('/get_k8s_services/<context>')
+@limiter.limit("60/minute")
+def get_k8s_services(context=None):
+    values = defaultdict()
+    services = []
+    try:
+        config.load_kube_config(config_file,context)
+        v1 = client.CoreV1Api()
+        ret = v1.list_namespaced_service(namespace='default')
+        for i in ret.items:
+            port = []
+            for info in i.spec.ports:
+                port.append(int(info.port))
+            services.append(i.metadata.name)
+            values[i.metadata.name] = port[0]
+    except Exception as e:
+        logging.error(e)
+    finally:
+        return jsonify({'values': values,'services':services})
+
 @page_ajax_api.route('/get_business_bigdata/<host>',methods = ['GET', 'POST'])
 @limiter.limit("60/minute")
 def business_bigdata_host_get(host=None):
@@ -79,8 +117,8 @@ def assets_info(action=None):
 @page_ajax_api.route('/alarm_load_whitelist/<action>/<hostname>',methods = ['GET', 'POST'])
 @user_auth.login_required(grade=1)
 def alarm_load_whitelist(hostname=None,action=None):
+    result = {'status': 'error', 'infos': '确认失败!'}
     try:
-        result = {'status': 'error', 'infos': '确认失败!'}
         Key = "op_alarm_load_whitelist"
         if action == 'attention':
             RC_CLUSTER.sadd(Key,hostname)
@@ -88,20 +126,6 @@ def alarm_load_whitelist(hostname=None,action=None):
             RC_CLUSTER.srem(Key, hostname)
         if action in ('attention','cancel'):
             result = {'status': 'ok','infos':'确认成功!'}
-    except Exception as e:
-        logging.error(e)
-    finally:
-        return jsonify(result)
-
-@page_ajax_api.route('/alarm_host_ensure/<key>/<infos>', methods=['GET', 'POST'])
-@user_auth.login_required(grade=1)
-def alarm_host_ensure(key=None,infos=None):
-    #确认问题服务器已修复
-    try:
-        result = {'status': 'error', 'infos': '确认失败!'}
-        RC.hdel(key,infos)
-        RC.sadd('server_ensure',infos)
-        result = {'status': 'ok', 'infos': '确认成功!'}
     except Exception as e:
         logging.error(e)
     finally:
@@ -150,9 +174,9 @@ def msg_id():
 @page_ajax_api.route('/modify_ops_comment', methods=['POST'])
 @user_auth.login_required(grade=1)
 def modify_ops_comment():
+    status = None
+    infos = '同步备注信息失败!'
     try:
-        status = None
-        infos = '同步备注信息失败!'
         infos = request.get_json()
         status = tools.modify_jumpserver_comment(infos['hostname'],infos['comment'])
         if int(status) == 200:

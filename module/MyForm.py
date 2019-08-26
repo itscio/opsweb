@@ -239,11 +239,8 @@ class FormK8sUpdate(Form):
     try:
         _, contexts, _ = tools.k8s_conf()
         choices = [(context, context) for context in contexts]
-        choices.insert(0,('--all-cluster--','--all-cluster--'))
         contexts = SelectField(choices=choices, id='contexts')
-        db_k8s_deploy = db_op.k8s_deploy
-        values = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
-        deployment = SelectField(choices=[(val[0],val[0]) for val in values],id='deployment')
+        deployment = SelectField(choices=[],id='deployment')
         version = SelectField(choices=[], id='version')
         replicas = IntegerField('replicas',id='replicas')
         submit = SubmitField('提交', id='btn1')
@@ -256,23 +253,19 @@ class FormK8sHpa(Form):
     try:
         _, contexts, _ = tools.k8s_conf()
         contexts = SelectField(choices=[(context, context) for context in contexts], id='contexts')
-        db_k8s_deploy = db_op.k8s_deploy
-        values = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
-        deployment = SelectField(choices=[(val[0],val[0]) for val in values],id='deployment')
+        deployment = SelectField(choices=[],id='deployment')
         max_replica = IntegerField(validators=[DataRequired()], id='max_replica')
         min_replica = IntegerField(validators=[DataRequired()],id='min_replica')
         cpu_value = IntegerField(validators=[DataRequired()],id='cpu_value')
         submit = SubmitField('提交', id='btn1')
     except Exception as e:
         logging.error(e)
-    finally:
-        db_op.DB.session.remove()
 
 class FormK8sIngress(Form):
     _, contexts, _ = tools.k8s_conf()
     contexts = SelectField(choices=[(context, context) for context in contexts], id='contexts')
-    service_name = StringField(validators=[DataRequired()], id='service_name')
-    service_port = IntegerField(validators=[DataRequired()],id='service_port')
+    service_name = SelectField(choices=[], id='service_name')
+    service_port = StringField(validators=[DataRequired()],id='service_port')
     domains = TextAreaField(validators=[DataRequired()],id='domains')
     submit = SubmitField('提交', id='btn1')
 

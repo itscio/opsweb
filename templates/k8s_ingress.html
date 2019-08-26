@@ -7,9 +7,9 @@
         <div class="panel-body" style="margin-top: 5%">
             <form action="/ingress_apply" method="post">
                 {{ form.csrf_token }}
-                <p>选择集群:{{ form.contexts (style="width:207px")}}</p>
-                <p>service_name:{{ form.service_name (style="width:175px")}}</p>
-                <p>service_port:&nbsp;&nbsp;{{ form.service_port (style="width:175px")}}</p>
+                <p>选择集群:{{ form.contexts (style="width:207px",onchange="select_k8s_service()")}}</p>
+                <p>SERVICE:{{ form.service_name (style="width:207px",onchange="select_k8s_service_port()")}}</p>
+                <p>服务端口:&nbsp;&nbsp;{{ form.service_port (style="width:197px")}}</p>
                 <p>{{ form.domains (rows = 3,style="width:266px",placeholder="多个域名以逗号分割")}}</p>
                 <p>{{ form.submit (class="btn btn-primary") }}</p>
             </form>
@@ -24,4 +24,33 @@
             },4000);
         </script>
     {% endif %}
+    <script>
+        "use strict";
+       function select_k8s_service(){
+                var url='/get_k8s_services/'+$('#contexts').val();
+                $("#service_name").empty();
+                $.ajax({url:url,success:function(data){
+                    if (data['services']){
+                        $.each(data['services'],function(i,val){
+                            var option = "<option value='"+val+"'>"+val+"</option>";
+                            $('#service_name').append(option);
+                        });
+                        $('#service_port').val(data['values'][$('#service_name').val()])
+                    }
+                }
+                }
+                );
+            }
+       function select_k8s_service_port(){
+                var url='/get_k8s_services/'+$('#contexts').val();
+                $.ajax({url:url,success:function(data){
+                    if (data['services']){
+                        $('#service_port').val(data['values'][$('#service_name').val()])
+                    }
+                }
+                }
+                );
+            }
+       select_k8s_service();
+    </script>
 {% endblock page %}

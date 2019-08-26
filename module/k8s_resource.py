@@ -286,7 +286,7 @@ class k8s_object(object):
                               preference=client.V1NodeSelectorTerm(
                                   match_expressions=[client.V1NodeSelectorRequirement(
                                       key='project',
-                          operator='In',values=['xxx'])
+                          operator='In',values=['moji'])
                       ]),weight=30),
                           client.V1PreferredSchedulingTerm(
                               preference=client.V1NodeSelectorTerm(
@@ -330,13 +330,14 @@ class k8s_object(object):
             db_ingress = db_op.k8s_ingress
             # ingress信息写入数据库
             for ingress_domain in domains:
+                path = None
                 if '/' in ingress_domain:
-                    domain = ingress_domain.split('/')[0]
+                    ingress_domain = ingress_domain.split('/')[0]
                     path = '/{}'.format('/'.join(ingress_domain.split('/')[1:]))
-                    v = db_ingress(name='nginx-ingress',context=self.context, namespace=self.namespace, domain=domain, path=path,
-                                   serviceName=self.dm_name, servicePort=int(ingress_port))
-                    db_op.DB.session.add(v)
-                    db_op.DB.session.commit()
+                v = db_ingress(name='nginx-ingress',context=self.context, namespace=self.namespace, domain=ingress_domain, path=path,
+                               serviceName=self.dm_name, servicePort=int(ingress_port))
+                db_op.DB.session.add(v)
+                db_op.DB.session.commit()
         except Exception as e:
             logging.error(e)
         else:
@@ -349,7 +350,7 @@ class k8s_object(object):
                                                              db_ingress.serviceName, db_ingress.servicePort
                                                              ).filter(and_(db_ingress.domain == domain[0],
                                                                            db_ingress.context==self.context)).all()
-                path, serviceName, servicePort = Rules_infos[0]
+                Rules_infos = [domain[0] for domain in Rules_infos]
                 for infos in Rules_infos:
                     path, serviceName, servicePort = infos
                     if path:
@@ -362,6 +363,7 @@ class k8s_object(object):
                                                            http=client.V1beta1HTTPIngressRuleValue(
                                                                paths=paths)))
                 else:
+                    path, serviceName, servicePort = Rules_infos[0]
                     Rules.append(client.V1beta1IngressRule(host=domain,
                                                            http=client.V1beta1HTTPIngressRuleValue(
                                                                paths=[client.V1beta1HTTPIngressPath(

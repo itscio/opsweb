@@ -1606,7 +1606,7 @@ def business_monitor(check_url=None):
                                     text.insert(5, "故障原因:%s" % str(e).split(':')[-1])
                                     alarm()
                             else:
-                                if int(resp.status_code) in (200,301,302,304):
+                                if int(resp.status_code) < 400:
                                     result = resp.json()
                                     ver = ''
                                     proj = ''
@@ -1649,7 +1649,7 @@ def business_monitor(check_url=None):
             except Exception as e:
                 logging.error(e)
         if values:
-            pool = ThreadPool(10)
+            pool = ThreadPool(15)
             pool.map(check_interface,values)
             pool.close()
             pool.join()

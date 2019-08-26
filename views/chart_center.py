@@ -930,6 +930,7 @@ def chart_k8s_status(domain=None):
     except Exception as e:
         logging.error(e)
     return render_template('chart_k8s_status.html', charts=charts,domains_menu=domains_menu,domain=domain)
+
 @page_chart_center.before_request
 @user_auth.login_required(grade=10)
 def check_login(exception = None):

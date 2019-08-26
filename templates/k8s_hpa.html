@@ -7,7 +7,7 @@
         <div class="panel-body" style="margin-top: 5%">
             <form action="/hpa_apply" method="post">
                 {{ form.csrf_token }}
-                <p>选择集群:&nbsp;{{ form.contexts (style="width:211px")}}</p>
+                <p>选择集群:&nbsp;{{ form.contexts (style="width:211px",onchange="select_k8s_deployment()")}}</p>
                 <p>Deployment:&nbsp;{{ form.deployment (style="width:188px")}}</p>
                 <p>最大副本数:&nbsp;&nbsp;{{ form.max_replica (style="width:194px")}}</p>
                 <p>最小副本数:&nbsp;&nbsp;{{ form.min_replica (style="width:194px")}}</p>
@@ -16,4 +16,20 @@
             </form>
         </div>
     </div>
+    <script>
+        "use strict";
+        function select_k8s_deployment(){
+            var url='/get_k8s_deployment/'+$('#contexts').val();
+            $("#deployment").empty();
+            $.ajax({url:url,success:function(data){
+                if (data['values']){
+                    $.each(data['values'],function(i,val){
+                        var option = "<option value='"+val+"'>"+val+"</option>";
+                        $('#deployment').append(option);
+                    });
+                }
+            }});
+            }
+        select_k8s_deployment();
+    </script>
 {% endblock page %}

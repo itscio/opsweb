@@ -182,9 +182,9 @@ def service():
                 }
             except Exception as e:
                 logging.error(e)
+        return render_template('k8s-resource.html', valus=valus, tables=tables, keys=keys, resource='Service')
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,resource='Service')
 
 @page_k8s.route('/k8s/ingress')
 def ingress():
@@ -204,9 +204,9 @@ def ingress():
                                   ])
             except Exception as e:
                 logging.error(e)
+        return render_template('k8s-resource.html', valus=valus, tables=tables, keys=keys, resource='Ingress')
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,resource='Ingress')
 
 @page_k8s.route('/k8s/hpa')
 def hpa():
@@ -262,9 +262,9 @@ def hpa():
             line.add(project[0], attr, vals, is_toolbox_show=False, is_smooth=True, mark_point=["max", "min"],
                   mark_point_symbolsize=60,legend_pos='40%',is_datazoom_show=True, datazoom_range=[v for v in range(100, 10)],
                              datazoom_type='both',)
+        return render_template('k8s-resource.html', valus=valus, tables=tables, keys=keys, line=line, resource='HPA')
     except Exception as e:
         logging.error(e)
-    return render_template('k8s-resource.html',valus=valus,tables=tables,keys=keys,line=line,resource='HPA')
 
 @page_k8s.route('/k8s/nodes')
 @page_k8s.route('/k8s/nodes/<context>')
@@ -313,12 +313,12 @@ def nodes(context=None):
                 'version':i.status.node_info.kubelet_version,
                 'status':i.status.conditions[-1].type
             }
+        app_resp = make_response(render_template('k8s-nodes.html', NODES=NODES, tables=tables, keys=keys))
+        if context:
+            app_resp.set_cookie('active_context', context, path='/')
+        return app_resp
     except Exception as e:
         logging.error(e)
-    app_resp = make_response(render_template('k8s-nodes.html',NODES=NODES,tables=tables,keys=keys))
-    if context:
-        app_resp.set_cookie('active_context', context, path='/')
-    return app_resp
 
 @page_k8s.route('/k8s/nodes_show')
 def nodes_show():
