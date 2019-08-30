@@ -42,8 +42,8 @@ redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 def Async_log(user,url):
     try:
-        url = url.replace('op_servers', 'op.moji.com')
-        if 'op.moji.com' in url and not url.endswith('/index'):
+        url = url.replace('op_servers', 'xxxx.xxxx.com')
+        if 'xxxx.xxxx.com' in url and not url.endswith('/index'):
             ip = session['remote_ip']
             Key = 'op_http_log_%s' %time.strftime('%Y-%m-%d',time.localtime())
             Redis.hset(Key,time.strftime('%H:%M:%S',time.localtime()),[ip,user,url])

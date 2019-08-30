@@ -209,14 +209,14 @@ class FormK8sDeploy(Form):
         db_project = db_op.project_list
         _, contexts, _ = tools.k8s_conf()
         contexts = SelectField(choices=[(context, context) for context in contexts], id='contexts')
-        projects = db_project.query.with_entities(distinct(db_project.project)).all()
-        projects = SelectField(choices=[(project[0],project[0]) for project in projects],id='projects')
+        projects = StringField('projects', validators=[DataRequired()],id='projects')
         object = StringField('object', validators=[DataRequired()],id='object')
         version = StringField('version', validators=[DataRequired()], id='version')
-        container_port = StringField('container_port', validators=[DataRequired()],id='container_port')
+        container_port = StringField('container_port',id='container_port')
         ingress_port = IntegerField('ingress_port', id='ingress_port')
         replicas = IntegerField('replicas', validators=[DataRequired()],id='replicas')
         dm_name = StringField('dm_name', validators=[DataRequired()],id='dm_name')
+        docker_args = TextAreaField( id='docker_args')
         run_args = TextAreaField(validators=[DataRequired()], id='run_args')
         healthcheck = StringField('healthcheck',id='healthcheck')
         mount_path1 = StringField('mount_path1', id='mount_path1')
@@ -232,8 +232,6 @@ class FormK8sDeploy(Form):
         submit = SubmitField('提交', id='btn1')
     except Exception as e:
         logging.error(e)
-    finally:
-        db_op.DB.session.remove()
 
 class FormK8sUpdate(Form):
     try:
@@ -242,7 +240,7 @@ class FormK8sUpdate(Form):
         contexts = SelectField(choices=choices, id='contexts')
         deployment = SelectField(choices=[],id='deployment')
         version = SelectField(choices=[], id='version')
-        replicas = IntegerField('replicas',id='replicas')
+        rollback = StringField('rollback',id='rollback')
         submit = SubmitField('提交', id='btn1')
     except Exception as e:
         logging.error(e)

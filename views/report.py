@@ -95,8 +95,8 @@ def resource_report():
                 RC.expire('op_web_py_vales_%s', 86400)
         except Exception as e:
             logging.error(e)
+        server_bar = Bar("近6个月新增服务器数量", title_pos='center', title_text_size=12, width='110%', height='230px')
         try:
-            server_bar = Bar("近6个月新增服务器数量", title_pos='center', title_text_size=12, width='110%', height='230px')
             attrs = sorted(set([val[0] for val in vm_vals if val] + [val[0] for val in py_vals if val]))
             vm_vals = {val[0]: val[1] for val in vm_vals}
             py_vals = {val[0]: val[1] for val in py_vals}
@@ -118,18 +118,21 @@ def resource_report():
                     xaxis_interval=0, xaxis_rotate=25, legend_pos='70%')
         except Exception as e:
             logging.error(e)
+        return render_template('resource_report.html', Bars=Bars, form=form, days=days, server_bar=server_bar)
     except Exception as e:
         logging.error(e)
         return redirect(url_for('error'))
-    return render_template('resource_report.html',Bars=Bars,form=form,days=days,server_bar=server_bar)
+
 
 @page_report.route('/server_used')
 def server_used():
     try:
+        PIES = []
+        INFOS = []
+        ATTRS = []
+        free_list = []
+        host_count = 0
         try:
-            PIES = []
-            INFOS = []
-            ATTRS = []
             if RC_CLUSTER.exists('op_zabbix_server_load_top'):
                 dict_load = eval(RC_CLUSTER.get('op_zabbix_server_load_top'))
                 bar_load = Bar("线上服务器cpu使用率TOP20", width='110%', height='100%', title_pos='center', title_text_size=14)
@@ -210,10 +213,10 @@ def server_used():
                         PIES.append(pie_project)
                 except Exception as e:
                     logging.error(e)
+        return render_template('server_used.html', INFOS=INFOS, PIES=PIES, host_count=host_count, free_list=free_list)
     except Exception as e:
         logging.error(e)
         return redirect(url_for('error'))
-    return render_template('server_used.html',INFOS=INFOS,PIES=PIES,host_count=host_count,free_list=free_list)
 
 @page_report.route('/alarm_report')
 def alarm_report():
@@ -270,6 +273,7 @@ def alarm_report():
         logging.error(e)
         return redirect(url_for('error'))
     return render_template('alarm_report.html',INFOS=INFOS,alarm_count=alarm_count)
+
 @page_report.route('/work_order_report_show')
 def work_order_report_show():
     form = MyForm.MyFormWorkOrderReport()

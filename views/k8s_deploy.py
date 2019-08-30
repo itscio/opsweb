@@ -71,20 +71,24 @@ def deployment_create():
         mount_path2 = form.mount_path2.data
         mount_name2 = form.mount_name2.data
         sidecar = form.sidecar.data
+        docker_args = form.docker_args.data
+        if docker_args:
+            docker_args = docker_args.splitlines()
         run_args = form.run_args.data
         run_args = run_args.splitlines()
-        re_requests = {}
-        re_limits = {}
+        re_requests = {'cpu': 1, 'memory':'2G'}
+        re_limits = {'cpu': 2, 'memory':'4G'}
         if mount_path2:
             mounts[mount_path2] = mount_name2
         try:
-            if object and version and  container_port and replicas:
+            if object and version  and replicas:
                 if object.endswith('.war') or object.endswith('.tar.gz') or object.endswith('.jar'):
                     dm_name = object.split('.')[0]
                     image = "%s/%s:%s" %(docker_registry,dm_name,version)
                     docker_file = "%s/%s" %(dockerfile_path,dm_name)
                     if os.path.exists(docker_file):
-                        container_port = [int(port) for port in container_port.split(',')]
+                        if container_port:
+                            container_port = [int(port) for port in container_port.split(',')]
                         if request_cpu and limit_cpu and request_mem and limit_mem:
                             if float(request_cpu) > float(limit_cpu) or float(request_mem) > float(limit_mem):
                                 raise flash('限制资源不能小于请求资源!')
@@ -96,8 +100,8 @@ def deployment_create():
                         redis_key = 'op_k8s_create_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
                         Scheduler = produce.SchedulerPublish()
                         Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_deploy, [context,project,object,version, image,
-                                                                                         run_args,container_port, ingress_port,
-                                                                                         replicas,
+                                                                                         docker_args,run_args,container_port,
+                                                                                         ingress_port,replicas,
                                                                                          domain,re_requests,mounts,
                                                                                          healthcheck,sidecar,re_limits,
                                                                                          redis_key])
@@ -123,15 +127,19 @@ def image_update():
         reload(MyForm)
         form = MyForm.FormK8sUpdate()
         if form.submit.data:
+            rollback = False
             deployment = form.deployment.data
             version = form.version.data
             context = form.contexts.data
-            if version:
-                new_image = "%s/%s:%s" %(docker_registry,deployment,version)
-                new_replicas = form.replicas.data
+            rollback_image = form.images.data
+            if version or rollback_image:
+                new_image = "%s/%s:%s" % (docker_registry, deployment, version)
+                if rollback_image:
+                    rollback = True
+                    new_image = rollback_image
                 redis_key = 'op_k8s_update_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
                 Scheduler = produce.SchedulerPublish()
-                Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [context,new_image, new_replicas,version, redis_key,'web'])
+                Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [context,new_image,version,rollback,redis_key,'web'])
                 Scheduler.start()
                 return render_template('deploy_show.html',redis_key=redis_key)
     except Exception as e:

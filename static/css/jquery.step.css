@@ -50,7 +50,6 @@ body {
 
 .ui-step-wrap .ui-step .ui-step-item div {
 	text-align: center;
-	color: #625454;
 }
 
 .ui-step-wrap .ui-step .ui-step-item .ui-step-item-num {
@@ -68,4 +67,18 @@ body {
 .ui-step-wrap .ui-step .ui-step-item.active .ui-step-item-num span {
 	color: #fff;
 	background: #64BD2E;
+}
+
+.ui-step-wrap .ui-step .ui-step-item.complete .ui-step-item-num span {
+	color: #fff;
+	background: orangered;
+}
+.title{
+	color:#000000;
+}
+.title_complete{
+	color:darkgreen;
+}
+.title5{
+	color:red;
 }

@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 from flask import Flask,request,g,redirect,url_for,session
 import time
-from  module import db_op,loging
+from  module import db_op,loging,Md5
 import redis
 from functools import wraps
 from sso_cas import CASClient
@@ -34,66 +34,56 @@ def login_required(grade = None):
                 pass
             else:
                 try:
-                    if user and dingId and token and ticket:
-                        if Redis.exists('OP_logout_ticket_%s' % ticket):
-                            if token == Redis.get('OP_token_%s' %dingId):
-                                g.user = user
-                                g.dingId = dingId
-                                g.secret_key = request.cookies.get('secret_key')
-                                g.token = token
-                                db_sso = db_op.user_sso
-                                val = db_sso.query.with_entities(db_sso.grade,db_sso.mail,db_sso.mobilePhone,db_sso.department).filter(db_sso.dingunionid == dingId).all()
-                                if val:
-                                    g.grade,g.mail,g.phone,g.department = val[0]
-                                    g.grade = g.grade.split(',')
-                                    if str(grade) in g.grade:
-                                        g.ip = request.headers.get('X-Forwarded-For')
-                                        if not g.ip:
-                                            g.ip = request.remote_addr
-                                        if ',' in g.ip:
-                                            g.ip = g.ip.split(',')[0]
-                                        session['remote_ip'] = g.ip
-                                        tm = time.strftime('%Y%m%d', time.localtime())
-                                        Redis.sadd('op_active_users_%s' %tm, dingId)
-                                        g.active_users = Redis.scard('op_active_users_%s' %tm)
-                                        g.date = time.strftime('%Y-%m-%d', time.localtime())
-                                        g.ym = time.strftime('%Y', time.localtime())
+                    if user and dingId and token and ticket and Redis.exists('OP_logout_ticket_%s' % ticket):
+                        if token == Redis.get('OP_token_%s' %dingId):
+                            g.user = user
+                            g.dingId = dingId
+                            g.secret_key = request.cookies.get('secret_key')
+                            g.token = token
+                            db_sso = db_op.user_sso
+                            val = db_sso.query.with_entities(db_sso.grade,db_sso.mail,db_sso.mobilePhone,db_sso.department).filter(db_sso.dingunionid == dingId).all()
+                            if val:
+                                g.grade,g.mail,g.phone,g.department = val[0]
+                                g.grade = g.grade.split(',')
+                                if str(grade) in g.grade:
+                                    g.ip = request.headers.get('X-Forwarded-For')
+                                    if not g.ip:
+                                        g.ip = request.remote_addr
+                                    if ',' in g.ip:
+                                        g.ip = g.ip.split(',')[0]
+                                    session['remote_ip'] = g.ip
+                                    tm = time.strftime('%Y%m%d', time.localtime())
+                                    Redis.sadd('op_active_users_%s' %tm, dingId)
+                                    g.active_users = Redis.scard('op_active_users_%s' %tm)
+                                    g.date = time.strftime('%Y-%m-%d', time.localtime())
+                                    g.ym = time.strftime('%Y', time.localtime())
+                                    #页面菜单缓存加速
+                                    menu_key = f'op_menu_{tm}'
+                                    user_menu_key = f'menu_{dingId}'
+                                    if Redis.hexists(menu_key,user_menu_key):
+                                        g.Base_Menu = eval(Redis.hget(menu_key,user_menu_key))
+                                    else:
                                         # 生成用户权限对应的页面菜单
-                                        try:
-                                            for key in ('navMenu', 'nav_val', 'submenu', 'sub_val'):
-                                                if g.Base_Menu[key]:
-                                                    pass
-                                        except:
-                                            grades = g.grade
-                                            DB = db_op.op_menu
-                                            nav_val = defaultdict()
-                                            sub_val = defaultdict()
-                                            navMenu = DB.query.with_entities(distinct(DB.Menu_name)).filter(
-                                                and_(DB.Menu == 'navMenu', DB.grade.in_(grades))).order_by(
-                                                DB.Menu_id).all()
-                                            if navMenu:
-                                                navMenu = [Menu[0] for Menu in navMenu]
-                                                for Menu in navMenu:
-                                                    val = DB.query.with_entities(DB.id_name, DB.module_name,
-                                                                                 DB.action_name).filter(
-                                                        and_(DB.grade.in_(grades), DB.Menu_name == Menu)).order_by(
-                                                        DB.sub_id).all()
-                                                    if val:
-                                                        nav_val[Menu] = val
-                                            submenu = DB.query.with_entities(distinct(DB.Menu_name)).filter(
-                                                and_(DB.Menu == 'submenu', DB.grade.in_(grades))).order_by(
-                                                DB.Menu_id).all()
-                                            if submenu:
-                                                submenu = [menu[0] for menu in submenu]
-                                                for Menu in submenu:
-                                                    val = DB.query.with_entities(DB.module_name, DB.action_name).filter(
-                                                        and_(DB.grade.in_(grades), DB.Menu_name == Menu)).order_by(
-                                                        DB.sub_id).all()
-                                                    if val:
-                                                        sub_val[Menu] = val
-                                            g.Base_Menu = {'navMenu': navMenu, 'nav_val': nav_val, 'submenu': submenu,
-                                                           'sub_val': sub_val}
-                                        return func(*args, **kwargs)
+                                        grades = g.grade
+                                        DB = db_op.op_menu
+                                        sub_val = defaultdict()
+                                        menu_md5 = defaultdict()
+                                        submenu = DB.query.with_entities(distinct(DB.Menu_name)).filter(DB.grade.in_(grades)).order_by(
+                                            DB.Menu_id).all()
+                                        if submenu:
+                                            submenu = [menu[0] for menu in submenu]
+                                            menu_md5 = {menu:Md5.Md5_make(menu) for menu in submenu}
+                                            for Menu in submenu:
+                                                val = DB.query.with_entities(DB.module_name, DB.action_name).filter(
+                                                    and_(DB.grade.in_(grades), DB.Menu_name == Menu)).order_by(
+                                                    DB.sub_id).all()
+                                                if val:
+                                                    sub_val[Menu] = val
+                                        g.Base_Menu = {'submenu': submenu,'sub_val': sub_val,'menu_md5':menu_md5}
+                                        #缓存页面菜单1天
+                                        Redis.hset(menu_key,user_menu_key,g.Base_Menu)
+                                        Redis.expire(menu_key,28800)
+                                    return func(*args, **kwargs)
                 except Exception as e:
                     logging.error(e)
                     return redirect(url_for('error'))

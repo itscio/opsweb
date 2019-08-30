@@ -220,31 +220,36 @@ def hpa():
         v1 = client.AutoscalingV1Api()
         ret = v1.list_horizontal_pod_autoscaler_for_all_namespaces()
         for i in ret.items:
+            rps = 0
+            RPS = []
             try:
-                rps = 0
-                RPS = []
                 project = db_k8s_deploy.query.with_entities(db_k8s_deploy.project).filter(db_k8s_deploy.deployment==i.spec.scale_target_ref.name).limit(1).all()
                 if project:
                     domains = db_project.query.with_entities(db_project.domain).filter(db_project.project==project[0][0]).limit(1).all()
-                    if domains[0][0]:
-                        for domain in domains[0][0].split(','):
-                            vals = RC.hgetall('%s_%s_%s' % (Key, domain, td))
-                            vals = sorted(vals.items(), key=lambda item: item[0])
-                            if vals:
-                                RPS.append(int(int(vals[-1][-1])/60))
-                        if RPS:
-                            rps = RPS[0]
-                            if len(RPS) >1:
-                                rps = reduce(lambda x,y:x+y,RPS)
-                    valus.append([i.metadata.name,
-                                 i.spec.scale_target_ref.name,
-                                 i.spec.max_replicas,
-                                 i.spec.min_replicas,
-                                 i.status.current_replicas,
-                                 '{0}%'.format(i.spec.target_cpu_utilization_percentage),
-                                 '{0}%'.format(i.status.current_cpu_utilization_percentage),
-                                  rps]
-                                 )
+                    if domains:
+                        domains = [domain[0] for domain in domains if domain]
+                        if domains[0]:
+                            for domain in domains[0].split(','):
+                                vals = RC.hgetall('%s_%s_%s' % (Key, domain, td))
+                                vals = sorted(vals.items(), key=lambda item: item[0])
+                                if vals:
+                                    RPS.append(int(int(vals[-1][-1])/60))
+                            if RPS:
+                                rps = RPS[0]
+                                if len(RPS) >1:
+                                    rps = reduce(lambda x,y:x+y,RPS)
+            except Exception as e:
+                logging.error(e)
+            try:
+                valus.append([i.metadata.name,
+                             i.spec.scale_target_ref.name,
+                             i.spec.max_replicas,
+                             i.spec.min_replicas,
+                             i.status.current_replicas,
+                             '{0}%'.format(i.spec.target_cpu_utilization_percentage),
+                             '{0}%'.format(i.status.current_cpu_utilization_percentage),
+                              rps]
+                             )
             except Exception as e:
                 logging.error(e)
         td = time.strftime('%Y-%m-%d', time.localtime())
@@ -259,9 +264,10 @@ def hpa():
                 if project[0] in info[0]:
                     attr.append(str(info[0].split('_')[-1]))
                     vals.append(int(info[1]))
-            line.add(project[0], attr, vals, is_toolbox_show=False, is_smooth=True, mark_point=["max", "min"],
-                  mark_point_symbolsize=60,legend_pos='40%',is_datazoom_show=True, datazoom_range=[v for v in range(100, 10)],
-                             datazoom_type='both',)
+            if attr and vals:
+                line.add(project[0], attr, vals, is_toolbox_show=False, is_smooth=True, mark_point=["max", "min"],
+                      mark_point_symbolsize=60,legend_pos='40%',is_datazoom_show=True, datazoom_range=[v for v in range(100, 10)],
+                                 datazoom_type='both',)
         return render_template('k8s-resource.html', valus=valus, tables=tables, keys=keys, line=line, resource='HPA')
     except Exception as e:
         logging.error(e)

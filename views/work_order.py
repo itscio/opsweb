@@ -340,9 +340,9 @@ def application():
                                     #上传至oss
                                     try:
                                         auth = oss2.Auth(oss_id, oss_key)
-                                        bucket = oss2.Bucket(auth, oss_url, 'mojiops')
+                                        bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
                                         bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                        sql_url = 'https://mojiops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
+                                        sql_url = 'https://xxxxops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
                                     except:
                                         raise Msg.extend(('error', '文件上传oss失败!'))
                                 else:
@@ -534,7 +534,7 @@ def server_auth():
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
                 # 记录任务流水状态
-                c = db_work_order(date=td,work_number = work_number, source=source,applicant=g.dingId,reviewer='hanlong.zhang@moji.com', dingid='',
+                c = db_work_order(date=td,work_number = work_number, source=source,applicant=g.dingId,reviewer='xxxx@xxxx.com', dingid='',
                                   status='待审批')
                 db_op.DB.session.add(c)
                 db_op.DB.session.commit()
@@ -610,9 +610,9 @@ def sql_execute():
                                 try:
                                     #上传至oss
                                     auth = oss2.Auth(oss_id, oss_key)
-                                    bucket = oss2.Bucket(auth, oss_url, 'mojiops')
+                                    bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
                                     bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                    sql_url = 'https://mojiops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
+                                    sql_url = 'https://xxxxops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
                                 except:
                                     raise Msg.extend(('error', '文件上传oss失败!'))
                             else:

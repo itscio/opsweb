@@ -40,13 +40,15 @@
             {% endif %}
             {% if PIES %}
                 {% for pie in PIES %}
-                    <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
-                        <div style="height: 330px;margin-left: 20px">
-                            {{ echarts_js_dependencies(pie) }}
-                            {{ echarts_container(pie) }}
-                            {{ echarts_js_content(pie) }}
+                    {% if pie %}
+                        <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
+                            <div style="height: 330px;margin-left: 20px">
+                                {{ echarts_js_dependencies(pie) }}
+                                {{ echarts_container(pie) }}
+                                {{ echarts_js_content(pie) }}
+                            </div>
                         </div>
-                    </div>
+                    {% endif %}
                 {% endfor %}
             {% endif %}
         {% endif %}

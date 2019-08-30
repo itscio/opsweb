@@ -91,27 +91,23 @@ class op_menu(DB.Model):
     __tablename__ = 'op_menu'
     __bind_key__ = 'op'
     id = DB.Column(DB.Integer, primary_key=True, autoincrement=True)
-    Menu = DB.Column(DB.String(10))
     Menu_id = DB.Column(DB.Integer)
     sub_id = DB.Column(DB.Integer)
     Menu_name = DB.Column(DB.String(10))
-    id_name = DB.Column(DB.String(20))
     module_name = DB.Column(DB.String(50))
     action_name = DB.Column(DB.String(50))
     grade = DB.Column(DB.Integer)
-    def __init__(self,Menu,Menu_id,sub_id,Menu_name,id_name,module_name,action_name,grade):
-        self.Menu = Menu
+    def __init__(self,Menu_id,sub_id,Menu_name,module_name,action_name,grade):
         self.Menu_id = Menu_id
         self.sub_id = sub_id
         self.Menu_name = Menu_name
-        self.id_name = id_name
         self.module_name = module_name
         self.action_name = action_name
         self.grade = grade
 
     def __repr__(self):
-        values = (self.Menu,self.Menu_id,self.sub_id,self.Menu_name,self.id_name,self.module_name,self.action_name,self.grade)
-        return '%s,%s,%s,%s,%s,%s,%s,%s' % values
+        values = (self.Menu_id,self.sub_id,self.Menu_name,self.module_name,self.action_name,self.grade)
+        return '%s,%s,%s,%s,%s,%s' % values
 
 class apscheduler_jobs(DB.Model):
     __tablename__ = 'apscheduler_jobs'
@@ -287,11 +283,12 @@ class k8s_deploy(DB.Model):
     replicas = DB.Column(DB.Integer)
     re_requests = DB.Column(DB.String(45))
     re_limits = DB.Column(DB.String(45))
+    healthcheck = DB.Column(DB.String(100))
     action = DB.Column(DB.String(45))
     update_date = DB.Column(DB.String(45))
     update_time = DB.Column(DB.String(45))
     def __init__(self,project,context,deployment,image,war,container_port,replicas,re_requests,re_limits,
-                 action,update_date,update_time):
+                 healthcheck,action,update_date,update_time):
         self.project = project
         self.context = context
         self.deployment = deployment
@@ -302,27 +299,30 @@ class k8s_deploy(DB.Model):
         self.re_requests = re_requests
         self.re_limits = re_limits
         self.action = action
+        self.healthcheck = healthcheck
         self.update_date = update_date
         self.update_time = update_time
     def __repr__(self):
         values=(self.project,self.context,self.deployment,self.image,self.war,self.container_port,self.replicas,self.re_requests,self.re_limits,
-                self.action,self.update_date,self.update_time)
-        return '%s,%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s'%values
+                self.healthcheck,self.action,self.update_date,self.update_time)
+        return '%s,%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s,%s'%values
 
 class docker_run(DB.Model):
     __tablename__ = 'docker_run'
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
     deployment = DB.Column(DB.String(45))
+    dockerfile = DB.Column(DB.String(500))
     run_args = DB.Column(DB.String(500))
     side_car = DB.Column(DB.String(500))
-    def __init__(self,deployment,run_args,side_car):
+    def __init__(self,deployment,dockerfile,run_args,side_car):
         self.deployment = deployment
+        self.dockerfile = dockerfile
         self.run_args = run_args
         self.side_car = side_car
     def __repr__(self):
-        values=(self.deployment,self.run_args,self.side_car)
-        return '%s,%s,%s'%values
+        values=(self.deployment,self.dockerfile,self.run_args,self.side_car)
+        return '%s,%s,%s,%s'%values
 
 class k8s_packages(DB.Model):
     __tablename__ = 'k8s_packages'

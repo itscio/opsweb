@@ -2,7 +2,7 @@
 {% block page %}
     <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:25%;margin-top: 4%">
         <div class="panel-heading" style="background-color: #0480be">
-            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >项目镜像容器更新</h4>
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >项目镜像容器更新/回滚</h4>
         </div>
         <div class="panel-body" style="margin-top: 5%">
             <form action="/image_update" method="post">
@@ -10,7 +10,7 @@
                 <p>选择集群:{{ form.contexts (style="width:190px",onchange="select_k8s_deployment()")}}</p>
                 <p>镜像名称:{{ form.deployment (style="width:190px",onchange="select_project_version()")}}</p>
                 <p>选择版本:{{ form.version (style="width:190px")}}</p>
-                <p>副本数量:{{ form.replicas (style="width:190px",placeholder="可不填写")}}</p>
+                <p>镜像回滚:{{ form.rollback (style="width:190px",placeholder="容器更新勿填")}}</p>
                 <p>{{ form.submit (class="btn btn-primary") }}</p>
             </form>
         </div>

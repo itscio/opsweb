@@ -265,9 +265,7 @@ function ajax_request(url) {
         }
         }});
 }
-function ajax_get(url) {
-    $.ajax({url: url});
-}
+
 function ajax_post(url,data) {
     $.ajax({
         type: "POST",
@@ -430,7 +428,6 @@ function login_webssh(host,ssh_port,url) {
     location.href=url;
 }
 function ajax_html_show(url,id){
-    console.log(url);
     $.ajax({url:url,
             success:function(data){
                 $('#'+id).html(data);
@@ -464,8 +461,12 @@ function deny_moment(url) {
         callback: function (result) {
             if (result != null){
                 var URL= url+'&moment='+result;
-                ajax_get(URL);
-                location.href=url.split('?')[0];
+                $.ajax({
+                    url: URL,
+                    success: function(){
+                        location.href = url.split('?')[0];
+                    }
+                })
             }
         }
     })

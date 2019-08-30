@@ -195,7 +195,7 @@ def get_oss_version(project=None):
         if project:
             tt = time.strftime('%Y',time.localtime())
             auth = oss2.Auth(oss_id, oss_key)
-            bucket = oss2.Bucket(auth, oss_url, 'mojiops')
+            bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
             for obj in oss2.ObjectIterator(bucket):
                 if obj.key.endswith('.war') or obj.key.endswith('.tar.gz') or obj.key.endswith('.jar'):
                     if obj.key.split('/')[-1].startswith(project):

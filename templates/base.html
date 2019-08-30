@@ -27,123 +27,83 @@
     </head>
     <body>
         {% set Main_Menu = g.Base_Menu %}
-        <div style="width: 100%;height:50px;margin-bottom: 0.3%">
-            <div style="width: 60%;float: left;height: 50px">
-                <div style="float:left;"><img style="width:200px;" src="/static/images/logo.gif"></div>
-                <div style="float:left;margin-left:5px;font-size:25pt;color: black;font-weight:bold;margin-top:1%">运维管理平台</div>
-            </div>
-            <div style="height: 50px;width:30%;font-size:9pt;float:right;text-align:right;margin-right: 0.5%">
-                <div class="tooltip-container no-display"></div>
-                <div style="margin-top: 1%">
-                    <p>
-                        <span>
-                            <i class="fas fa-bell"></i>消息(0)
-                        </span>&nbsp;&nbsp;
-                        <i class="fas fa-user" style="color:cornflowerblue"></i>&nbsp;<span style="font-weight:bold;color:darkgreen">{{ g.user }}</span> &nbsp;
-                        <i class="fas fa-users" style="color: cornflowerblue"></i>在线人数:<span style="font-weight:bold;color:darkgreen">{{ g.active_users }}</span>
-                        &nbsp;<a  href={{ url_for('logout.logout') }}><i class="fas fa-sign-out-alt"></i>退出</a>
-                    </p>
-                    <p>
-                        <i class="fas fa-calendar-alt" style="color: cornflowerblue"></i>日期:
-                        <span style="font-weight:bold;color:#006400">{{ g.date }}</span>&nbsp;
-                        <i class="fas fa-broadcast-tower" style="color: cornflowerblue"></i>来源IP:
-                        <span style="font-weight:bold;color:green">{{ g.ip }}</span>
-                    </p>
+        <div style="width:100%;height: 50px;color: whitesmoke;background-color: #353C48">
+            <div style="float:left">
+                <div style="margin-top: 0.5%">
+                    <a href="/index" target="_self"><img style="width:180px;" src="/static/images/logo.gif"></a>
                 </div>
             </div>
+            <div style="float:left;font-size:x-large;margin-top: 1%;margin-left: 0.5%">
+                <span style="letter-spacing:1.5px">运维管理平台</span>
+            </div>
+            <div class="tooltip-container no-display"></div>
+            <div style="margin-top:1%;font-size:9pt;float:right;margin-right: 0.5%;">
+                <i class="fas fa-user"></i>登录用户:{{ g.user }}&nbsp;
+                <i class="fas fa-broadcast-tower"></i>来源IP:{{ g.ip }}&nbsp;
+                <i class="fas fa-bell"></i>消息数:0&nbsp;
+                <i class="fas fa-calendar-alt"></i>日期:{{ g.date }}&nbsp;
+                <i class="fas fa-users"></i>在线人数:{{ g.active_users }}&nbsp;
+                <a  href={{ url_for('logout.logout') }}>
+                    <span style="color:#80bdff">
+                        <i class="fas fa-sign-out-alt"></i>
+                        退出</span>
+                </a>
+            </div>
         </div>
-        <div id="navMenu">
-            <ul id="breadcrumb" style="list-style-type:none;">
-                <li style="list-style-type:none;"><a href="/index" target="_self"><i class="fas fa-home"></i>首页</a></li>
-                {% for Menu in Main_Menu['navMenu'] %}
-                    <li style="list-style-type:none;">
-                        <a rel= {{ Menu }} target="_self" id ="nav_{{ Menu }}">
-                            <i class="fab fa-google-drive"></i>
-                            {{ Main_Menu['nav_val'][Menu][0][0] }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-        <div>
-            {% for Menu in Main_Menu['navMenu'] %}
-                <ul id={{ Menu }} class="dropMenu">
-                    {% for val in Main_Menu['nav_val'][Menu] %}
-                        {% if 'http' in val[1] %}
-                            <li style="list-style-type:none;">
-                                <a href={{ val[1] }} target="_blank">{{ val[2] }}</a>
-                            </li>
-                        {% else %}
-                            <li style="list-style-type:none;">
-                                <a target="_self" href="{{ url_for(val[1]) }}#+nav_{{ Menu|urlencode }}" >{{ val[2] }}</a>
-                            </li>
-                        {% endif %}
+        {% if Main_Menu['submenu'] %}
+            <nav id="navbar" class="">
+                <ul>
+                    {% for Menu in Main_Menu['submenu'] %}
+                        <li id="menu_{{ Main_Menu['menu_md5'][Menu] }}">
+                            <a href="#"><i class="far fa-plus-square"></i>&nbsp;{{ Menu }}</a>
+                            <ul id = "ul_{{ Main_Menu['menu_md5'][Menu] }}">
+                                {% for val in Main_Menu['sub_val'][Menu] %}
+                                    {% if 'http' in val[0] %}
+                                    <li style="list-style-type:none;">
+                                        <a href={{ val[0] }} target="_blank">{{ val[1] }}</a>
+                                    </li>
+                                    {% else %}
+                                        <li style="list-style-type:none;">
+                                            {% set sub_id = url_for(val[0]).split('/')[-1] %}
+                                            <a target="_self" href="{{ url_for(val[0]) }}#_{{ Main_Menu['menu_md5'][Menu] }}" id="sub_{{ Main_Menu['menu_md5'][Menu] }}{{ sub_id }}">{{ val[1] }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </li>
                     {% endfor %}
                 </ul>
-            {% endfor %}
-        </div>
-        <script>
-            cssdropdown.startchrome("navMenu")
-        </script>
-        {% if Main_Menu['submenu'] %}
-            <div style="display: inline;background-color: #ebeef0;">
-                <div class="fl">
-                    <ul id="accordion" class="accordion">
-                        {% for Menu in Main_Menu['submenu'] %}
-                            <li style="list-style-type:none">
-                                <div class="link">{{ Menu }}
-                                    <i class="fas fa-angle-double-down" style="color:whitesmoke;top:35%;position:unset"></i>
-                                </div>
-                                <ul class="submenu" id="menu_{{ Menu }}" style="margin: 0 0 0px 0px">
-                                    {% for val in Main_Menu['sub_val'][Menu] %}
-                                        {% if 'http' in val[0] %}
-                                            <li style="list-style-type:none;">
-                                                <a href={{ val[0] }} target="_blank">{{ val[1] }}</a>
-                                            </li>
-                                        {% else %}
-                                            <li style="list-style-type:none;">
-                                                {% set sub_id = url_for(val[0]).split('/')[-1] %}
-                                                <a target="_self" href="{{ url_for(val[0]) }}#+{{ Menu|urlencode }}" id="sub_{{ sub_id }}"> {{ val[1] }}</a>
-                                            </li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
+            </nav>
+            <script>
+                $("#navbar").rvnm({theme: 'dark-doder'});
+                var url = window.location.href;
+                if (url.indexOf('#')>=0){
+                    var menu_id = decodeURI(url.split('#')[1]);
+                    if (menu_id.indexOf('_') >-1){
+                        var uri_id  = menu_id+url.split('#')[0].split('/').slice(-1);
+                        $('#menu'+menu_id).removeClass('rvnm-expandable').addClass('rvnm-collapseable');
+                        $('#ul'+menu_id).css({'display':'block'});
+                        $('#sub'+uri_id).css({'background':'#4285f4'});
+                    }
+                }
+            </script>
         {% endif %}
-        <div class="Page" id="content"></div>
         <div class="Page" id="Page">
             {% block page %} {% endblock page %}
         </div>
         <div style="clear:both;"></div>
     </body>
     <footer>
-        <br><br>
-        <p>xxxx有限公司|版权所有© 2009-{{ g.ym }} xxxx|运维邮箱:xxx@xxxxx.com</p>
+        <div style="margin-top: 5%">xxxx有限公司|版权所有© 2009-{{ g.ym }} xxxx|运维邮箱:xx@xxxx.com</div>
     </footer>
     <script>
-        var url = window.location.href;
-        if (url.indexOf('#+')>=0){
-            var menu_id = decodeURI(url.split('#+')[1]);
-            if (menu_id.indexOf('nav_') >=0){
-                $('#'+menu_id).css('color','#a3b0c9');
-            } else{
-            var uri_id  = url.split('/')[3].split('#+')[0];
-            $('#menu_'+menu_id).show();
-            $('#sub_'+uri_id).css({'background':'#CCCCCC','color':'tomato'});
-            }
-        }
         $(document).ready(function() {
             $.minimalTips();
         });
     </script>
     {% if not Main_Menu['submenu'] %}
         <script>
-            $('#Page').removeClass('Page');
-            $('#Page').addClass('Page_other');
+            $('#Page').removeClass('Page').addClass('Page_other');
         </script>
     {% endif %}
 </html>
