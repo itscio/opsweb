@@ -34,6 +34,7 @@ def js_files():
                 'js/zh.js',
                 'js/jquery.step.min.js',
                 'js/jquery-rvnm.js',
+                'js/botui.min.js',
                 filters='jsmin',
                 output='js/js_packed.js'
                 )
@@ -50,6 +51,9 @@ def css_files():
                 'css/font-awesome.min.css',
                 'css/jquery-rvnm.css',
                 'css/jquery.step.css',
+                'css/botui.min.css',
+                'css/botui-theme-default.css',
+                'css/mimic.css',
                 filters='cssmin',
                 output='css/css_packed.css'
                 )

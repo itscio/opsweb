@@ -3,7 +3,6 @@ import importlib
 from flask import Flask,Blueprint,render_template,g,flash,request
 from module import MyForm,user_auth,loging,db_op,db_idc,tools
 from sqlalchemy import distinct,and_,or_
-import conf
 from flask_sqlalchemy import SQLAlchemy
 import redis
 import time

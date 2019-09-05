@@ -13,6 +13,7 @@
                 <link rel="stylesheet" href="{{ ASSET_URL }}">
             {% endassets %}
             <script src="/static/js/jquery.min.js"></script>
+            <script src="/static/js/vue.min.js"></script>
             <script src="/static/js/bootstrap.min.js"></script>
             <script src="/static/js/bootprompt.js"></script>
             <script src="/static/js/flatpickr.js"></script>
@@ -27,29 +28,30 @@
     </head>
     <body>
         {% set Main_Menu = g.Base_Menu %}
-        <div style="width:100%;height: 50px;color: whitesmoke;background-color: #353C48">
-            <div style="float:left">
-                <div style="margin-top: 0.5%">
-                    <a href="/index" target="_self"><img style="width:180px;" src="/static/images/logo.gif"></a>
+        <div style="float:left;width:9.5%;height: 35px;background-color:#353C48" id="logo">
+            <div style="margin-top: 0.5%">
+                <div style="margin-left: 8%">
+                    <a href="/index" target="_self">
+                        <img style="width:130px;" src="/static/images/logo.gif">
+                    </a>
                 </div>
             </div>
-            <div style="float:left;font-size:x-large;margin-top: 1%;margin-left: 0.5%">
-                <span style="letter-spacing:1.5px">运维管理平台</span>
-            </div>
-            <div class="tooltip-container no-display"></div>
+        </div>
+        <div style="float:right;width:90%;box-sizing: border-box;height: 35px;" id="infos">
+            <div style="float:left;font-size:large;margin-top: 1%;margin-left: 35%" id="work_order_alarm"></div>
             <div style="margin-top:1%;font-size:9pt;float:right;margin-right: 0.5%;">
                 <i class="fas fa-user"></i>登录用户:{{ g.user }}&nbsp;
                 <i class="fas fa-broadcast-tower"></i>来源IP:{{ g.ip }}&nbsp;
-                <i class="fas fa-bell"></i>消息数:0&nbsp;
                 <i class="fas fa-calendar-alt"></i>日期:{{ g.date }}&nbsp;
                 <i class="fas fa-users"></i>在线人数:{{ g.active_users }}&nbsp;
                 <a  href={{ url_for('logout.logout') }}>
-                    <span style="color:#80bdff">
+                    <span style="color:#0077b3;">
                         <i class="fas fa-sign-out-alt"></i>
                         退出</span>
                 </a>
             </div>
         </div>
+        <div style="height:1.5px; border-top:1.5px solid #353C48;width:100%;clear:both;"></div>
         {% if Main_Menu['submenu'] %}
             <nav id="navbar" class="">
                 <ul>
@@ -87,6 +89,11 @@
                     }
                 }
             </script>
+        {% else %}
+            <script>
+                $("#infos").css({'background-color':'#353C48','color':'whitesmoke'});
+                $("#logo").css({'width':'10%'});
+            </script>
         {% endif %}
         <div class="Page" id="Page">
             {% block page %} {% endblock page %}
@@ -94,12 +101,25 @@
         <div style="clear:both;"></div>
     </body>
     <footer>
-        <div style="margin-top: 5%">xxxx有限公司|版权所有© 2009-{{ g.ym }} xxxx|运维邮箱:xx@xxxx.com</div>
+        <div style="margin-top: 5%">xxxx公司|版权所有© 2009-{{ g.ym }} xxxx|运维邮箱:yw@xxxx.com</div>
     </footer>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
+            <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
+                <a href="javascript:hideDialog();" >关闭</a>
+            </span>
+        </div>
+        <div class="ui-dialog-content" id="dialog-content"></div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
+    </div>
     <script>
         $(document).ready(function() {
             $.minimalTips();
         });
+        setInterval(function(){
+            ajax_html_show("/work_order_alarm","work_order_alarm");
+        },10000);
     </script>
     {% if not Main_Menu['submenu'] %}
         <script>

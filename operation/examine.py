@@ -14,6 +14,7 @@ DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/mail.conf')
 app.config.from_pyfile('../conf/tokens.conf')
+app.config.from_pyfile('../conf/work_order.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -23,6 +24,10 @@ sender = app.config.get('MAIL_DEFAULT_SENDER')
 receiver = app.config.get('DEFAULT_RECEIVER')
 work_token = app.config.get('WORK_TOKEN')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
+server_auth_leader = app.config.get('SAL')
+source_types = app.config.get('SOURCE_TYPES')
+work_types = app.config.get('WORK_TYPES')
+order_types = app.config.get('ORDER_TYPES')
 page_examine = Blueprint('examine', __name__)
 @page_examine.route('/publish_record')
 def publish_record():
@@ -54,6 +59,92 @@ def op_log():
     except Exception as e:
         logging.error(e)
     return render_template('op_log.html',tables = tables,vals = vals)
+
+@page_examine.route('/active_users')
+def active_users():
+    tables = ['登录用户', '所属部门', '用户权限', '最近活动时间', '来源IP']
+    vals = []
+    try:
+        db_user_sso = db_op.user_sso
+        td = time.strftime('%Y-%m-%d', time.localtime())
+        dingIds = Redis.smembers('op_active_users_%s' % td)
+        if dingIds:
+            for dingId in dingIds:
+                remote_ip = Redis.hget('op_user_remote_ip', dingId)
+                infos = db_user_sso.query.with_entities(db_user_sso.realName,
+                                                        db_user_sso.department,db_user_sso.grade
+                                                        ).filter(db_user_sso.dingunionid==dingId).all()
+                infos = [info for info in infos[0]]
+                if infos[2].startswith('0') or infos[2].startswith('1'):
+                    infos[2] = '管理员'
+                else:
+                    infos[2] = '工单用户'
+                infos.append(Redis.hget('op_user_login_time',dingId))
+                infos.append(remote_ip)
+                vals.append(infos)
+    except Exception as e:
+        logging.error(e)
+    return render_template('active_users.html',tables = tables,vals = vals)
+
+@page_examine.route('/work_examine')
+@page_examine.route('/work_examine/<int:work_id>')
+def work_examine(work_id=None):
+    try:
+        # 工单流程进度
+        title = '运维工单流程审查'
+        INDEXS = {'待审批':2,'审批通过':3,'审批拒绝':2,'未受理':3,'已退回':2,
+                  '受理中':3,'已拒绝':4,'已完成':4,'已回滚':4,'未审核':2}
+        db_work_order = db_op.work_order
+        db_sso = db_op.user_sso
+        infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName,db_sso.mail).all()
+        users = {info[0]: info[1] for info in infos}
+        mails = {info[-1]: info[1] for info in infos}
+        work_lists = []
+        if work_id:
+            title = '运维工单流程查询'
+            infos = db_work_order.query.with_entities(db_work_order.work_number,
+                                                      db_work_order.date,
+                                                      db_work_order.source,
+                                                      db_work_order.applicant,
+                                                      db_work_order.reviewer,
+                                                      db_work_order.dingid,
+                                                      db_work_order.status).filter(db_work_order.work_number==work_id).all()
+        else:
+            infos = db_work_order.query.with_entities(db_work_order.work_number,
+                                                        db_work_order.date,
+                                                        db_work_order.source,
+                                                        db_work_order.applicant,
+                                                        db_work_order.reviewer,
+                                                        db_work_order.dingid,
+                                                        db_work_order.status).order_by(desc(db_work_order.work_number)).limit(500).all()
+        if infos:
+            infos = [list(info) for info in infos]
+            for info in infos:
+                Infos=[]
+                applicant = ''
+                reviewer = ''
+                operater = ''
+                Infos.extend(info[:3])
+                if info[3] in users:
+                    applicant = users[info[3]]
+                if info[4] in mails:
+                    reviewer = mails[info[4]]
+                    if info[2] =='ensure_server_auth':
+                        reviewer = '%s&%s'%(mails[info[4]],mails[server_auth_leader])
+                if info[5] in users:
+                    operater = users[info[5]]
+                status = info[-1]
+                if info[-1] in ('未审核','已退回'):
+                    status = '%s%s' %(mails[info[4]],info[-1])
+                if info[-1] in ('待审批','审批拒绝'):
+                    status = '%s%s' %(mails[server_auth_leader],info[-1])
+                Infos.append(["填写申请表", "申请人:%s"%applicant, "审核人:%s" %reviewer, "执行人:%s"%operater, "工单状态:%s" %status])
+                Infos.append(INDEXS[info[-1]])
+                work_lists.append(Infos)
+        return render_template('work_examine.html', work_lists=work_lists,
+                               order_types=order_types,source_types=source_types,title=title)
+    except Exception as e:
+        logging.error(e)
 
 @page_examine.route('/ensure_application')
 def ensure_application():
@@ -131,7 +222,7 @@ def ensure_application():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','项目名称','版本','描述','申请人','详情','操作')
+        tables = ('工单号','日期','项目名称','版本','描述','申请人','详情','问题备注','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         projects = db_publish_application.query.with_entities(db_publish_application.work_number,db_publish_application.date,
@@ -236,7 +327,7 @@ def ensure_server_auth():
             msg = "未知异常错误!"
     finally:
         #获取最新数据
-        tables = ('工单号','日期','申请人','部门','服务器列表','申请权限','所属用途','详情','操作')
+        tables = ('工单号','日期','申请人','部门','服务器列表','申请权限','所属用途','详情','问题备注','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName, db_sso.department).all()
         users = {info[0]: info[1:] for info in users}
         servers = db_server_auth.query.with_entities(db_server_auth.work_number,
@@ -340,7 +431,7 @@ def ensure_sql_execute():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','服务器','端口','数据库','变更描述','申请人','详情','操作')
+        tables = ('工单号','日期','服务器','端口','数据库','变更描述','申请人','详情','问题备注','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         sql_executes = db_sql_execute.query.with_entities(db_sql_execute.work_number,db_sql_execute.date,
@@ -439,7 +530,7 @@ def ensure_project_offline():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','项目名称','描述','申请人','详情','操作')
+        tables = ('工单号','日期','项目名称','描述','申请人','详情','问题备注','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         projects = db_project_offline.query.with_entities(db_project_offline.work_number,db_project_offline.date,
@@ -548,7 +639,7 @@ def ensure_other_work():
         if action == 'deny':
             return jsonify({'status': 'ok'})
         #获取最新数据
-        tables = ('工单号','日期','事项标题','事项描述','申请人','详情','操作')
+        tables = ('工单号','日期','事项标题','事项描述','申请人','详情','问题备注','操作')
         users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
         users = {info[0]: info[1:] for info in users}
         other_works = db_other_work.query.with_entities(db_other_work.work_number,db_other_work.date,db_other_work.title,

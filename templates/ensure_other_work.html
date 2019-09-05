@@ -33,6 +33,9 @@
                                     <i class="fas fa-align-left"></i>
                                 </a>
                             </td>
+                            <td class="td_style" style="text-align: center">
+                                <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看或者填写工单问题备注"><i class="fas fa-edit"></i></a>
+                            </td>
                             <td class="td_style" style="text-align: center;vertical-align: middle">
                                 {% if value[2] == '待审批' %}
                                     <a href="/ensure_other_work?action=agree&work_number={{ value[0] }}"><i class="far fa-check-circle" style="color: darkgreen"></i>同意</a> |
@@ -51,7 +54,7 @@
                                 {% elif value[2] == '已完成' %}
                                     <span class="icon-ok" style="color: green"></span>
                                 {% else %}
-                                    <strong style="font-size: larger">---</strong>
+                                    <strong style="font-size: larger">--</strong>
                                 {% endif %}
                             </td>
                         </tr>
@@ -60,13 +63,14 @@
             {% endif %}
         </table>
     </div>
-    <div class="ui-mask" id="mask"></div>
-    <div class="ui-dialog" id="dialogMove">
-        <div class="ui-dialog-title" id="dialogDrag">工单详情
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
             <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
                 <a href="javascript:hideDialog();" >关闭</a>
             </span>
         </div>
+        <div class="ui-dialog-content" id="dialog-content"></div>
         <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
     </div>
     <script>

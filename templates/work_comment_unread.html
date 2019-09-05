@@ -1,0 +1,28 @@
+<table class="table table-hover table-striped table-condensed table-bordered" id="table">
+    <thead>
+        <tr>
+
+            {% for tab in ('工单号','工单类型','工单详情','问题备注',) %}
+                <th style="text-align: center;vertical-align: middle">{{ tab }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    {% if comments %}
+        <tbody>
+            {% for value in comments %}
+                <tr>
+                    <td class="td_style" style="text-align: center"><a href="/{{ comments[value] }}?action=query&work_number={{ value }}" class="mintip" title="工单操作">{{ value }}</a></td>
+                    <td class="td_style" style="text-align: center">{{ source_types[comments[value]] }}</td>
+                    <td class="td_style" style="text-align: center">
+                        <a href="#" onclick="work_details_show('/work_details/application/{{ value }}')" class="mintip" title="查看工单详情" >
+                            <i class="fas fa-align-left"></i>
+                        </a>
+                    </td>
+                    <td class="td_style" style="text-align: center">
+                        <a href="#" onclick="work_details_show('/work_comment/{{ value }}')" class="mintip" title="查看或者填写工单问题备注"><i class="fas fa-edit"></i></a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    {% endif %}
+</table>

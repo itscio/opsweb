@@ -68,7 +68,7 @@ def download_war(object,version,docker_args,run_args,redis_key):
                 Redis.lpush(redis_key, '%s package download from oss ......' %package)
                 _flow_log('%s package download from oss ......' %package)
                 auth = oss2.Auth(oss_id, oss_key)
-                bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
+                bucket = oss2.Bucket(auth, oss_url, 'xxxops')
                 oss_project_path = None
                 try:
                     if not os.path.exists('%s/%s' %(dockerfile_path,dm_name)):
@@ -312,7 +312,7 @@ class k8s_object(object):
                               preference=client.V1NodeSelectorTerm(
                                   match_expressions=[client.V1NodeSelectorRequirement(
                                       key='project',
-                          operator='In',values=['xxxx'])
+                          operator='In',values=['xxx'])
                       ]),weight=30),
                           client.V1PreferredSchedulingTerm(
                               preference=client.V1NodeSelectorTerm(

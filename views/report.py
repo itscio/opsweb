@@ -291,7 +291,7 @@ def work_order_report(start_time=None,end_time=None,source=None):
     stat_key = 'op_work_order_report_status'
     dep_key = 'op_work_order_report_department'
     if not source:
-        tm = datetime.datetime.now() - datetime.timedelta(days=90)
+        tm = datetime.datetime.now() - datetime.timedelta(days=180)
         start_time = tm.strftime('%Y-%m-%d')
         end_time = time.strftime('%Y-%m-%d',time.localtime())
         source = 'ensure_application'

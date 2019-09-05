@@ -1,0 +1,24 @@
+<div style="float: left;width:98%;margin-left: 1%">
+    <table class="table table-hover table-striped table-condensed table-bordered" style="margin-top: 1%" id="table">
+        <thead>
+            <tr>
+                {% for tab in ('工单号','申请日期','工单类型','申请人','工单状态') %}
+                    <th class="td_style" style="text-align: center;">{{ tab }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        {% if work_lists %}
+            <tbody>
+                {% for value in work_lists %}
+                    <tr>
+                        <td class="td_style" style="text-align: center"><a href="/work_review">{{ value[0] }}</a></td>
+                        <td class="td_style" style="text-align: center">{{ value[1] }}</td>
+                        <td class="td_style" style="text-align: center">{{ source_types[value[2]] }}</td>
+                        <td class="td_style" style="text-align: center">{{ value[3] }}</td>
+                        <td class="td_style" style="text-align: center">{{ value[4] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        {% endif %}
+    </table>
+</div>

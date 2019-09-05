@@ -2,7 +2,7 @@
 {% block page %}
     <div style="clear:both;"></div>
     <div style="font-weight: bolder">运维工单申请审核</div>
-    {% set tables = ('工单号','申请日期','工单类型','申请人','工单详情','状态','审核') %}
+    {% set tables = ('工单号','申请日期','工单类型','申请人','工单详情','问题备注','工单状态','审核') %}
     <div style="float: left;width:98%;margin-left: 1%">
         <table class="table table-hover table-striped table-condensed table-bordered" style="margin-top: 1%" id="table">
             <thead>
@@ -27,6 +27,9 @@
                                     <i class="fas fa-align-left"></i>
                                 </a>
                             </td>
+                            <td class="td_style" style="text-align: center">
+                                <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看或者填写工单问题备注"><i class="fas fa-edit"></i></a>
+                            </td>
                             <td class="td_style" style="text-align: center">{{ value[-1] }}</td>
                             <td class="td_style" style="text-align: center">
                                     <a href="/work_review?action=review_pass&work_number={{ value[0] }}" class="mintip" title="通过工单"><i class="far fa-check-circle" style="color: darkgreen"></i>通过</a>|
@@ -40,7 +43,7 @@
     </div>
     <div class="ui-mask" id="mask" onselectstart="return false"></div>
     <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
-        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >工单详情
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
             <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
                 <a href="javascript:hideDialog();" >关闭</a>
             </span>

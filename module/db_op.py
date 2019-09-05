@@ -483,19 +483,40 @@ class work_order(DB.Model):
     source = DB.Column(DB.String(50))
     applicant = DB.Column(DB.String(100))
     reviewer = DB.Column(DB.String(100))
+    approval = DB.Column(DB.String(100))
     dingid = DB.Column(DB.String(100))
     status = DB.Column(DB.String(50))
-    def __init__(self,date,work_number,source,applicant,reviewer,dingid,status):
+    def __init__(self,date,work_number,source,applicant,reviewer,approval,dingid,status):
         self.date = date
         self.work_number = work_number
         self.source = source
         self.applicant = applicant
         self.reviewer = reviewer
+        self.approval = approval
         self.dingid = dingid
         self.status = status
     def __repr__(self):
-        values=(self.date,self.work_number,self.source,self.applicant,self.reviewer,self.dingid,self.status)
-        return '%s,%i,%s,%s,%s,%s,%s'%values
+        values=(self.date,self.work_number,self.source,self.applicant,self.reviewer,self.approval,self.dingid,self.status)
+        return '%s,%i,%s,%s,%s,%s,%s,%s'%values
+
+class work_comment(DB.Model):
+    __tablename__ = 'work_comment'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    date_time = DB.Column(DB.String(20))
+    work_number = DB.Column(DB.Integer)
+    dingid = DB.Column(DB.String(100))
+    user = DB.Column(DB.String(45))
+    comment = DB.Column(DB.String(500))
+    def __init__(self,date_time,work_number,dingid,user,comment):
+        self.date_time = date_time
+        self.work_number = work_number
+        self.dingid = dingid
+        self.user = user
+        self.comment = comment
+    def __repr__(self):
+        values=(self.date_time,self.work_number,self.dingid,self.user,self.comment)
+        return '%s,%i,%s,%s,%s'%values
 
 class server_auth(DB.Model):
     __tablename__ = 'server_auth'

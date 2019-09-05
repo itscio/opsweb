@@ -3,15 +3,14 @@ from flask import Flask,Blueprint,redirect,url_for,make_response,request
 from module import db_op,loging,Md5,tools
 import redis
 import time
-import os
 from sso_cas import CASClient
 from flask_sqlalchemy import SQLAlchemy
-import conf
+import module
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('conf/redis.conf')
 app.config.from_pyfile('conf/cas.conf')
-limiter = conf.WebLimiter()
+limiter = module.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')

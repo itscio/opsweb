@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Flask,request,render_template_string,session
+from flask import Flask,request,render_template_string,session,g
 import requests
 from functools import wraps
 import time
@@ -42,12 +42,17 @@ redis_password = app.config.get('REDIS_PASSWORD')
 Redis = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 def Async_log(user,url):
     try:
-        url = url.replace('op_servers', 'xxxx.xxxx.com')
-        if 'xxxx.xxxx.com' in url and not url.endswith('/index'):
+        td = time.strftime('%Y-%m-%d', time.localtime())
+        tm = time.strftime('%H:%M:%S', time.localtime())
+        url = url.replace('op_servers', 'xxx.xxxx.com')
+        if 'xxx.xxxx.com' in url and not url.endswith('/index'):
             ip = session['remote_ip']
-            Key = 'op_http_log_%s' %time.strftime('%Y-%m-%d',time.localtime())
-            Redis.hset(Key,time.strftime('%H:%M:%S',time.localtime()),[ip,user,url])
+            Key = 'op_http_log_%s' %td
+            Redis.hset(Key,tm,[ip,user,url])
             Redis.expire(Key,864000)
+            Redis.sadd('op_active_users_%s' % td,g.dingId)
+            Redis.hset('op_user_remote_ip', g.dingId, ip)
+            Redis.hset('op_user_login_time', g.dingId, tm)
     except Exception as e:
         logging.error(e)
 

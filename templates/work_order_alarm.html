@@ -1,0 +1,13 @@
+<div>
+    {% if text %}
+        <h6 class="animated heartBeat">
+            {% if url %}
+                <a href="#" onclick="work_details_show('{{ url|safe }}')">
+                    <i class="far fa-hand-point-right"></i>{{ text|safe }}
+                </a>
+            {% else %}
+                {{ text|safe }}
+            {% endif %}
+        </h6>
+    {% endif %}
+</div>

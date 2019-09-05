@@ -53,10 +53,10 @@ def login_required(grade = None):
                                         g.ip = g.ip.split(',')[0]
                                     session['remote_ip'] = g.ip
                                     tm = time.strftime('%Y%m%d', time.localtime())
-                                    Redis.sadd('op_active_users_%s' %tm, dingId)
-                                    g.active_users = Redis.scard('op_active_users_%s' %tm)
-                                    g.date = time.strftime('%Y-%m-%d', time.localtime())
+                                    td = time.strftime('%Y-%m-%d', time.localtime())
+                                    g.date = td
                                     g.ym = time.strftime('%Y', time.localtime())
+                                    g.active_users = Redis.scard('op_active_users_%s' % td)
                                     #页面菜单缓存加速
                                     menu_key = f'op_menu_{tm}'
                                     user_menu_key = f'menu_{dingId}'
@@ -80,9 +80,9 @@ def login_required(grade = None):
                                                 if val:
                                                     sub_val[Menu] = val
                                         g.Base_Menu = {'submenu': submenu,'sub_val': sub_val,'menu_md5':menu_md5}
-                                        #缓存页面菜单1天
+                                        #缓存页面菜单1小时
                                         Redis.hset(menu_key,user_menu_key,g.Base_Menu)
-                                        Redis.expire(menu_key,28800)
+                                        Redis.expire(menu_key,3600)
                                     return func(*args, **kwargs)
                 except Exception as e:
                     logging.error(e)

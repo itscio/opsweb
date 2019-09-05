@@ -25,8 +25,7 @@
                             {% endfor %}
                             <td class="table_list" style="max-width:150px">{{ value[7] }}</td>
                             <td class="table_list" style="max-width:200px">{{ value[8] }}</td>
-                            <td class="table_list" style="max-width:150px">{{ value[9] }}</td>
-                            {% for val in value[10:] %}
+                            {% for val in value[9:] %}
                                 <td class="td_style" style="text-align: center">
                                     <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ val }}</div>
                                 </td>
@@ -37,7 +36,10 @@
                                 </a>
                             </td>
                             <td class="td_style" style="text-align: center">
-                                {% if value[2] in ['待审批','未受理','审批拒绝'] %}
+                                <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看或者填写工单问题备注"><i class="fas fa-edit"></i></a>
+                            </td>
+                            <td class="td_style" style="text-align: center">
+                                {% if value[2] in ['未审核','待审批','未受理','审批拒绝','已退回'] %}
                                     <a href="/server_auth_list?action=repeal&work_number={{ value[0]|safe }}" class="mintip" title="撤销工单">可撤销</a>
                                 {% elif value[2] == '受理中' %}
                                     <i class="fas fa-spinner fa-spin"></i>{{ value[2] }}
@@ -53,12 +55,13 @@
     </div>
     <div class="ui-mask" id="mask" onselectstart="return false"></div>
     <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
-        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >工单详情
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
             <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
                 <a href="javascript:hideDialog();" >关闭</a>
             </span>
         </div>
         <div class="ui-dialog-content" id="dialog-content"></div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
     </div>
     <script>
         $(document).ready(table_order('table',1));

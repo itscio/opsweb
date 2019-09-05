@@ -1,0 +1,24 @@
+<div class="botui-app-container" id="comment">
+    <bot-ui></bot-ui>
+</div>
+<script>
+    var MsgBot = BotUI('comment');
+    {% if comments %}
+        $.each({{ comments|safe }}, function(i, value) {
+            MsgBot.message.add({
+              delay: 1200,
+              content: value
+            });
+        });
+    {% endif %}
+    MsgBot.action.text({
+          delay: 800,
+          action: {
+              value: '',
+              placeholder: '填写完请按回车键!'
+          }
+        }).then(function (res) {
+            var url = '/input_work_comment/{{ work_number|safe }}/'+res.value;
+            $.ajax({url:url});
+        });
+</script>

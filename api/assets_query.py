@@ -3,7 +3,7 @@ from flask import Blueprint,jsonify,request
 from module import db_op,db_idc,loging,Md5
 from sqlalchemy import and_
 import time
-import conf
+import module
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import distinct
 import redis
@@ -12,7 +12,7 @@ app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/sql.conf')
-limiter = conf.WebLimiter()
+limiter = module.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_data = app.config.get('REDIS_DATA')

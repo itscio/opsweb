@@ -20,7 +20,8 @@
                         {{ form.csrf_token }}
                         <p>项目名称:{{ form.project (style="width:155px;") }}&nbsp;开发语言:{{ form.select_dev }}</p>
                         <p>项目域名:{{ form.domain (style="width:288px") }}</p>
-                        <p>选择资源:{{ form.select_resource (style="width:348px") }}</p>
+                        <div>选择资源</div>
+                        <p>{{ form.select_resource (style="width:348px") }}</p>
                         <p>{{ form.submit (class="btn btn-primary") }}</p>
                     </form>
                 </div>
@@ -36,7 +37,8 @@
                         {{ form.csrf_token }}
                         <p>部门:{{ form.department(style="width:73px") }}&nbsp;负责人:{{ form.person (style="width:133px")}}</p>
                         <p>联系方式:{{ form.contact (style="width:225px")}}</p>
-                        <p>资源:{{ form.select_third (style="width:285px")}}</p>
+                        <div>选择资源</div>
+                        <p>{{ form.select_third (style="width:285px")}}</p>
                         <p>{{ form.submit_third (class="btn btn-primary") }}</p>
                     </form>
                 </div>

@@ -27,39 +27,29 @@ function showDialog(){
     fillToBody( g('mask') );
 }
 function show_comment(){
-    g('dialogMove').style.display = 'block';
-    g('mask').style.display = 'block';
-    autoCenter( g('dialogMove') );
-    fillToBody( g('mask') );
+    showDialog();
     var comment = $('#comment_show').text();
     $('#comment_update').val(Trim(comment));
 }
 function work_details_show(url){
-        g('dialogMove').style.display = 'block';
-        g('mask').style.display = 'block';
-        autoCenter( g('dialogMove') );
-        fillToBody( g('mask') );
+        showDialog();
         $.ajax({
          url: url,
          cache: false,
          success: function(html){
-             $("#dialog-content").html(html);
+             $('#iframe').hide();
+             $("#dialog-content").show().html(html);
          }
         });
 }
 
 function work_details_iframe(url){
-        g('dialogMove').style.display = 'block';
-        g('mask').style.display = 'block';
-        autoCenter( g('dialogMove') );
-        fillToBody( g('mask') );
-        $('iframe').attr('src',url);
+        showDialog();
+        $("#dialog-content").hide();
+        $('#iframe').show().attr('src',url);
 }
 function show_k8s_input(name,target_ref,max_update,cpu_update){
-    g('dialogMove').style.display = 'block';
-    g('mask').style.display = 'block';
-    autoCenter( g('dialogMove') );
-    fillToBody( g('mask') );
+    showDialog();
     $('#max_update').val(Trim(max_update));
     $('#cpu_update').val(Trim(cpu_update));
     $('#target_ref').val(Trim(target_ref));
@@ -73,8 +63,7 @@ function hideDialog(){
 function hide_comment(){
     g('dialogMove').style.display = 'none';
     g('mask').style.display = 'none';
-    $('#dialogDrag').text('修改备注');
-    $('#dialogDrag').css('color','');
+    $('#dialogDrag').text('修改备注').css('color','');
 }
 function comment_modify() {
     if ($('#comment_update').val()){

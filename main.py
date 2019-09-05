@@ -16,13 +16,13 @@ from views import work_order
 from operation import examine,assets_manage,resource_pool
 from module import tools,user_auth,produce
 from flask_debugtoolbar import DebugToolbarExtension
-import conf
+import module
 class MyFlask(Flask):
-    jinja_environment = conf.FlaskEchartsEnvironment
+    jinja_environment = module.FlaskEchartsEnvironment
 app = MyFlask(__name__)
 DB = SQLAlchemy(app)
 mail = Mail(app)
-limiter = conf.WebLimiter()
+limiter = module.WebLimiter()
 limiter = limiter.limiter
 moment = Moment(app)
 assets = Environment(app)
@@ -61,8 +61,8 @@ app.register_blueprint(k8s_deploy.page_k8s_deploy)
 app.register_blueprint(k8s_project_update.page_k8s_project_update)
 produce.scheduler_tasks()
 task_run.Run()
-assets.register('js_file', conf.js_files())
-assets.register('css_file', conf.css_files())
+assets.register('js_file', module.js_files())
+assets.register('css_file', module.css_files())
 @app.route('/')
 @limiter.exempt
 def main():
