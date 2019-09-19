@@ -4,7 +4,7 @@
   - 前端Web框架：Bootstrap4
   - 前端图表框架：Pycharts + Datatables
   - 后端Web框架：Flask1.0+
-  - 后端Task框架：Pyscheduler
+  - 后端Task框架：apscheduler
   - 后端数据库：Mysql + Influxdb + Redis
   - 后端日志源：ElasticSearch
   - 监控数据源：zabbix
