@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block page %}
+    {% if table_infos %}
+        <div class="div" style="margin-top: 1%"><a href="/mysql"style="float:left;margin-left: 5%"><span class="icon-hand-left" ></span>返回</a>&nbsp;&nbsp{{ db_name }}数据库表列表</div>
+        <div style="width: 90%;margin-left: 5%">
+             <table class="table table-hover table-striped table-condensed table-bordered" id="table_data">
+                <thead>
+                    <tr>
+                        {% for t in tables %}
+                            <td style="text-align: center;vertical-align:middle;font-weight: bold">{{ t }}</td>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for value in values %}
+                        <tr>
+                            {% for va in value[:2] %}
+                                <td style="text-align: center;vertical-align:middle;">{{va}}</td>
+                            {% endfor %}
+                            <td style="text-align: center;vertical-align:middle;">{{table_infos[value[:2]|join(':')]}}</td>
+                            <td style="text-align: center;vertical-align:middle;">{{value[2]}}</td>
+                            <td style="text-align: center;vertical-align:middle;"><a href="/tables/{{ value[:2]|join(':') }}/{{ db_name }}/{{ value[3] }}">{{value[3]}}</a></td>
+                            {% for va in value[4:] %}
+                                <td style="text-align: center;vertical-align:middle;">{{va}}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <script>
+            $(document).ready(table_order('table_data',4));
+        </script>
+    {% elif Columns %}
+        <div class="div" style="margin-top: 1%"><a href="#" onclick="referrer_url()" style="float:left;margin-left: 5%"><span class="icon-hand-left" ></span>返回</a>&nbsp;&nbsp{{ db_name }}库{{ table_name }}表详情</div>
+        <div style="width: 90%;margin-left: 5%">
+            <div class="style_hr"></div>
+            <span style="float: left;color: blue"><strong>{{ table_name }}表结构:</strong></span>
+            <table class="table table-bordered table-striped table-condensed">
+                <thead>
+                    <tr>
+                        {% for info in tb_columns %}
+                            <th style="text-align: center;vertical-align:middle;">{{ info }}</th>
+                        {% endfor %}
+                    </tr>
+
+                </thead>
+                <tbody>
+                    {% for infos in Columns %}
+                        <tr>
+                            {% for info in infos[:-2] %}
+                                <td style="text-align: center;vertical-align:middle;">{{ info }}</td>
+                            {% endfor %}
+                            <td style="text-align: center;vertical-align:middle;">{{ infos[-1] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <thead>
+                    <tr>
+                        <th colspan="6" style="text-align: center;vertical-align:middle;">create table sql</th>
+                        <th colspan="2" style="text-align: center;vertical-align:middle;">clipboard</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" id="foo" style="overflow: hidden;font-size: smaller">{{ create_table }}</td>
+                        <td colspan="2" style="vertical-align:middle;">
+                            <button id="copy_button" type="button" class="btn btn-link" data-clipboard-action="copy" data-clipboard-target="#foo" style="margin-left: 20%">复制到粘贴板</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <span style="float: left;color: blue"><strong>{{ table_name }}表索引:</strong></span>
+            <table class="table table-bordered table-striped table-condensed">
+                <thead>
+                    <tr>
+                        {% for tab in tb_index %}
+                            <th style="text-align: center;vertical-align:middle;">{{ tab }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for index in Indexs %}
+                        <tr>
+                            {% for inx in index[1:] %}
+                                <td style="text-align: center;vertical-align:middle;">{{ inx }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <script>
+            setTimeout(js_msg("没有找到相关数据信息!",3000,'error'),3000);
+            if (document.referrer){
+            location.href=document.referrer;
+            } else {
+                location.href= '/index';
+            }
+
+        </script>
+    {% endif %}
+    <script>
+        var clipboard = new Clipboard('#copy_button');
+        clipboard.on('success', function() {
+            js_msg("已复制到剪贴板中",3000,'info');
+        });
+        clipboard.on('error', function(e) {
+            console.log(e);
+        });
+    </script>
+{% endblock page %}

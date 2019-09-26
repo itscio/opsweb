@@ -1,0 +1,50 @@
+<div style="width:100%;margin-left:1%">
+    <div id="alarm_load" class="style_border" style="width:31%;float:left;overflow: scroll;margin-left: 1%;height:220px;">
+        <strong style="font-size: smaller">服务器15分钟持续压力预警</strong>
+        {% if z_infos['cpu_load'] or z_infos['openfile'] %}
+            {% for info in z_infos['cpu_load'] %}
+                <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
+                    <a href="/assets_get?type=server&hostname={{ info[0] }}">{{ info[0] }}</a> CPU持续使用率{{ info[1]|int }}%
+                    {% if info[0] in whitelist %}
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')">取消知悉</a></span>
+                    {% else %}
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            {% for info in z_infos['openfile'] %}
+                <div class="alert alert-info" style="text-align: left;margin: 1%">服务器
+                    <a href="/assets_get?type=server&hostname={{ info[0] }}">{{ info[0] }}</a> openfile持续达到{{ info[1]|int }}
+                    {% if info[0] in whitelist %}
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/cancel/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')">取消知悉</a></span>
+                    {% else %}
+                        <span class="badge index_zabbix"><a href="javascript:void(0);" onclick="ajax_request('/alarm_load_whitelist/attention/{{ info[0] }}');ajax_html_show('/alarm_show','alarm_show')" style="color: tomato">确认知悉</a></span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="radar_background">
+                <div class="radar">
+                    <a href="#">实时监测中</a>
+                </div>
+            </div>
+            <script>
+                $('#alarm_load').css('overflow','hidden');
+            </script>
+        {% endif %}
+    </div>
+    <div id="work_counts" class="style_border" style="width:31%;float:left;margin-left: 1%;height:220px;">
+        <div style="width:107%;float:left;overflow: hidden;margin-left: -5%">
+            {{ echarts_js_dependencies(work_bar) }}
+            {{ echarts_container(work_bar) }}
+            {{ echarts_js_content(work_bar) }}
+        </div>
+    </div>
+    <div id="k8s_assets" class="style_border" style="width:31%;float:left;margin-left: 1%;height:220px;">
+        <div style="width:107%;float:left;overflow: hidden;margin-left: -4%">
+            {{ echarts_js_dependencies(k8s_bar) }}
+            {{ echarts_container(k8s_bar) }}
+            {{ echarts_js_content(k8s_bar) }}
+        </div>
+    </div>
+</div>

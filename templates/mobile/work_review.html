@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="clear:both;"></div>
+    <div style="font-weight: bolder">运维工单申请审核</div>
+    {% set tables = ('工单号','申请日期','工单类型','申请人','工单详情','问题备注','工单状态','审核') %}
+    <div style="float: left;width:98%;margin-left: 1%">
+        <table class="table table-hover table-striped table-condensed table-bordered" style="margin-top: 1%" id="table">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <th class="td_style" style="text-align: center;">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            {% if work_lists %}
+                <tbody>
+                    {% for value in work_lists %}
+                        <tr>
+                            <td class="td_style" style="text-align: center">{{ value[0] }}</td>
+                            <td class="td_style" style="text-align: center">{{ value[1] }}</td>
+                            <td class="td_style" style="text-align: center">{{ source_types[value[2]] }}</td>
+                            {% for val in value[3:-1] %}
+                                <td class="td_style" style="text-align: center">{{ val }}</td>
+                            {% endfor %}
+                            <td class="td_style" style="text-align: center">
+                                <a href="#" onclick="work_details_show('/work_details/{{ order_types[value[2]] }}/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
+                                    <i class="fas fa-align-left"></i>
+                                </a>
+                            </td>
+                            <td class="td_style" style="text-align: center">
+                                {% if value[-1] =='未审核' %}
+                                    <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="填写工单问题备注">
+                                        <span style="color:darkgreen;font-size: large"><i class="far fa-comment-dots"></i></span>
+                                    </a>
+                                {% else %}
+                                    <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看工单问题备注">
+                                        <span style="color: #0058a3;font-size: large"><i class="far fa-comment-dots"></i></span>
+                                    </a>
+                                {% endif %}
+                            </td>
+                            <td class="td_style" style="text-align: center">{{ value[-1] }}</td>
+                            <td class="td_style" style="text-align: center">
+                                    <a href="/work_review?action=review_pass&work_number={{ value[0] }}" class="mintip" title="通过工单"><i class="far fa-check-circle" style="color: darkgreen"></i>通过</a>|
+                                <a href="/work_review?action=review_deny&work_number={{ value[0] }}" class="mintip" title="退回工单"><i class="far fa-times-circle" style="color: darkred"></i>退回</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            {% endif %}
+        </table>
+    </div>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
+            <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
+                <a href="javascript:hideDialog();" >关闭</a>
+            </span>
+        </div>
+        <div class="ui-dialog-content" id="dialog-content"></div>
+    </div>
+    <script>
+        $(document).ready(table_order('table',1));
+    </script>
+    {% if msg %}
+        <script>
+            "use strict";
+            js_msg('{{ msg|safe }}',3000,'info');
+            setTimeout(function () {
+                location.href='/work_review';
+            },4000);
+        </script>
+    {% endif %}
+{% endblock %}

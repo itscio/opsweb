@@ -3,7 +3,6 @@ from flask import Flask,Blueprint,redirect,make_response,request,jsonify
 from module import tools,user_auth
 from xml.dom.minidom import parseString
 from collections import defaultdict
-import os
 import redis
 import time
 app = Flask(__name__)

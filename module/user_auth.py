@@ -1,7 +1,7 @@
 #-*- coding: utf-8 -*-
 from flask import Flask,request,g,redirect,url_for,session
 import time
-from  module import db_op,loging,Md5
+from module import db_op,loging,Md5
 import redis
 from functools import wraps
 from sso_cas import CASClient

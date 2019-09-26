@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">
+        <a href="/assets" style="float: left;margin-top: 1%"><span class="icon-hand-left"></span>返回</a>
+        &nbsp;&nbsp设备信息列表:
+        {% if export %}
+            (<a href="/assets_get/export" style="font-size: small"><i class="fas fa-download"></i>导出Excel文件</a>)
+        {% endif %}
+        <div class="style_hr"></div>
+    </div>
+    <div style="width: 99%">
+        <table class="table table-hover table-striped table-condensed table-bordered" id="table_data">
+            <thead>
+                <tr style="font-weight: bold">
+                    {% for tab in tables %}
+                        <th class="table_list" style="text-align: center">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if values %}
+                    {% for val in values %}
+                        <tr>
+                            <td class="table_list" style="text-align: center">{{ val[0] }}</td>
+                            <td class="table_list" style="text-align: center">{{ val[1] }}</td>
+                            {% if assets_type == 'server' %}
+                                <td class="table_list" style="text-align: center"><a href="/assets_get?type=server&ip={{ val[2]}}&port={{ val[3] }}">{{ val[2] }}</a></td>
+                            {% else %}
+                                <td class="table_list" style="text-align: center">{{ val[2] }}</td>
+                            {% endif %}
+                            {% for va in val[3:] %}
+                                <td class="table_list" style="text-align: center">{{ va }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',1));
+    </script>
+{% endblock page %}

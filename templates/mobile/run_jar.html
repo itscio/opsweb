@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">{{ lable }}</div>
+    <div style="width: 99%">
+         <table id="table_data" class="table table-striped table-bordered table-hover table-condensed">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <td>{{ tab }}</td>
+                    {% endfor %}
+                </tr>
+            </thead>
+             <tbody>
+                 {% for val in vals %}
+                    <tr>
+                        <td width="10%">{{ val[0] }}</td>
+                        <td width='40%'>{{ val[1] }}</td>
+                        <td>{{ val[2] }}
+                            <a href="#" style="float: right;font-size: smaller;margin-right:5%" onclick="run_jar('{{ val[0]|safe }}','{{ val[1]|safe }}','{{ val[-1]|safe }}')">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                        {% for va in val[3:-1] %}
+                            <td>{{ va }}</td>
+                        {% endfor %}
+                        <td><a href="/assets_get?type=server&hostname={{ val[-1] }}">{{ val[-1] }}</a></td>
+
+                    </tr>
+                 {% endfor %}
+             </tbody>
+         </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',5));
+        window.localStorage.clear();
+        function run_jar(jar_type,project,hostname) {
+            window.localStorage.setItem('run_jar_hostname',hostname);
+            window.localStorage.setItem('run_jar_type',jar_type);
+            window.localStorage.setItem('run_jar_project',project);
+            window.localStorage.setItem('run_jar_referrer','/run_jar');
+            location.href='/new_business#+业务部署';
+        }
+    </script>
+{% endblock page %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:950px;margin-left:20%;margin-top: 1%" id="other_work">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >其它事项申请工单</h4>
+        </div>
+        <div class="panel-body" style="margin-bottom: 3%">
+            <form action="/other_work" method="post" enctype=multipart/form-data>
+                {{ form.csrf_token }}
+                <div style="margin-top: 1%">选择事项:{{ form.titles (style="width:150px",onchange="other_work_menu()")}} &nbsp;指定受理人:{{ form.assign (style="width:150px")}}&nbsp;
+                    审核人:{{ form.input (style="width:200px",placeholder="部门leader邮箱") }} &nbsp;申请人: <input type="text" id="usr" style="width:50px;text-align: center"></div>
+                <div style="border-top: 1px solid #d1d1d1;margin-top: 1%;background-color: #f8f8f8">
+                    <div style="font-weight: bold;margin-top: 1%">事项说明:</div>
+                    <div style="margin-top: 0.8%">{{ form.text (style="width:900px;resize:vertical")}}</div>
+                </div>
+                <div style="margin-top: 2%">{{ form.submit(class="btn btn-primary") }}</div>
+            </form>
+        </div>
+    </div>
+    {% if Msg %}
+        <script>
+            "use strict";
+            js_msg('{{ Msg[1]|safe }}',3000,'{{ Msg[0] }}');
+            if ('{{ Msg[0]|safe }}' ==='success'){
+            setTimeout(function () {
+                location.href='/other_work_list';
+            },4000);
+            }
+        </script>
+    {% endif %}
+    {% if not Main_Menu['submenu'] %}
+        <script>
+            $('#other_work').css('margin-left','25%');
+        </script>
+    {% endif %}
+    <script>
+        "use strict";
+        CKEDITOR.replace('text',{height:300});
+        $('#usr').val('{{ g.user|safe }}').attr("readonly","readonly");
+        function other_work_menu(){
+        if ($('#titles').val().indexOf('VPN') >=0){
+            $('#input').val('{{ server_auth_leader|safe }}').attr("readonly","true");
+        }else{
+            $('#input').val('').removeAttr("readonly");
+        }}
+    </script>
+{% endblock page %}

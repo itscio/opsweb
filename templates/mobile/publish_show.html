@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="margin-left: 2%"><p style="text-align:left;font-weight:bold">执行输出(等待时间可能会稍长):</p></div>
+    <div style="margin-left: 2%;text-align:left;max-height:60%;overflow: hidden">
+        <p id="MSG"></p>
+    </div>
+    <!-- 部署结果汇总 -->
+    <div class="modal fade" id="Result_Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title" id="myModalLabel">上线部署执行结果汇总</h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center">部署成功</th>
+                                <th style="text-align:center">部署失败</th>
+                                <th style="text-align:center">自动回滚</th>
+                                <th style="text-align:center">未部署数</th>
+                                <th style="text-align:center">实例总数</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="result_tr">
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <div style="float: left" id="gray"></div>
+                    <div style="float: left" id="flow_log"></div>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        js_msg('受理中,请耐心等待......',false,'info');
+        var id = setInterval("publish_Request()",200);
+        function publish_Request(){
+            $.get("/publish_query/{{ secret_key|safe }}",function(data){
+            if (data !=""){
+                if (data.indexOf("_End_") < 0){
+                    if(data.indexOf("Fail") > 0){
+                        $("#MSG").before('<p>'+data+'&nbsp;<span class="icon-remove" style="color: red"></span></p>');}
+                    else{
+                        if (data.indexOf("Success")>0){
+                            $("#MSG").before('<p>'+data+'&nbsp;<span class="icon-ok" style="color: green"></span></p>');}
+                        else{
+                            $("#MSG").before('<p>'+data+'</p>');
+                        }
+                    }}
+                else {
+                    js_msg('',3,'success');
+                    $("#MSG").before('<p style="font-weight:bold">本次操作执行完毕!</p>');
+                    clearInterval(id);
+                    var events = {0:"color:green;",1:"color:red;",2:"color:orange;",3:"color:blue;",4:"color:black;"};
+                    var results = data.split(':')[1];
+                    var flow_number = data.split(':')[2];
+                    var gray_results = data.split(':')[3];
+                    $.each(results.split(','),
+                        function (i,val) {$('#result_tr').append('<td style="text-align:center;'+events[i]+'">'+val+'</td>');
+                    });
+                    if (gray_results.split(',')[0] == 'True'){
+                        $('#gray').html('<span>灰度上线服务器:'+gray_results.split(',')[1]+'</span>');
+                    }
+                    $('#flow_log').html('<a href="/publish_log/'+flow_number+'">日志详情</a>');
+                    $('#Result_Modal').modal('show');
+                }}
+                window.scrollTo(0,document.body.scrollHeight);});
+        }
+    </script>
+{% endblock page %}

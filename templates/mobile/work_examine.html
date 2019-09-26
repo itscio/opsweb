@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="font-weight: bolder">{{ title }}</div>
+    {% set tables = ('工单号','申请日期','工单类型','工单详情','工单进度') %}
+    <div style="margin-left: 1%;margin-right: 2%">
+        <table class="table table-hover table-striped table-condensed table-bordered" style="margin-top: 1%" id="table">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <th class="td_style" style="text-align: center;">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if work_lists %}
+                    {% for value in work_lists %}
+                        <tr>
+                            <td class="td_style" style="vertical-align: middle;">
+                            <a href="/{{ value[2] }}?action=query&work_number={{ value[0] }}" class="mintip" title="工单操作">{{ value[0] }}</a>
+                            </td>
+                            <td class="td_style" style="vertical-align: middle;">{{ value[1] }}</td>
+                            <td class="td_style" style="vertical-align: middle;">{{ source_types[value[2]] }}</td>
+                            <td class="td_style" style="vertical-align: middle;">
+                                <a href="#" onclick="work_details_iframe('/work_details/{{ order_types[value[2]] }}/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
+                                    <i class="fas fa-align-left"></i>
+                                </a>
+                            </td>
+                            <td align="center">
+                                <div style="width:800px;">
+                                    <div id="{{ value[0] }}"></div>
+                                </div>
+                                <script type="text/javascript">
+                                    $("#{{ value[0] }}").step({
+                                        index: {{ value[-1]|safe }},
+                                        time: 500,
+                                        title: {{ value[3]|safe }}
+                                    });
+                                </script>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="ui-mask" id="mask"></div>
+    <div class="ui-dialog" id="dialogMove">
+        <div class="ui-dialog-title" id="dialogDrag">
+            <div id="title">运维工单</div>
+        </div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
+        <div>
+            <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
+                <a href="javascript:hideDialog();" >关闭</a>
+            </span>
+        </div>
+    </div>
+    <script>
+        $(document).ready(table_order('table',1));
+        $("#iframe").load(function(){
+            var mainheight = $(this).contents().find("body").height()+30;
+            $(this).height(mainheight);
+            $('#dialogMove').height(mainheight+30);
+            });
+    </script>
+{% endblock %}

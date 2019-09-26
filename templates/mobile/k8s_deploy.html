@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:850px;float:left;margin-left:21%;margin-top: 2%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >项目容器化部署</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/deployment_create" method="post">
+                {{ form.csrf_token }}
+                <p>选择集群<span style="color: red">*</span>:{{ form.contexts (style="width:130px")}}&nbsp;所属项目<span style="color: red">*</span>:{{ form.projects(style="width:150px") }}&nbsp;
+                    服务端口:{{ form.container_port (style="width:135px",placeholder="多个以逗号分割")}}
+                </p>
+                <p>代码包名<span style="color: red">*</span>:{{ form.object (style="width:190px")}}&nbsp;版本号<span style="color: red">*</span>:{{ form.version (style="width:181px")}}&nbsp;
+                    副本数量<span style="color: red">*</span>:{{ form.replicas (style="width:50px")}}</p>
+                <p>容器Dockerfile特殊参数:</p>
+                <p>{{ form.docker_args (style="width:620px;height:60px;margin-top:-14px;margin-bottom:-10px") }}</p>
+                <p>容器系统环境及应用进程启动参数:<span style="color: red">*</span></p>
+                <p>{{ form.run_args (style="width:620px;height:60px;margin-top:-14px;margin-bottom:-10px") }}</p>
+                <p>Sidecar镜像:{{ form.sidecar (placeholder="完整Docker镜像地址",style="width:540px") }}</p>
+                <p>健康监测URL:{{ form.healthcheck (placeholder="以/开头的URL地址",style="width:532px") }}</p>
+                <p>亲和性标签:{{ form.label_project (style="width:232px",placeholder="required(必须符合)") }}&nbsp;
+                    亲和性标签:{{ form.label_deploy (style="width:232px",placeholder="preferred(尽可能符合)") }}</p>
+                <p>mount路径:{{ form.mount_path (style="width:235px") }}&nbsp;mount名称:{{ form.mount_name (style="width:235px") }}</p>
+                <p>容器CPU核数:{{ form.request_cpu (style="width:113px") }}-{{ form.limit_cpu (style="width:113px")}}&nbsp;
+                    内存资源:{{ form.request_mem (style="width:110px",placeholder="默认GB")}}-{{ form.limit_mem (style="width:110px",placeholder="默认GB")}}
+                </p>
+                <p>项目域名:{{ form.domain (style="width:400px",placeholder="对外提供http服务必填,多个以逗号分割")}} &nbsp;对外服务端口:{{ form.ingress_port (style="width:64px") }}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
+            </form>
+        </div>
+    </div>
+{% endblock page %}

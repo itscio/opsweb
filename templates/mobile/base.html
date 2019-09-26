@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html" xmlns="http://www.w3.org/1999/html">
+    <head>
+        <div class=".header">
+            <title>运维管理平台</title>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+            <link rel="stylesheet" href="/static/css/awesome.css"/>
+            <link rel="stylesheet" href="/static/css/datatables.min.css">
+            <link rel="stylesheet" href="/static/css/dataTables.bootstrap4.min.css">
+            <link rel="stylesheet" href="/static/css/flatpickr.min.css">
+            {% assets "css_file" %}
+                <link rel="stylesheet" href="{{ ASSET_URL }}">
+            {% endassets %}
+            <script src="/static/js/jquery.min.js"></script>
+            <script src="/static/js/vue.min.js"></script>
+            <script src="/static/js/bootstrap.min.js"></script>
+            <script src="/static/js/bootprompt.js"></script>
+            <script src="/static/js/flatpickr.js"></script>
+            <script src="/static/js/datatables.min.js"></script>
+            <script src="/static/js/dataTables.bootstrap4.min.js"></script>
+            <script src="/static/js/ckeditor.js"></script>
+            <script src="/static/js/echarts.min.js"></script>
+            {% assets "js_file" %}
+                <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+            {% endassets %}
+        </div>
+    </head>
+    <body>
+        {% set Main_Menu = g.Base_Menu %}
+        <div style="float:left;width:9.5%;height: 40px;background-color:#353C48" id="logo">
+            <div style="margin-top: 0.5%">
+                <div style="margin-left: 1%">
+                    <a href="/index" target="_self">
+                        <img style="width:96%;height: 38px;" src="/static/images/logo.gif">
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div style="float:right;width:90%;box-sizing: border-box;height: 35px;" id="infos">
+            <div style="float:left;font-size:large;margin-top: 1%;margin-left: 35%" id="work_order_alarm"></div>
+            <div style="margin-top:1%;font-size:9pt;float:right;margin-right: 0.5%;">
+                <i class="fas fa-user"></i>登录用户:{{ g.user }}&nbsp;
+                <i class="fas fa-broadcast-tower"></i>来源IP:{{ g.ip }}&nbsp;
+                <i class="fas fa-calendar-alt"></i>日期:{{ g.date }}&nbsp;
+                <i class="fas fa-users"></i>在线人数:{{ g.active_users }}&nbsp;
+                <a  href={{ url_for('logout.logout') }}>
+                    <span style="color:#0077b3;">
+                        <i class="fas fa-sign-out-alt"></i>
+                        退出</span>
+                </a>
+            </div>
+        </div>
+        <div style="height:1.3px; border-top:1.3px solid gainsboro;width:100%;clear:both;" id="hr_div"></div>
+        {% if Main_Menu['submenu'] %}
+            <nav id="navbar" class="">
+                <ul>
+                    {% for Menu in Main_Menu['submenu'] %}
+                        <li id="menu_{{ Main_Menu['menu_md5'][Menu] }}">
+                            <a href="#"><i class="far fa-plus-square"></i>&nbsp;{{ Menu }}</a>
+                            <ul id = "ul_{{ Main_Menu['menu_md5'][Menu] }}">
+                                {% for val in Main_Menu['sub_val'][Menu] %}
+                                    {% if 'http' in val[0] %}
+                                    <li style="list-style-type:none;">
+                                        <a href={{ val[0] }} target="_blank">{{ val[1] }}</a>
+                                    </li>
+                                    {% else %}
+                                        <li style="list-style-type:none;">
+                                            {% set sub_id = url_for(val[0]).split('/')[-1] %}
+                                            <a target="_self" href="{{ url_for(val[0]) }}#_{{ Main_Menu['menu_md5'][Menu] }}" id="sub_{{ Main_Menu['menu_md5'][Menu] }}{{ sub_id }}">{{ val[1] }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+            <script>
+                $("#navbar").rvnm({theme: 'dark-doder'});
+                var url = window.location.href;
+                if (url.indexOf('#')>=0){
+                    var menu_id = decodeURI(url.split('#')[1]);
+                    if (menu_id.indexOf('_') >-1){
+                        var uri_id  = menu_id+url.split('#')[0].split('/').slice(-1);
+                        $('#menu'+menu_id).removeClass('rvnm-expandable').addClass('rvnm-collapseable');
+                        $('#ul'+menu_id).css({'display':'block'});
+                        $('#sub'+uri_id).css({'background':'#4285f4'});
+                    }
+                }
+            </script>
+        {% else %}
+            <script>
+                $("#infos").css({'background-color':'#353C48','color':'whitesmoke'});
+                $("#logo").css({'width':'10%'});
+            </script>
+        {% endif %}
+        <div class="Page" id="Page">
+            {% block page %} {% endblock page %}
+        </div>
+        <div style="clear:both;"></div>
+    </body>
+    <footer>
+        <div style="margin-top: 2%">北京xxxx科技股份有限公司|版权所有© 2009-{{ g.ym }} xxxx|运维邮箱:yw@xxxx.com</div>
+    </footer>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
+            <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
+                <a href="javascript:hideDialog();" >关闭</a>
+            </span>
+        </div>
+        <div class="ui-dialog-content" id="dialog-content"></div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
+    </div>
+    <script>
+        $(document).ready(function() {
+            $.minimalTips();
+        });
+        setInterval(function(){
+            ajax_html_show("/work_order_alarm","work_order_alarm");
+        },10000);
+    </script>
+    {% if not Main_Menu['submenu'] %}
+        <script>
+            $('#Page').removeClass('Page').addClass('Page_other');
+            $('#hr_div').hide();
+            $('#infos').css({'height':'40px'});
+        </script>
+    {% endif %}
+</html>
+

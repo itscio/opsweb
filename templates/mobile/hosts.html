@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">{{ lable }}</div>
+    <div style="width: 99%">
+        <span style="float: right">输入主机名:<input id="input_host" type="text"></span>
+         <table id="table_data" class="table table-striped table-bordered table-hover table-condensed">
+            <thead>
+                <tr>
+                    {% for tab in tables[:2] %}
+                        <td>{{ tab }}</td>
+                    {% endfor %}
+                    {% for tab in tables[2:] %}
+                        <td style="text-align: center;vertical-align: middle">{{ tab }}</td>
+                    {% endfor %}
+                </tr>
+            </thead>
+            {% if vals %}
+                 <tbody>
+                    <tr>
+                        <td width="10%">{{ vals[0][0] }}</td>
+                        <td width='25%'>{{ vals[0][1] }}</td>
+                        {% for va in vals[0][2:-1] %}
+                                    <td style="text-align: center;vertical-align: middle" rowspan="{{ vals|length }}">{{ va }}</td>
+                        {% endfor %}
+                        <td style="text-align: center;vertical-align: middle" rowspan="{{ vals|length }}"><a href="/assets_get?type=server&hostname={{ vals[0][-1] }}">{{ vals[0][-1] }}</a></td>
+                    </tr>
+                     {% for val in vals[1:] %}
+                        <tr>
+                            <td width="10%">{{ val[0] }}</td>
+                            <td width='40%'>{{ val[1] }}</td>
+                        </tr>
+                     {% endfor %}
+                 </tbody>
+            {% endif %}
+         </table>
+    </div>
+    <script>
+    $.input_host('input_host',{{ host_list|safe }},function () {
+            var host = $('#input_host').val();
+            location.href='/hosts/'+host;
+        });
+    </script>
+{% endblock page %}

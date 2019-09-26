@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block page %}
+    <ul id="myTab" class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item">
+            <a href="#query" data-toggle="tab" class="nav-link active" aria-selected="true" role="tab">线上资源</a>
+        </li>
+        <li class="nav-item">
+            <a href="#allot" data-toggle="tab" class="nav-link" aria-selected="true" role="tab">资源池操作</a>
+        </li>
+    </ul>
+    <div id="myTabContent" class="tab-content">
+        <div class="tab-pane fade show active" id="query">
+            <form action="/resource_pool" method="post" class="form-horizontal" id="form_query">
+                {{ form.csrf_token }}
+                <p>资源类型:{{ form.source_type }}&nbsp;
+                    项目:{{ form.Project }}&nbsp;
+                    {{ form.submit_query(class="btn btn-link") }}
+                </p>
+                <!-- 自有资源 -->
+                {% if source_type == 'self' %}
+                    <span style="float: left" class="icon-plus" id="new_add"><a href="#" onclick="form_hide()">新增</a></span>
+                    <span style="float: left;display: none" id="add">可用资源:{{ form.hosts_add }}{{ form.submit_add(class="btn btn-link") }}</span>
+                    <div style="clear:both;"><div class="style_hr"></div></div>
+                    <div style="width: 98%">
+                        <table class="table table-hover table-striped table-condensed" id="self_table">
+                            <thead>
+                                <tr>
+                                {% for t in tables %}
+                                    <th style="text-align: center;vertical-align: middle;background-color:#F9F9FA">{{ t }}</th>
+                                {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for val in values %}
+                                    {% if val %}
+                                        <tr id="{{ val[0] }}">
+                                            {% for va in val[1:3] %}
+                                                <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                            {% endfor %}
+                                            <td style="text-align: center;vertical-align: middle">
+                                                <a href="/assets_get?type=server&ip={{ val[3] }}&port={{ val[4] }}">
+                                                    {{ val[3] }}
+                                                </a>
+                                            </td>
+                                            <td style="text-align: center;vertical-align: middle">
+                                                <a href="/resource_pool?application={{ val[5] }}&application-id={{ val[0] }}">
+                                                    {{ val[5] }}
+                                                </a>
+                                            </td>
+                                            {% for va in val[6:] %}
+                                                <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                            {% endfor %}
+                                            <td style="text-align: center;vertical-align: middle"><a href="#" onclick="get_url('/resource_pool/del/',{{ val[0] }},'self')">删除</a></td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+                <!-- 第三方资源 -->
+                {% if source_type == 'third' %}
+                    <div style="width: 98%">
+                        <table class="table table-hover table-striped table-condensed" id="third_table" style="margin-top: 3%">
+                            <thead>
+                                <tr>
+                                {% for t in third_tables %}
+                                    <th style="text-align: center;vertical-align: middle;background-color:#F9F9FA">{{ t }}</th>
+                                {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for val in third_values %}
+                                    {% if val %}
+                                        <tr id="{{ val[0] }}">
+                                            <td style="text-align: center;vertical-align: middle">{{ val[1] }}</td>
+                                            <td style="text-align: center;vertical-align: middle">
+                                                <a href="/resource_pool?application={{ val[2] }}&application-id={{ val[0] }}">
+                                                    {{ val[2] }}
+                                                </a>
+                                            </td>
+                                            <td style="text-align: center;vertical-align: middle">{{ val[3] }}</td>
+                                            <td style="text-align: center;vertical-align: middle">
+                                                <a href="/assets_get?type=server&ip={{ val[4] }}&port={{ val[5] }}">
+                                                    {{ val[4] }}
+                                                </a>
+                                            </td>
+                                            {% for va in val[6:] %}
+                                                <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                            {% endfor %}
+                                            <td style="text-align: center;vertical-align: middle"><a href="#" onclick="get_url('/resource_pool/del/',{{ val[0] }},'third')">删除</a></td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+        <div class="tab-pane fade" id="allot">
+            <!-- 注释 -->
+            <div class="panel panel-default resource_pool" style="margin-left: 5%">
+                <div style="border:1px solid royalblue">
+                    <div class="panel-heading" style="background-color:royalblue;font-size: larger;color:white">
+                       资源池预配服务
+                    </div>
+                    <form action="/resource_pool" method="post" class="form-horizontal" style="padding-top: 4%">
+                        {{ form.csrf_token }}
+                        <p>应用:{{ form.resource }}资源:{{ form.servers (style="width:155px")}}</p>
+                        <p>应用端口:{{ form.app_port (placeholder="加锁只需选择资源即可",style="width:220px") }}</p>
+                        <p>{{ form.submit_allot(class="btn btn-link") }}{{ form.submit_lcok(class="btn btn-link") }}</p>
+                    </form>
+                </div>
+            </div>
+            <div class="panel panel-default resource_pool" style="margin-left: 10%">
+                <div style="border:1px solid limegreen">
+                    <div class="panel-heading" style="background-color:limegreen;font-size: larger;color:white">
+                       第三方资源回收
+                    </div>
+                    <form action="/resource_pool" method="post" class="form-horizontal" style="padding-top: 3%">
+                        {{ form.csrf_token }}
+                        <p>{{ form_third.hosts (style = "resize:none;height: 67px; width: 300px;",placeholder="每行以IP:ssh_port:app_port格式输入")}}</p>
+                        <p>{{ form_third.submit_recucle(class="btn btn-link") }}</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            table_data('self_table');
+            table_data('third_table');
+            });
+    </script>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="alert alert-info alert-dismissable" style="margin-top: 8%;display:inline-block;*display:inline;*zoom:1;">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+{% endblock page %}

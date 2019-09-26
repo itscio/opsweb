@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;float: left;width: 45%;margin-left: 25%;margin-top: 4%;">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >新业务信息录入</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/new_business" method="post">
+                {{ form.csrf_token }}
+                <p>业务名称:<span style="color: red;font-size:large">*</span>{{ form.business (style="width:160px",id="select_business",autocomplete="off")}}&nbsp;开发语言:{{ form.select_dev (id='jar_type')}}</p>
+                <p>业务描述:<span style="color: red;font-size:large">*</span>{{ form.describe (style="width:295px",placeholder="业务简单描述",id='describe')}}</p>
+                <p>项目名称:<span style="color: red;font-size:large">*</span>{{ form.project (style="width:295px",id="project") }}</p>
+                <p>项目域名:&nbsp;&nbsp;{{ form.domain (style="width:295px",id='domain') }}</p>
+                <p>开发负责人:{{ form.person (style="width:121px",id='person') }}&nbsp;联系电话:{{ form.contact (style="width:105px",id='contact') }}</p>
+                <p>{{ form.area_resource (style="width:362px;height:100px;resize:none",placeholder="主机:应用端口,如无端口只需填写主机名称或者ip即可.",id='hostname') }}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
+            </form>
+        </div>
+    </div>
+    <script>
+        var url_referrer = window.localStorage.getItem('run_jar_referrer');
+        $.input_host('select_business',{{ BUSI|safe }},function () {
+            $('#describe').attr('readonly','readonly');
+            $('#person').attr('readonly','readonly');
+            $('#contact').attr('readonly','readonly');
+            $('#domain').attr('readonly','readonly');
+        });
+        $("#select_business").on('input',function() {
+            var project = $('#project').val();
+            if (project.indexOf('.jar') < 0){
+                $('#domain').removeAttr('readonly');
+            }
+            $('#describe').removeAttr('readonly');
+            $('#person').removeAttr('readonly');
+            $('#contact').removeAttr('readonly');
+        });
+        {% if not Error and not Info %}
+            if (url_referrer){
+                var hostname = window.localStorage.getItem('run_jar_hostname');
+                var jar_type = window.localStorage.getItem('run_jar_type');
+                var project = window.localStorage.getItem('run_jar_project');
+                $('#hostname').text(hostname);
+                $('#hostname').attr('readonly','readonly');
+                $('#jar_type').val(jar_type);
+                $('#jar_type').attr('readonly','readonly');
+                $('#project').val(project);
+                $('#project').attr('readonly','readonly');
+                $('#describe').attr('readonly','readonly');
+                $('#domain').attr('readonly','readonly');
+                $('#person').attr('readonly','readonly');
+                $('#contact').attr('readonly','readonly');
+            }
+        {% endif %}
+        {% if Error %}
+            {% for info in Error %}
+                js_msg("{{ info|safe }}",3000,'error');
+                setTimeout(function () {},3000);
+            {% endfor %}
+            if (url_referrer) {
+                setTimeout(function () {window.localStorage.clear();location.href = url_referrer;},3000);
+            }
+        {% endif %}
+        {% if Info %}
+            {% for info in Info %}
+                js_msg("{{ info|safe }}",3000,'info');
+                setTimeout(function () {},3000);
+            {% endfor %}
+            if (url_referrer){
+                setTimeout(function(){window.localStorage.clear();location.href=url_referrer;},1000);
+                } else{
+                    setTimeout(function(){location.href='/new_business';},1000);
+            }
+        {% endif %}
+    </script>
+{% endblock page %}

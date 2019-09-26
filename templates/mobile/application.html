@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:950px;margin-left:20%;margin-top: 2%" id="application">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >代码上线发布申请</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%;margin-bottom: 5%">
+            <form action="/application" method="post" enctype=multipart/form-data>
+                {{ form.csrf_token }}
+                <div>
+                    项目名称:{{ form.project (style="width:130px",autocomplete="off") }}
+                    TAG:{{ form.tag (style="width:142px",autocomplete="off") }}
+                    审核人:{{ form.leader (style="width:151px",placeholder="项目负责人邮箱") }}
+                </div>
+                <div style="margin-top: 0.8%">GIT地址:{{ form.git_url (style="width:516px") }}</div>
+                <div style="margin-top: 0.8%">{{ form.describe (rows = 4,style="width:570px;resize:vertical",placeholder="代码变更描述:") }}</div>
+                <div style="border:1px dashed darkred;width:570px;margin-left: 20%;">
+                    {{ form.product(style="margin:0px") }}<span>产品已确认通过</span>
+                    {{ form.test (style="margin:0px") }}<span>测试已确认通过</span>
+                    {{ form.nottest (style="margin:0px") }}<span>无需测试确认</span>
+                    <span style="font-size: smaller;color: red;margin-left: 3%"><i class="fas fa-exclamation-triangle"></i>产品、测试均为必选项!</span>
+                </div>
+                <div style="height:3px; border-bottom:1px dashed #afbdd8;width:570px;margin-left: 20%;"></div>
+                <div>
+                    {{ form.sql_run (style="margin:0px") }}<span>需执行SQL</span>
+                </div>
+                <div id="run_sql_show" style="clear: both;display:none">
+                    <div style="margin-top: 0.8%">服务器:{{ form.sql_server(style="width:210px",autocomplete="off")}}&nbsp;端口:{{ form.sql_port(style="width:78px",autocomplete="off")}}&nbsp;数据库:{{ form.sql_database(style="width:150px",autocomplete="off")}}</div>
+                    <div style="margin-top: 0.8%">上传文件:{{ form.sql_file (style="width:138px")}}<span style="color: red;font-size: smaller">(只支持zip包文件)</span> &nbsp;文件MD5:{{ form.sql_md5(style="width:203px",autocomplete="off")}}</div>
+                    <div style="margin-top: 0.8%">{{ form.sql_describe (rows = 4,style="width:570px;resize:vertical",placeholder="数据库变更描述:")}}</div>
+                </div>
+                <div style="height:2px; border-top:1px dashed #afbdd8;width:570px;margin-left: 20%;"></div>
+                <div style="clear:both">{{ form.comment (rows = 4,style="width:570px;resize:vertical;margin-top: 5px",placeholder="备注(可选):") }}</div>
+                <div style="margin-top: 1%">{{ form.submit(class="btn btn-primary") }}</div>
+            </form>
+        </div>
+    </div>
+    {% if Msg %}
+        <script>
+            "use strict";
+            js_msg('{{ Msg[1]|safe }}',3000,'{{ Msg[0] }}');
+            if ('{{ Msg[0]|safe }}' ==='success'){
+                setTimeout(function () {
+                location.href='/work_order_list';
+                    },4000);
+            }else{
+                if ($("#sql_run").prop("checked")) {
+                    $('#run_sql_show').show();
+                }
+            }
+        </script>
+    {% endif %}
+    <script>
+        "use strict";
+        $("#sql_run").click(
+            function () {
+                if ($(this).prop("checked")) {
+                    $('#run_sql_show').show();
+                    $('#sql_server').val("").attr('required',true);
+                    $('#sql_port').val("").attr('required',true);
+                    $('#sql_file').attr('required',true);
+                    $('#sql_database').val("").attr('required',true);
+                    $('#sql_url').val("").attr('required',true);
+                    $('#sql_md5').val("").attr('required',true);
+                    $('#sql_describe').val("").attr('required',true);
+                } else {
+                    $('#run_sql_show').hide();
+                    $('#sql_server').attr('required',false);
+                    $('#sql_port').attr('required',false);
+                    $('#sql_file').attr('required',false);
+                    $('#sql_database').attr('required',false);
+                    $('#sql_url').attr('required',false);
+                    $('#sql_md5').attr('required',false);
+                    $('#sql_describe').attr('required',false);
+                }
+        });
+        $('#test').click(function(){
+            if ($(this).prop("checked")){
+                $('#nottest').attr("checked", false);
+                if ($('#product').prop("checked")){
+                    $('#btn1').removeAttr("disabled");
+                }else{
+                    $('#btn1').attr({"disabled":"disabled"});
+                }
+            }else{
+                if($('#nottest').prop("checked") == false){
+                    $('#btn1').attr({"disabled":"disabled"});
+                }
+            }
+        });
+        $('#nottest').click(function(){
+            if ($(this).prop("checked")){
+                $('#test').attr("checked", false);
+                if ($('#product').prop("checked")){
+                    $('#btn1').removeAttr("disabled");
+                }else{
+                   $('#btn1').attr({"disabled":"disabled"});
+                }
+            }else{
+                if($('#test').prop("checked") == false){
+                    $('#btn1').attr({"disabled":"disabled"});
+                }
+            }
+        });
+        $('#product').click(function(){
+            if ($(this).prop("checked")){
+                if ($('#test').prop("checked")||$('#nottest').prop("checked")){
+                   $('#btn1').removeAttr("disabled");
+                }
+            }else{
+                $('#btn1').attr({"disabled":"disabled"});
+            }
+        });
+        $(function () {
+            if ($('#product').prop("checked")){
+                if ($('#test').prop("checked")||$('#nottest').prop("checked")){
+                   $('#btn1').removeAttr("disabled");
+                }else{
+                    $('#btn1').attr({"disabled":"disabled"});
+                }
+            }else{
+                $('#btn1').attr({"disabled":"disabled"});
+            }
+        });
+        $.input_host('project',{{ projects|safe }});
+    </script>
+    {% if not Main_Menu['submenu'] %}
+        <script>
+            $('#application').css('margin-left','25%');
+        </script>
+    {% endif %}
+{% endblock page %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="width: 99%">
+        <div id="error_status">
+            <div style="margin-left:1.9%;margin-top: 1%;width:96.2%;float:left;border:1px solid gainsboro;overflow: hidden">
+                <div style="margin-left: -8%;">
+                    {{ echarts_js_dependencies(Lines) }}
+                    {{ echarts_container(Lines) }}
+                    {{ echarts_js_content(Lines) }}
+                </div>
+            </div>
+        </div>
+        {% if infos %}
+            <div style="clear:both"></div>
+            <form action="/chart_error_status" method="post" style="margin-top: 1%">
+                {{ form.csrf_token }}
+                <div style="width:98%">
+                    <div style="float:left;margin-left:2%;text-align: left;width: 30%;display: inline-block">
+                        <div style="margin-top: 2%"><a href="#" onclick="obj_display('error_status')" style="font-size: 14px">(折叠/展开)</a></div>
+                    </div>
+                    <div style="float:right;width: 50%;margin-right: 1%;display: inline-block">
+                        {{ form.submit(class="btn btn-link", value='详情查询',style="Float:right;margin-top: 2%") }}
+                        {{ form.input (id='input',style="width:120px;Float:right;margin-top: 2.8%",placeholder="选择时间点") }}
+                    </div>
+                </div>
+            </form>
+            <div style="clear:both"><hr style="float:right;width: 15%;margin: 0px;margin-right: 1.5%;background-color:lightsalmon;height:1px;border:none;"></div>
+            {% for info in infos %}
+                <div style="width:47%;float:left;border:1px solid gainsboro;overflow: hidden;height: 350px;margin-top: 1%;margin-left: 2%">
+                        {{ echarts_js_dependencies(info) }}
+                        {{ echarts_container(info) }}
+                        {{ echarts_js_content(info) }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <script type="text/javascript">
+        document.getElementById("input").flatpickr({minDate:'today',locale: "zh",maxDate:'today',enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true,minuteIncrement:1});
+    </script>
+{% endblock page %}

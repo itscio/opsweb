@@ -3,7 +3,7 @@ from flask import Blueprint,jsonify,request
 from module import db_op,db_idc,loging,Md5
 from sqlalchemy import and_
 import time
-import module
+import conf
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import distinct
 import redis
@@ -12,7 +12,7 @@ app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/sql.conf')
-limiter = module.WebLimiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_data = app.config.get('REDIS_DATA')
@@ -109,9 +109,9 @@ def project_get(project=None):
                for val in RC.smembers(Key):
                    projects.append(eval(val))
                RC.delete(Key)
-               rep = jsonify({project:projects,'md5':Md5.Md5_make(str(projects)),'url':request.url})
+               rep = jsonify({project:projects,'md5':Md5.Md5_make(str(projects)),'url':request.url.replace('http','https')})
     except Exception as e:
-        rep = jsonify({'error':str(e),'url':request.url})
+        rep = jsonify({'error':str(e),'url':request.url.replace('http','https')})
     finally:
         return rep
 
@@ -119,7 +119,7 @@ def project_get(project=None):
 @limiter.limit("60/minute")
 def hosts_get(host=None,domain=None):
     try:
-        rep = jsonify({host:{domain:'None'}, 'url': request.url})
+        rep = jsonify({host:{domain:'None'}, 'url': request.url.replace('http','https')})
         if host:
            db_hosts = db_idc.hosts
            db_servers = db_idc.idc_servers
@@ -129,11 +129,51 @@ def hosts_get(host=None,domain=None):
                if vals:
                    hostname = db_servers.query.with_entities(db_servers.hostname).filter(db_servers.ip==vals[0][0]).all()
                    if hostname:
-                       rep = jsonify({host:{domain:hostname[0][0]},'url':request.url})
+                       rep = jsonify({host:{domain:hostname[0][0]},'url':request.url.replace('http','https')})
     except Exception as e:
         logging.error(e)
     finally:
         return rep
+
+@page_assets_query.route('/redis_get/<int:port>')
+@limiter.limit("60/minute")
+def redis_get(port=None):
+    redis_list = []
+    try:
+        if port:
+            db_servers = db_idc.idc_servers
+            db_redis = db_idc.redis_info
+            server_infos = db_servers.query.with_entities(db_servers.id, db_servers.ip,
+                                                       db_servers.hostname).all()
+            server_infos={int(info[0]):info[1:] for info in server_infos}
+            server_ids = db_redis.query.with_entities(db_redis.server_id).filter(db_redis.port == port).all()
+            if server_ids:
+                for id in server_ids:
+                    if int(id[0]) in server_infos:
+                        redis_list.append(server_infos[int(id[0])])
+    except Exception as e:
+        logging.error(e)
+    finally:
+        rep = jsonify({'redis_list': redis_list, 'url': request.url.replace('http','https')})
+        return rep
+
+@page_assets_query.route('/k8s_pod_get/<pod_ip>')
+@limiter.limit("60/minute")
+def k8s_pod_get(pod_ip=None):
+    pod_name = None
+    node_name = None
+    try:
+        if pod_ip:
+            db_pods = db_idc.k8s_pods
+            infos = db_pods.query.with_entities(db_pods.pod_name,db_pods.node_name).filter(db_pods.pod_ip == pod_ip).all()
+            if infos:
+                pod_name,node_name = infos[0]
+    except Exception as e:
+        logging.error(e)
+    finally:
+        rep = jsonify({'pod_name': pod_name,'node_name': node_name,'url': request.url.replace('http','https')})
+        return rep
+
 @page_assets_query.teardown_request
 def db_remove(exception):
     db_idc.DB.session.remove()

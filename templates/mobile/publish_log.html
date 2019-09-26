@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="text-align:left;">
+        {% if flow_logs %}
+            <p style="font-weight:bold">上线部署日志详情:</p>
+            {% for line in flow_logs %}
+                {% if 'Error' in line or 'Fail' in line %}
+                    <p style="color: red">{{ line }}</p>
+                {% else %}
+                    <p>{{ line }}</p>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <p style="font-weight:bold">上线操作记录不存在!</p>
+        {% endif %}
+    </div>
+{% endblock page %}

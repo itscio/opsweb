@@ -5,7 +5,7 @@ import time
 import redis
 import urllib
 import oss2
-import module
+import conf
 from kubernetes import client
 from flask_sqlalchemy import SQLAlchemy
 from module import user_auth
@@ -18,7 +18,7 @@ app.config.from_pyfile('../conf/oss.conf')
 app.config.from_pyfile('../conf/sql.conf')
 app.config.from_pyfile('../conf/work_order.conf')
 logging = loging.Error()
-limiter = module.WebLimiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -197,24 +197,29 @@ def get_oss_version(project=None):
         if project:
             tt = time.strftime('%Y',time.localtime())
             auth = oss2.Auth(oss_id, oss_key)
-            bucket = oss2.Bucket(auth, oss_url, 'xxxops')
-            for obj in oss2.ObjectIterator(bucket):
-                if obj.key.endswith('.war') or obj.key.endswith('.tar.gz') or obj.key.endswith('.jar'):
-                    if obj.key.split('/')[-1].startswith(project):
-                        try:
-                            ver = obj.key.split(tt)[-1].split('-')
-                            version = int('%s%s'%(tt,ver[0]))
-                            version = '%s-%s' %(version,ver[1].split('.')[0])
-                            versions.append(version)
-                        except:
-                            pass
-            versions = list(set(versions))
-            versions.sort(reverse=True)
-            if len(versions) >10:
-                versions = versions[:10]
+            bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
+            db_packages = db_op.k8s_packages
+            packages = db_packages.query.with_entities(db_packages.package).filter(db_packages.deployment==project).all()
+            if packages:
+                package_name = packages[0][0].split('.')[0]
+                for obj in oss2.ObjectIterator(bucket):
+                    if obj.key.endswith('.war') or obj.key.endswith('.tar.gz') or obj.key.endswith('.jar'):
+                        obj_name  = obj.key.split('/')[-1].replace('_','-')
+                        if obj_name.startswith('%s-%s'%(package_name,tt)):
+                            try:
+                                ver = obj_name.split(tt)[-1].split('.')[0]
+                                version = '%s%s'%(tt,ver)
+                                versions.append(version)
+                            except:
+                                pass
+                versions = list(set(versions))
+                versions.sort(reverse=True)
+                if len(versions) >15:
+                    versions = versions[:15]
     except Exception as e:
         logging.error(e)
     finally:
+        db_op.DB.session.remove()
         return jsonify({project:versions})
 
 @page_ajax_api.route('/input_work_comment/<int:work_number>/<comment>')
@@ -286,6 +291,40 @@ def work_comment_unread():
     # 获取工单消息
     comments = Redis.hgetall('op_work_comment_alarm_%s' % g.dingId)
     return render_template('work_comment_unread.html', comments=comments,source_types=source_types)
+
+@page_ajax_api.route('/k8s_pod_query')
+@user_auth.login_required(grade=10)
+def k8s_pod_query():
+    try:
+        valus = []
+        tables = ('PROJECT', 'CONTEXT', 'NODE', 'POD_NAME', 'POD_IP', 'ONLINE_TAG')
+        db_k8s_deploy = db_op.k8s_deploy
+        projects = db_k8s_deploy.query.with_entities(distinct(db_k8s_deploy.deployment)).all()
+        projects = [project[0] for project in projects]
+        for context in contexts:
+            config.load_kube_config(config_file, context)
+            v1 = client.CoreV1Api()
+            ret = v1.list_namespaced_pod('default')
+            for i in ret.items:
+                val=[]
+                project = '-'.join(i.metadata.name.split('-')[:-2])
+                if project in projects:
+                    try:
+                        val.append(project)
+                        val.append(context)
+                        val.append(i.spec.node_name)
+                        val.append(i.metadata.name)
+                        val.append(i.status.pod_ip)
+                        val.append(str(i.spec.containers[0].image).split(':')[-1])
+                    except Exception as e:
+                        logging.error(e)
+                    else:
+                        valus.append(val)
+        return render_template('k8s-pod-show.html', valus=valus, tables=tables)
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_op.DB.session.remove()
 
 @page_ajax_api.teardown_request
 def db_remove(exception):

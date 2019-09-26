@@ -109,21 +109,6 @@ class op_menu(DB.Model):
         values = (self.Menu_id,self.sub_id,self.Menu_name,self.module_name,self.action_name,self.grade)
         return '%s,%s,%s,%s,%s,%s' % values
 
-class apscheduler_jobs(DB.Model):
-    __tablename__ = 'apscheduler_jobs'
-    __bind_key__ = 'op'
-    id = DB.Column(DB.String(200),primary_key=True)
-    next_run_time = DB.Column(DB.BigInteger)
-    job_state = DB.Column(DB.BLOB)
-    def __init__(self,id,next_run_time,job_state):
-        self.id = id
-        self.next_run_time = next_run_time
-        with open(job_state,'rb') as f:
-            self.job_state = f.read()
-    def __repr__(self):
-        values = (self.id,self.next_run_time,self.job_state)
-        return '%s,%s,%r' % values
-
 class user_approval(DB.Model):
     __tablename__ = 'user_approval'
     __bind_key__='op'
@@ -312,17 +297,19 @@ class docker_run(DB.Model):
     __bind_key__='op'
     id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
     deployment = DB.Column(DB.String(45))
-    dockerfile = DB.Column(DB.String(500))
-    run_args = DB.Column(DB.String(500))
-    side_car = DB.Column(DB.String(500))
-    def __init__(self,deployment,dockerfile,run_args,side_car):
+    context = DB.Column(DB.String(45))
+    dockerfile = DB.Column(DB.Text)
+    run_args = DB.Column(DB.Text)
+    side_car = DB.Column(DB.String(1000))
+    def __init__(self,deployment,context,dockerfile,run_args,side_car):
         self.deployment = deployment
+        self.context = context
         self.dockerfile = dockerfile
         self.run_args = run_args
         self.side_car = side_car
     def __repr__(self):
-        values=(self.deployment,self.dockerfile,self.run_args,self.side_car)
-        return '%s,%s,%s,%s'%values
+        values=(self.deployment,self.context,self.dockerfile,self.run_args,self.side_car)
+        return '%s,%s,%s,%s,%s'%values
 
 class k8s_packages(DB.Model):
     __tablename__ = 'k8s_packages'
@@ -590,3 +577,28 @@ class other_work(DB.Model):
     def __repr__(self):
         values=(self.date,self.time,self.dingid,self.title,self.describe,self.md5,self.work_number)
         return '%s,%s,%s,%s,%s,%s,%i'%values
+
+class k8s_events(DB.Model):
+    __tablename__ = 'k8s_events'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    context = DB.Column(DB.String(100))
+    date_time = DB.Column(DB.String(100))
+    kind = DB.Column(DB.String(100))
+    name = DB.Column(DB.String(100))
+    namespace = DB.Column(DB.String(100))
+    message = DB.Column(DB.String(500))
+    reason = DB.Column(DB.String(500))
+    type = DB.Column(DB.String(100))
+    def __init__(self,context,date_time,kind,name,namespace,message,reason,type):
+        self.context = context
+        self.date_time = date_time
+        self.kind = kind
+        self.name = name
+        self.namespace = namespace
+        self.message = message
+        self.reason = reason
+        self.type = type
+    def __repr__(self):
+        values=(self.context,self.date_time,self.kind,self.name,self.namespace,self.message,self.reason,self.type)
+        return '%s,%s,%s,%s,%s,%s,%s,%s'%values

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="clear:both;"></div>
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item">
+            <a href="#self" data-toggle="tab" class="nav-link active" aria-selected="true" role="tab">运维工单系统</a>
+        </li>
+        <li class="nav-item">
+            <a href="#k8s" data-toggle="tab" class="nav-link" aria-selected="true" role="tab">容器资源查询</a>
+        </li>
+    </ul>
+    <div id="myTabContent" class="tab-content">
+        <div class="tab-pane fade show active" id="self">
+            <div class="grid">
+                {% for key in work_orders %}
+                    <div class="grid-item" style="height: 180px;">
+                        <div style="margin-top: 25%">
+                            <a class="grid-style" href="/{{ key }}"><i class="fas fa-file-invoice"></i>{{ work_orders[key] }}</a>
+                            <ul class="social">
+                                <li>点击进入工单申请页</li>
+                            </ul>
+                        </div>
+                    </div>
+                {% endfor %}
+                {% for key in work_order_lists %}
+                    {% if key == 'work_order_show' %}
+                        <div class="grid-item" style="height: 180px;background-color:darkcyan">
+                            <div style="margin-top: 25%">
+                                <a class="grid-style" href="/{{ key }}"><i class="fas fa-search"></i>{{ work_order_lists[key] }}</a>
+                                <ul class="social">
+                                    <li>点击进入进度查询页</li>
+                                </ul>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if key == 'work_repeal' %}
+                        <div class="grid-item" style="height: 180px;background-color:darkcyan">
+                            <div style="margin-top: 25%">
+                                <a class="grid-style" href="/{{ key }}"><i class="fas fa-redo"></i>{{ work_order_lists[key] }}</a>
+                                <ul class="social">
+                                    <li>点击进入工单撤销页</li>
+                                </ul>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if key == 'work_review' %}
+                        <div class="grid-item" style="height: 180px;background-color:seagreen">
+                            <div style="margin-top: 25%">
+                                <a class="grid-style" href="/{{ key }}"><i class="fas fa-print"></i>{{ work_order_lists[key] }}</a>
+                                <ul class="social">
+                                    <li>点击进入工单审核页</li>
+                                </ul>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="tab-pane fade" id="k8s">
+            <div id="k8s_show"></div>
+            <script>
+                ajax_html_show("/k8s_pod_query","k8s_show");
+            </script>
+        </div>
+    </div>
+    <script>
+        "use strict";
+          (function(){
+             function animate(item, x, y, index) {
+               dynamics.animate(item, {
+                 translateX: x,
+                 translateY: y,
+                 opacity: 1
+                }, {
+                  type: dynamics.spring,
+                  duration: 800,
+                  frequency: 120,
+                  delay: 100 + index * 30
+                });
+              }
+              minigrid('.grid', '.grid-item', 15, animate);
+              window.addEventListener('resize', function(){
+                minigrid('.grid', '.grid-item', 15, animate);
+              });
+            })();
+    </script>
+{% endblock %}

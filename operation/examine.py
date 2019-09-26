@@ -1,5 +1,5 @@
 #-*- coding: utf-8 -*-
-from flask import Flask,Blueprint,request,render_template,g,jsonify,Flask
+from flask import Blueprint,request,render_template,g,jsonify,Flask
 from module import user_auth,db_op,loging,tools
 from sqlalchemy import desc
 import redis

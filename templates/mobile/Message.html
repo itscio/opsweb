@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block page %}
+    {% with messages = get_flashed_messages(category_filter=["message"]) %}
+        {% if messages %}
+            <div class="alert alert-info alert-dismissable" style="margin-top: 8%;display:inline-block;*display:inline;*zoom:1;text-align: left">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+                <p style="text-align: center"><span id="jumpTo">5</span>秒后页面自动返回......</p>
+            </div>
+            <script type="text/javascript">
+                if (document.referrer){
+                    var url = document.referrer;
+                } else{
+                    var url = '/index';
+                }
+                var jumpTo = document.getElementById('jumpTo');
+                secs = jumpTo.innerHTML;
+                countDown(secs,url);
+            </script>
+        {% endif %}
+    {% endwith %}
+    {% with messages = get_flashed_messages(category_filter=["error"]) %}
+        {% if messages %}
+            <div class="alert alert-error alert-dismissable" style="margin-top: 8%;display:inline-block;*display:inline;*zoom:1;text-align: left">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+                <p style="text-align: center"><span id="jumpTo">30</span>秒后页面自动返回......</p>
+            </div>
+            <script type="text/javascript">
+                var url = '/index';
+                var jumpTo = document.getElementById('jumpTo');
+                secs = jumpTo.innerHTML;
+                countDown(secs,url);
+            </script>
+        {% endif %}
+    {% endwith %}
+{% endblock page %}

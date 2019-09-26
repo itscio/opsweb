@@ -44,8 +44,8 @@ def Async_log(user,url):
     try:
         td = time.strftime('%Y-%m-%d', time.localtime())
         tm = time.strftime('%H:%M:%S', time.localtime())
-        url = url.replace('op_servers', 'xxx.xxxx.com')
-        if 'xxx.xxxx.com' in url and not url.endswith('/index'):
+        url = url.replace('op_servers', 'xx.xxx.com')
+        if 'xx.xxx.com' in url and not url.endswith('/index'):
             ip = session['remote_ip']
             Key = 'op_http_log_%s' %td
             Redis.hset(Key,tm,[ip,user,url])
@@ -197,16 +197,25 @@ def get_server_list():
             "password": password
         })
         res = res.json()
-        headers = {
-            "Authorization": "%s %s" % ("Bearer ", res["token"])
-        }
-        res  = requests.get(assetsUrl, headers=headers,timeout=30)
-        idcs = requests.get(app.config.get('JPSURL'), headers=headers, timeout=30)
-        idcs = {info['id']:info['value'] for info in idcs.json()}
-        for info in res.json():
-            idc = idcs[info['labels'][0]]
-            if idc not in ('lan','j'):
-                hosts.append((info['ip'],info['port'],info['hostname'],idc))
+        try:
+            headers = {
+                "Authorization": "%s %s" % ("Bearer ", res["token"])
+            }
+        except Exception as e:
+            loging.write(res)
+            logging.error(e)
+        else:
+            res  = requests.get(assetsUrl, headers=headers,timeout=30)
+            idcs = requests.get(app.config.get('JPSURL'), headers=headers, timeout=30)
+            idcs = {info['id']:info['value'] for info in idcs.json()}
+            for info in res.json():
+                try:
+                    if info['labels']:
+                        idc = idcs[info['labels'][0]]
+                        if idc not in ('lan','j'):
+                            hosts.append((info['ip'],info['port'],info['hostname'],idc))
+                except:
+                    continue
     except Exception as e:
         logging.error(e)
     finally:

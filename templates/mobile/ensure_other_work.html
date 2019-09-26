@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="font-weight: bolder">{{ total }}</div>
+    <div style="text-align: center;width:99%;margin-right:0.5%">
+        <table class="table table-hover table-striped table-condensed table-bordered" id="table">
+            <thead>
+                <tr>
+                    {% for tab in tables %}
+                        <th style="text-align: center;vertical-align: middle">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            {% if work_orders %}
+                <tbody>
+                    {% for value in work_orders %}
+                        <tr>
+                            <td class="td_style" style="text-align: center;vertical-align: middle">
+                                <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}"><a href="/work_examine/{{ value[0] }}" class="mintip" title="查看工单进度">{{ value[0] }}</a></div>
+                            </td>
+                            {% for val in value[3:5] %}
+                                <td class="td_style" style="text-align: center;vertical-align: middle">
+                                    <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ val }}</div>
+                                </td>
+                            {% endfor %}
+                            <td class="table_list" style="width:350px;text-align: left"><div style="height:20px">{{ value[5]|safe }}</div></td>
+                            {% for val in value[6:] %}
+                                <td class="td_style" style="text-align: center;vertical-align: middle">
+                                    <div style="word-wrap: break-word;word-break: break-all;overflow: hidden;width: auto}">{{ val }}</div>
+                                </td>
+                            {% endfor %}
+                            <td class="td_style" style="text-align: center">
+                                <a href="#" onclick="work_details_iframe('/work_details/other_work/{{ value[0]|safe }}')" class="mintip" title="查看工单详情" >
+                                    <i class="fas fa-align-left"></i>
+                                </a>
+                            </td>
+                            <td class="td_style" style="text-align: center">
+                                {% if value[2] in ['未受理','未审核','受理中','待审批','审批通过'] %}
+                                    <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="填写工单问题备注">
+                                        <span style="color:darkgreen;font-size: large"><i class="far fa-comment-dots"></i></span>
+                                    </a>
+                                {% else %}
+                                    <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看工单问题备注">
+                                        <span style="color: #0058a3;font-size: large"><i class="far fa-comment-dots"></i></span>
+                                    </a>
+                                {% endif %}
+                            </td>
+                            <td class="td_style" style="text-align: center;vertical-align: middle">
+                                {% if value[2] == '待审批' %}
+                                    <a href="/ensure_other_work?action=agree&work_number={{ value[0] }}"><i class="far fa-check-circle" style="color: darkgreen"></i>同意</a> |
+                                    <a href="/ensure_other_work?action=refuse&work_number={{ value[0] }}"><i class="far fa-times-circle" style="color: darkred"></i>拒绝</a>
+                                {% elif value[2] == '审批通过' %}
+                                    <a href="/ensure_other_work?action=activate&work_number={{ value[0] }}" class="mintip" title="受理工单"><i class="far fa-clock"></i>受理</a>
+                                {% elif value[2] == '审批拒绝' %}
+                                    <span class="icon-remove" style="color:darkred"></span>
+                                {% elif value[2] == '未受理' %}
+                                    <a href="/ensure_other_work?action=activate&work_number={{ value[0] }}" class="mintip" title="受理工单"><i class="far fa-clock"></i>受理</a>
+                                {% elif value[2] == '受理中' %}
+                                    <a href="/ensure_other_work?action=complete&work_number={{ value[0] }}" class="mintip" title="关闭完成工单"><i class="far fa-check-circle" style="color: darkgreen"></i>完成</a> |
+                                    <a href="#" onclick="deny_moment('/ensure_other_work?action=deny&work_number={{ value[0] }}')"><i class="far fa-times-circle" style="color: darkred"></i>拒绝</a>
+                                {% elif value[2] == '已拒绝' %}
+                                    <span class="icon-remove" style="color:darkred"></span>
+                                {% elif value[2] == '已完成' %}
+                                    <span class="icon-ok" style="color: green"></span>
+                                {% else %}
+                                    <strong style="font-size: larger">--</strong>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            {% endif %}
+        </table>
+    </div>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
+            <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
+                <a href="javascript:hideDialog();" >关闭</a>
+            </span>
+        </div>
+        <div class="ui-dialog-content" id="dialog-content"></div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
+    </div>
+    <script>
+        "use strict";
+        $(document).ready(table_order('table',1));
+        $("#iframe").load(function(){
+            var mainheight = $(this).contents().find("body").height()+30;
+            $(this).height(mainheight);
+            $('#dialogMove').height(mainheight+30);
+            });
+    </script>
+    {% if msg %}
+        <script>
+            "use strict";
+            js_msg('{{ msg|safe }}',3000,'info');
+            setTimeout(function () {
+                location.href='/ensure_other_work';
+            },4000);
+        </script>
+    {% endif %}
+{% endblock page %}

@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">
+        <a href="#" onclick="referrer_url()" style="float:left;margin-left: 1%">
+            <span class="icon-hand-left" ></span>返回
+        </a>&nbsp;&nbsp{{ total_infos['ip'] }}服务器资源:
+        <div class="style_hr" style="margin-left: 1%;width: 97.5%"></div>
+    </div>
+    <div style="margin-top:0.5%">
+        {% if total_infos['server_info'] %}
+            <strong style="float:left;margin-left:1%;">服务器硬件信息:</strong>
+            <div style="clear:both"></div>
+            <div style="width:97.5% ;float:left;text-align:left;margin-left: 1%">
+                <div>
+                    <table class="table table-hover table-striped table-condensed table-bordered">
+                        <thead>
+                            <tr>
+                                {% for info in total_infos['server_info'][0][:11] %}
+                                    <th style="text-align: center;vertical-align: middle">{{ info }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                {% for info in total_infos['server_info'][1][:6]  %}
+                                    <td style="text-align: center;vertical-align: middle">{{ info }}</td>
+                                {% endfor %}
+                                    <td id="hostname" style="text-align: center;vertical-align: middle">{{ total_infos['server_info'][1][6] }}</td>
+                                {% for info in total_infos['server_info'][1][7:11]  %}
+                                    <td style="text-align: center;vertical-align: middle">{{ info }}</td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                        <thead>
+                            <tr>
+                                {% for info in total_infos['server_info'][0][11:-2] %}
+                                    <th style="text-align: center;vertical-align: middle">{{ info }}</th>
+                                {% endfor %}
+                                <th style="text-align: center;vertical-align: middle" colspan="2">{{ total_infos['server_info'][0][-2] }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                {% for info in total_infos['server_info'][1][11:-1]  %}
+                                    <td class="table_list" style="vertical-align: middle;text-align: center;">{{ info }}</td>
+                                {% endfor %}
+                                <td class="table_list" style="vertical-align: middle;text-align: center;" colspan="2">
+                                    <i class="fas fa-sign-in-alt" style="color: green"></i>
+                                    <a href="javascript:login_webssh('{{ total_infos['server_info'][1][2]|safe }}','{{ total_infos['server_info'][1][3]|safe }}','/webssh')">登录</a> |
+                                    <a href="/assets_manage?mid=assets_manage&aid={{ total_infos['server_info'][1][0] }}&sid={{ total_infos['server_info'][1][2] }}:{{ total_infos['server_info'][1][3] }}&action=modify">
+                                        <span style="color:tomato"><i class="fas fa-cogs"></i></span>变更</a>
+                                    &nbsp;|&nbsp;
+                                    <a href="/assets_manage?mid=assets_manage&aid={{ total_infos['server_info'][1][0] }}&sid={{ total_infos['server_info'][1][2] }}:{{ total_infos['server_info'][1][3] }}&action=down" >
+                                        <span style="color: red"><i class="fas fa-power-off"></i></span>下架</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="table_list" style="vertical-align: middle;text-align: center;font-weight: bold">
+                                    <i class="fas fa-thumbtack" style="color:dodgerblue;"></i>
+                                    {{ total_infos['server_info'][0][-1] }}:
+                                </td>
+                                <td id='comment_show' colspan="{{ total_infos['server_info'][0][:11]|length }}">
+                                    {{ total_infos['server_info'][1][-1] }}
+                                    <span style="float: right">
+                                        <a href="#" onclick="show_comment()" class="mintip" title="修改备注内容">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        &nbsp;
+                                        <a href="#" onclick="rsync_comment()" class="mintip" title="同步备注信息到Jumpserver">
+                                            <i class="fas fa-sync"></i>
+                                        </a>
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <strong style="float:left;margin-left:1%;">服务器资源使用:</strong>
+            <div style="clear:both;margin-top: 1%"></div>
+            <div id="zabbix_infos">
+                {% if total_infos['zabbix_infos'] %}
+                    <div class="style_border" style="height:125px;margin-left: 1%;width:97.4%">
+                        {% if total_infos['zabbix_infos'][0] == 1 %}
+                            <div class="assets">
+                                <div class="counter green">
+                                    <div class="counter-content">
+                                        <div style="font-weight: bold;padding-top: 15px;">正常</div>
+                                    </div>
+                                    <h3 class="title">网络连通</h3>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="assets">
+                                <div class="counter red">
+                                    <div class="counter-content">
+                                        <div style="font-weight: bold;padding-top: 15px;">异常</div>
+                                    </div>
+                                    <h3 class="title">网络连通</h3>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="assets">
+                            <div class="counter">
+                                <div class="counter-content">
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][1]|int}}</span>%</div>
+                                </div>
+                                <h3 class="title">CPU使用率</h3>
+                            </div>
+                        </div>
+                        <div class="assets">
+                            <div class="counter tomato">
+                                <div class="counter-content">
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][2]|int}}</span>%</div>
+                                </div>
+                                <h3 class="title">内存使用率</h3>
+                            </div>
+                        </div>
+                        <div class="assets">
+                            <div class="counter blue">
+                                <div class="counter-content">
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][3]|int}}</span>%</div>
+                                </div>
+                                <h3 class="title">磁盘IO</h3>
+                            </div>
+                        </div>
+                        <div class="assets">
+                            <div class="counter purple">
+                                <div class="counter-content">
+                                    <div style="padding-top: 15px;"><span class="counter-value">{{ total_infos['zabbix_infos'][-1]|int}}</span></div>
+                                </div>
+                                <h3 class="title">OPENFILE</h3>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                <div style="clear: both"></div>
+            </div>
+        {% endif %}
+    </div>
+    {% if total_infos['pool_project'] %}
+        {% for Key in ('project_info','third_info') %}
+            {% if total_infos[Key] %}
+                <div style="clear:both"></div>
+                    {% if Key == 'project_info' %}
+                        <strong style="float:left;margin-left: 1%;margin-top: 1%">已部署自有应用:</strong>
+                    {% endif %}
+                    {% if Key == 'third_info' %}
+                        <strong style="float:left;margin-left: 1%;margin-top: 1%;">已部署第三方应用:</strong>
+                    {% endif %}
+                <div style="clear:both"></div>
+                <div style="width:97.5%;float:left;text-align: center;margin-left: 1%">
+                    <div class="table-responsive">
+                        <div class="table-striped table-hover">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        {% for tab in total_infos[Key][0] %}
+                                            <th style="text-align: center;vertical-align: middle">{{ tab }}</th>
+                                        {% endfor %}
+                                        <th style="text-align: center;vertical-align: middle">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for infos in total_infos[Key][1:] %}
+                                        <tr>
+                                            <td style="text-align: center;vertical-align: middle">
+                                                    <a href="/resource_pool?application={{ infos[1] }}&application-id={{ infos[0] }}">
+                                                        {{ infos[1] }}
+                                                    </a>
+                                            </td>
+                                            <td style="text-align: center;vertical-align: middle">{{ infos[2] }}</td>
+                                            <td style="text-align: center;vertical-align: middle">
+                                                {% if infos[3] == 'None' %}
+                                                    {{ infos[3] }}
+                                                {% else %}
+                                                    <a href="/resource_pool?project={{ infos[3]}}">{{ infos[3] }}</a>
+                                                {% endif %}
+                                            </td>
+                                            {% for info in infos[4:-1] %}
+                                                <td style="text-align: center;vertical-align: middle">{{ info }}</td>
+                                            {% endfor %}
+                                            {% if Key == 'project_info' %}
+                                                {% set business = infos[-1].split(':') %}
+                                                <td style="text-align: center;vertical-align: middle">
+                                                    <a href="/business/{{ business[0] }}">{{ business[-1] }}</a>
+                                                </td>
+                                            {% else %}
+                                                <td style="text-align: center;vertical-align: middle">{{ infos[-1] }}</td>
+                                            {% endif %}
+                                            <td style="text-align: center;vertical-align: middle"><a href="/resource_pool?action=recyle&ip={{ total_infos['server_info'][1][2] }}&ssh_port={{ total_infos['server_info'][1][3] }}&app_port={{ infos[2] }}">
+                                                <span style="color:green"><i class="fas fa-recycle"></i></span>资源回收</a></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div style="clear:both"></div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >
+            修改备注
+        </div>
+        <div class="ui-dialog-content">
+            <div class="ui-dialog-l40 ui-dialog-pt15">
+                <input id = 'comment_update' class="ui-dialog-input" type="text" />
+            </div>
+            <div style="margin-top: 3%">
+                <span style="float: left;margin-left: 1%" class="ui-dialog-submit">
+                    <a href="javascript:hide_comment();" >取消</a>
+                </span>
+                <span style="float: right;margin-right: 1%" class="ui-dialog-submit">
+                    <a href="javascript:comment_modify();" >提交</a>
+                </span>
+            </div>
+        </div>
+    </div>
+    <script>
+        "use strict";
+        $(document).ready(function(){
+        $('.counter-value').each(function(){
+            $(this).prop('Counter',0).animate({
+                Counter: $(this).text()
+            },{
+                duration: 3500,
+                easing: 'swing',
+                step: function (now){
+                    $(this).text(Math.ceil(now));
+                }
+            });
+        });
+        });
+    </script>
+{% endblock page %}
+

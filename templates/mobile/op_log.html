@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>运维平台用户访问记录</p></div>
+    <div style="width: 99%">
+        <table id="table_data" class="table table-striped table-bordered table-hover" width="100%">
+        <thead>
+            <tr style="background-color:#F9F9FA">
+                {% for t in tables %}
+                    <td>{{ t }}</td>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if vals %}
+                 {% for val in vals %}
+                    <tr>
+                        {% for va in val[-2:] %}
+                            <td>{{ va }}</td>
+                        {% endfor %}
+                        {% for va in val[:-2] %}
+                            <td>{{ va }}</td>
+                        {% endfor %}
+                    </tr>
+                 {% endfor %}
+            {% endif %}
+        </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',0));
+    </script>
+{% endblock page %}

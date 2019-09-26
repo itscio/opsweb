@@ -27,7 +27,7 @@ def k8s_project_update():
                 project = params['project']
                 version = params['version']
                 context = params['context']
-                new_image = "%s/%s:%s" %(docker_registry,project.split('.')[0],version)
+                new_image = "%s/%s:%s" %(docker_registry[context],project.split('.')[0],version)
                 if 'replicas' in params:
                     new_replicas = params['replicas']
                 # 验证token是否有效

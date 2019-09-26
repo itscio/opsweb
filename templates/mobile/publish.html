@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:750px;margin-left:25%;margin-top: 2%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >代码上线发布</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/publish" method="post">
+                {{ form.csrf_token }}
+                <p>
+                    <span>执行操作:{{ form.execute (onchange="execute_rollback()")}}</span>
+                    <span style="margin-left:5px">代码包类型:{{ form.package_type }}</span>
+                    <span style="margin-left:5px">发布方式:{{ form.publish_type}}</span>
+                    <span style="margin-left:5px">服务重启:{{ form.restart }}</span>
+                    <span style="margin-left:5px">灰度发布:{{ form.gray }}</span>
+                </p>
+                <p>项目健康检测接口:{{ form.check_url (style="width:470px") }}</p>
+                <p>代码压缩包md5值:{{ form.package_md5 (style="width:470px",autocomplete="off") }}</p>
+                <p id = "input_describe" >{{ form.describe(cols = 70, rows = 4,style="width:587px;resize:none",placeholder="上线内容及变更描述:") }}</p>
+                <p id = "input_text" >{{ form.package_url(cols = 70, rows = 4,style="width:587px;resize:none",placeholder="代码压缩包下载路径:") }}</p>
+                <p id = "rollback_select" style="display: none">
+                    选择回滚的项目:{{ form.project (style="width:13.2em",onchange="get_version('project')")}} &nbsp;
+                    选择回滚的版本:{{ form.version (style="width:13.2em") }}</p>
+                <p>{{ form.submit(class="btn btn-primary") }}</p>
+            </form>
+        </div>
+    </div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <script language="JavaScript">
+                js_msg('{{ messages[-1] }}',5000,'error');
+            </script>
+        {% endif %}
+    {% endwith %}
+{% endblock page %}

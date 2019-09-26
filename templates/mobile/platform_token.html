@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>第三方平台连接API接口授权</p></div>
+    <div>
+        <span style="float: left;padding-top:0.35%">第三方平台:</span>
+        {{ form.input (style="Float:left;width:120px",autocomplete="off")}} &nbsp;
+        <span style="float: left;padding-top:0.35%;margin-left: 1%">失效日期:</span>
+        {{ form.select_date (style="Float:left")}} &nbsp;
+        <input type="button" onclick="token_url('/platform_token/add')" value="授权" class="btn btn-link" style="float:left;margin-top: -0.3%">
+    </div>
+    <div class="style_hr" style="width:98%"></div>
+    <div style="width:98%">
+        <table ID="table_data" class="table table-hover table-striped table-bordered table-condensed" style="text-align: center">
+          <thead>
+            <tr style="background-color:#f9f9f9 ">
+                {% for tab in tables[:-1] %}
+                    <th>{{ tab }}</th>
+                {% endfor %}
+                <th style="text-align: center">{{ tables[-1] }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for val in vals %}
+                <tr>
+                    {% if val[-2] == tm %}
+                        <td>{{ val[1] }}<span class="badge" style="color:orangered;background-color:white">新</span></td>
+                        {% for v in val[2:-1] %}
+                            <td>{{ v }}</td>
+                        {% endfor %}
+                    {% else %}
+                        {% for v in val[1:-1] %}
+                          <td>{{ v }}</td>
+                        {% endfor %}
+                    {% endif %}
+                    <td>{{ form.input_date (id=val[0], value=val[-1] ,style="width: 100px") }}</td>
+                    <td style="text-align: center">
+                        <input type="button" onclick="token_url('/platform_token/modify/{{ val[0] }}')" value="修改" class="btn btn-link">|
+                        <input type="button" onclick="token_url('/platform_token/drop/{{ val[0] }}')" value="吊销" class="btn btn-link">
+                    </td>
+                </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',3));
+        {% for val in vals %}
+            document.getElementById('{{ val[0] }}').flatpickr({dateFormat: "Y-m-d",locale: "zh",minDate: "today", maxDate: new Date().fp_incr(180)});
+        {% endfor %}
+    </script>
+{% endblock page %}

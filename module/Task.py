@@ -321,39 +321,44 @@ def server_per():
     finally:
         db_idc.DB.session.remove()
 
-@tools.proce_lock()
-def get_server_info():
+@tools.proce_lock(Host='172.16.68.13')
+def get_assets_infos():
+    dt = time.strftime('%Y-%m-%d', time.localtime())
     db_store = db_idc.idc_store
     db_server = db_idc.idc_servers
     db_idc_id = db_idc.idc_id
     server_val = db_server.query.with_entities(db_server.ip,db_server.ssh_port).filter(and_(db_server.status !='维护中',db_server.comment !='跳过')).all()
-    #获取阿里云存储情况
-    auth = oss2.Auth(oss_id, oss_key)
-    service = oss2.Service(auth, 'http://oss.aliyuncs.com')
-    Buckets = [b.name for b in oss2.BucketIterator(service)]
-    #获取idc id
-    idc_id = db_idc_id.query.with_entities(db_idc_id.id).filter(and_(db_idc_id.aid=='阿里云',db_idc_id.cid=='OSS')).all()
-    if idc_id:
-        store_val = db_store.query.with_entities(db_store.type).filter(db_store.idc_id == idc_id[0][0]).all()
-        if store_val:
-            store_val = [val[0] for val in store_val]
-        # bucket信息写入数据库
-        add_vals = set(Buckets) - set(store_val)
-        if add_vals:
-            for bucket_name in add_vals:
-                bucket = oss2.Bucket(auth, 'http://oss.aliyuncs.com', bucket_name)
-                bucket_info = bucket.get_bucket_info()
-                c = db_store(idc_id=idc_id[0][0],type=bucket_name,ip='http://oss.aliyuncs.com',purch_date=bucket_info.creation_date.split('T')[0],expird_date='',status='使用中',comment='')
-                db_idc.DB.session.add(c)
-                db_idc.DB.session.commit()
-        # 删除数据库中bucket信息
-        del_vals = set(store_val)-set(Buckets)
-        if del_vals:
-            for bucket_name in del_vals:
-                c = db_store.query.filter(db_store.type==bucket_name).all()
-                for v in c:
-                    db_idc.DB.session.delete(v)
-                    db_idc.DB.session.commit()
+    def get_oss_info():
+        # 获取阿里云存储情况
+        try:
+            auth = oss2.Auth(oss_id, oss_key)
+            service = oss2.Service(auth, 'http://oss.aliyuncs.com')
+            Buckets = [b.name for b in oss2.BucketIterator(service)]
+            #获取idc id
+            idc_id = db_idc_id.query.with_entities(db_idc_id.id).filter(and_(db_idc_id.aid=='阿里云',db_idc_id.cid=='OSS')).all()
+            if idc_id:
+                store_val = db_store.query.with_entities(db_store.type).filter(db_store.idc_id == idc_id[0][0]).all()
+                if store_val:
+                    store_val = [val[0] for val in store_val]
+                # bucket信息写入数据库
+                add_vals = set(Buckets) - set(store_val)
+                if add_vals:
+                    for bucket_name in add_vals:
+                        bucket = oss2.Bucket(auth, 'http://oss.aliyuncs.com', bucket_name)
+                        bucket_info = bucket.get_bucket_info()
+                        c = db_store(idc_id=idc_id[0][0],type=bucket_name,ip='http://oss.aliyuncs.com',purch_date=bucket_info.creation_date.split('T')[0],expird_date='',status='使用中',comment='')
+                        db_idc.DB.session.add(c)
+                        db_idc.DB.session.commit()
+                # 删除数据库中bucket信息
+                del_vals = set(store_val)-set(Buckets)
+                if del_vals:
+                    for bucket_name in del_vals:
+                        c = db_store.query.filter(db_store.type==bucket_name).all()
+                        for v in c:
+                            db_idc.DB.session.delete(v)
+                            db_idc.DB.session.commit()
+        except Exception as e:
+            logging.error(e)
     def get_info(info):
         sip,port= info
         sip = sip.strip()
@@ -473,12 +478,14 @@ def get_server_info():
                         db_idc.DB.session.commit()
                     except Exception as e:
                         logging.error(e)
+                    db_server.query.filter(and_(db_server.ip == sip, db_server.ssh_port == port)).update({db_server.uptime:dt})
+                    db_idc.DB.session.commit()
                 except Exception as e:
                     logging.error(e)
                 finally:
                     Ssh.Close()
     try:
-        loging.write("start get server infos ......")
+        loging.write("start get assets infos ......")
         if server_val:
             pool = ThreadPool(5)
             pool.map(get_info,server_val)
@@ -487,7 +494,8 @@ def get_server_info():
     except Exception as e:
         logging.error(e)
     finally:
-        loging.write("get server infos complete!")
+        get_oss_info()
+        loging.write("get assets infos complete!")
         db_idc.DB.session.remove()
 
 @tools.proce_lock()
@@ -555,7 +563,7 @@ def auto_discovery():
                                                       manufacturer='', productname='',
                                                       system='', cpu_info='', cpu_core=0, mem='',disk_count=0, disk_size='', idrac='',
                                                       purch_date=dt,
-                                                      expird_date='', status='使用中', comment='')
+                                                      expird_date='', status='使用中', comment='',uptime=dt)
                                         db_idc.DB.session.add(v)
                                         db_idc.DB.session.commit()
                                     else:
@@ -568,7 +576,8 @@ def auto_discovery():
                                         idc_id = db_idc_id.query.with_entities(db_idc_id.id).filter(and_(db_idc_id.aid == aid, db_idc_id.cid == 'KVM')).all()
                                         idc_id = int(idc_id[0][0])
                                         v = db_server(idc_id=idc_id,ip=ip,ssh_port=ssh_port,s_ip='',host_type='vm',hostname=hostname,sn='',manufacturer='',productname='',
-                                                      system='',cpu_info='',cpu_core=0,mem='',disk_count=0,disk_size='',idrac='',purch_date=dt,expird_date='2999-12-12',status='使用中',comment='')
+                                                      system='',cpu_info='',cpu_core=0,mem='',disk_count=0,disk_size='',idrac='',purch_date=dt,
+                                                      expird_date='2999-12-12',status='使用中',comment='',uptime=dt)
                                         db_idc.DB.session.add(v)
                                         db_idc.DB.session.commit()
                                     for cmd in ("yum -y install dmidecode","chmod +s /usr/sbin/dmidecode"):
@@ -971,18 +980,6 @@ def cron_run_task():
             if not MY_SQL.Run(cmd):
                 cmd = "delete from op.project_list where ip='%s' and ssh_port=%i" % (ip, ssh_port)
                 MY_SQL.Run(cmd)
-        #清理redis信息表
-        db_third = db_idc.third_resource
-        db_servers = db_idc.idc_servers
-        db_redis = db_idc.redis_info
-        vals = db_third.query.with_entities(distinct(db_third.ip)).filter(db_third.resource_type=='redis').all()
-        vals = tuple([val[0] for val in vals])
-        ids = db_servers.query.with_entities(db_servers.id).filter(db_servers.ip.in_(vals)).all()
-        ids = tuple([int(id[0]) for id in ids])
-        v = db_redis.query.filter(~ db_redis.server_id.in_(ids)).all()
-        for c in v:
-            db_idc.DB.session.delete(c)
-            db_idc.DB.session.commit()
     except Exception as e:
         logging.error(e)
     finally:
@@ -1823,12 +1820,15 @@ def zabbix_counts():
                 hostname = key[-1]['hostname']
                 if not hostname.startswith('nj'):
                     for infos in results[key]:
-                        if infos['mean_cpu_load'] >= 0:
-                            dict_load[hostname] = infos['mean_cpu_load']
-                        if infos['mean_mem_use'] >=0:
-                            dict_mem[hostname] = infos['mean_mem_use']
-                        if infos['mean_openfile'] >=0:
-                            dict_openfile[hostname] = infos['mean_openfile']
+                        try:
+                            if infos['mean_cpu_load'] >= 0:
+                                dict_load[hostname] = infos['mean_cpu_load']
+                            if infos['mean_mem_use'] >= 0:
+                                dict_mem[hostname] = infos['mean_mem_use']
+                            if infos['mean_openfile'] >= 0:
+                                dict_openfile[hostname] = infos['mean_openfile']
+                        except:
+                            continue
     except Exception as e:
         logging.error(e)
     try:

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>当前集群:{{ g.context }} {{ resource }}资源信息</p></div>
+    {% if resource == 'Pods' %}
+        <div style="margin-left: 0.5%;width:97.7%;">
+            <table class="table table-bordered">
+                <tbody>
+                    <td class="pod_span" style="text-align: center;vertical-align: middle;">POD数量:{{ counts[0] }}</td>
+                    <td class="pod_span" style="text-align: center;vertical-align: middle;">namespace:{{ counts[1] }}</td>
+                    <td class="pod_span" style="text-align: center;vertical-align: middle;">镜像数量:{{ counts[2] }}</td>
+                    <td class="pod_span" style="text-align: center;vertical-align: middle;">POD正常率:{{ counts[3] }}%</td>
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+    <div style="clear: both"></div>
+    <div style="width:97.7%;margin-left: 0.5%">
+        <table class="table table-bordered table-hover table-striped table-condensed" id="tabledata">
+            <thead>
+                {% for t in tables %}
+                    <th style="text-align: center">{{ t }}</th>
+                {% endfor %}
+            </thead>
+            <tbody>
+                {% for val in valus %}
+                    {% if resource == 'Pods' %}
+                        <tr>
+                            <td style="vertical-align: middle;table-layout: fixed;word-wrap:break-word;word-break:break-all;">{{ val }}</td>
+                            {% for key in keys[:-2] %}
+                                <td style="text-align: center;vertical-align: middle;table-layout: fixed;word-wrap:break-word;word-break:break-all;">{{ valus[val][key] }}</td>
+                            {% endfor %}
+                            {% set images = valus[val][keys[-2]].split(';') %}
+                            <td style="vertical-align: middle;">
+                                {% for image in images %}
+                                    <p>{{ image }}</p>
+                                {% endfor %}
+                            </td>
+                            {% if valus[val][keys[-1]] == 'Running' %}
+                                <td style="text-align: center;color: green;vertical-align: middle">{{ valus[val][keys[-1]] }}</td>
+                            {% else %}
+                                <td style="text-align: center;color: red;vertical-align: middle;">{{ valus[val][keys[-1]] }}</td>
+                            {% endif %}
+                            <td style="text-align: center;vertical-align: middle;">
+                                <a href='#' onclick="ajax_request('/pod_manage/{{ val|safe }}/{{ valus[val]['namespace']|safe }}/delete')" style="color: red">
+                                    <i class="far fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% elif resource == 'Service' %}
+                        <tr>
+                            <td style="vertical-align: middle;">{{ val }}</td>
+                            {% for key in keys[:-1] %}
+                                <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
+                            {% endfor %}
+                            <td style="vertical-align: middle;">{{ valus[val][keys[-1]] }}</td>
+                        </tr>
+                    {% elif resource == 'Deployment' %}
+                        <tr>
+                            <td style="vertical-align: middle;">{{ val }}</td>
+                            {% for key in keys[:3] %}
+                                <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
+                            {% endfor %}
+                            <td style="vertical-align: middle;">
+                                {% for container in valus[val][keys[3]] %}
+                                    <p>{{ container }}</p>
+                                {% endfor %}
+                            </td>
+                            {% for key in keys[4:-1] %}
+                                <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
+                            {% endfor %}
+                            {% if valus[val][keys[-1]] == 100 %}
+                                <td style="text-align: center;color: green;vertical-align: middle">{{ valus[val][keys[-1]] }}%</td>
+                            {% else %}
+                                <td style="text-align: center;color: red;vertical-align: middle;">{{ valus[val][keys[-1]] }}%</td>
+                            {% endif %}
+                        </tr>
+                    {% elif resource == 'Daemonset' %}
+                        <tr>
+                            <td style="vertical-align: middle;">{{ val }}</td>
+                            {% for key in keys[:2] %}
+                                <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
+                            {% endfor %}
+                            <td style="vertical-align: middle;">
+                                {% for path in valus[val][keys[2]] %}
+                                    <p>{{ path }}</p>
+                                {% endfor %}
+                            </td>
+                            {% for key in keys[3:] %}
+                                <td style="text-align: center;vertical-align: middle;">{{ valus[val][key] }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% elif resource == 'HPA' %}
+                        <tr>
+                            {% for v in val %}
+                                <td style="text-align: center;vertical-align: middle;">{{ v }}</td>
+                            {% endfor %}
+                            <td style="text-align: center;vertical-align: middle;">
+                                <a href='#' onclick="show_k8s_input('{{ val[0]|safe }}','{{ val[1]|safe }}','{{ val[2]|safe }}','{{ val[5]|safe }}')" class="mintip" title="修改参数" style="color: dodgerblue">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                &nbsp;
+                                <a href='#' onclick="k8s_hpa_delete('{{ val[0]|safe }}')" class="mintip" title="删除HPA" style="color: red">
+                                    <i class="far fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            {% for v in val %}
+                                <td style="text-align: center;vertical-align: middle;">{{ v }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div>
+        {% if resource == 'HPA' %}
+            <div style="float:right;margin-right: 1.7%;margin-top: 1%" >选择日期:{{ form.select_date (onchange="set_cookies('select_date')")}}</div>
+            <div style="margin-left:0.5%;width:97.7%;float:left;border:1px solid gainsboro;overflow: hidden">
+                <div style="margin-left: -8%;">
+                    {{ echarts_js_dependencies(line) }}
+                    {{ echarts_container(line) }}
+                    {{ echarts_js_content(line) }}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        "use strict";
+        $(document).ready(table_order("tabledata",1));
+    </script>
+    <style>
+    .pod_span{color:#3a87ad;font-weight: bold;background-color: #d9edf7;}
+    </style>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >
+            修改HPA参数
+        </div>
+        <div class="ui-dialog-content">
+            <div class="ui-dialog-l70">
+                最大副本数:<input id = 'max_update' class="ui-dialog-input" type="text" />
+            </div>
+            <div class="ui-dialog-l70">
+                CPU阀值:<input id = 'cpu_update' class="ui-dialog-input" type="text" />
+            </div>
+            <div>
+                <span style="float: left;margin-left: 1%" class="ui-dialog-submit">
+                    <a href="javascript:hideDialog();" >取消</a>
+                </span>
+                <span style="float: right;margin-right: 1%" class="ui-dialog-submit">
+                    <a href="javascript:k8s_hpa_modify()" >提交</a>
+                </span>
+            </div>
+        </div>
+        <input id="name" type="hidden">
+        <input id="target_ref" type="hidden">
+    </div>
+    <script>
+        "use strict";
+        $(document).ready(function(){
+        $('.counter-value').each(function(){
+            $(this).prop('Counter',0).animate({
+                Counter: $(this).text()
+            },{
+                duration: 5500,
+                easing: 'swing',
+                step: function (now){
+                    $(this).text(Math.ceil(now));
+                }
+            });
+        });
+        });
+        var td = $.cookie('select_date');
+        if (td){
+           $('#select_date').val(td);
+        }
+    </script>
+{% endblock page %}

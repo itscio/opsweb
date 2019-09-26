@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block page %}
+    {% if alarms %}
+        <div class="div">线上业务接口状态监控</div>
+        {% for url,vals in alarms %}
+            {% if vals['incr'] %}
+                <div class="panel" style="float:left;border: 1.5px solid #F2DEDF;border-radius:7px;width: 46%;margin-top: 1%;margin-left: 2%;background:aliceblue">
+                    <div class="panel-heading alert alert-error" style="text-align: center;height:1em">
+                        <h5 style="line-height: 10px;margin: -2px">
+                            <span style="float: left">
+                                {% if vals['incr'] < 3 %}
+                                    <i class="fas fa-exclamation-triangle" style="color: sandybrown"></i>关注:
+                                    <a href="#" onclick="obj_display('{{ url|safe }}')">{{ url }}</a>
+                                {% endif %}
+                                {% if vals['incr'] >=3 %}
+                                    <i class="fas fa-sun fa-spin" style="color: red"></i>报警:
+                                    <a href="#" onclick="obj_display('{{ url|safe }}')">{{ url }}</a>
+                                {% endif %}
+                                <i class="fas fa-hand-point-left" style="color:lightcoral"></i>
+                            </span>
+                            <span style="float: right;font-size:small">
+                                业务:{{ vals['business'] }}
+                            </span>
+                        </h5>
+                    </div>
+                    <div class="panel-body" id="{{ url }}" style="display: none">
+                        {% for key in vals %}
+                            {% if key not in ('incr','business') %}
+                                <div style="float:left;margin-left:5%;margin-top:-1%;font-size: smaller">
+                                    <strong>{{ Keys[key] }}</strong>
+                                    {% if key == 'mean_avg_resp' %}
+                                        <span>当前数值:{{ vals[key]['now'] }}s,三分钟前数值:{{ vals[key]['old_val'] }}s,昨天数值:{{ vals[key]['bef_val'] }}s</span>
+                                    {% elif key == 'mean_pv' %}
+                                        <span>当前pv:{{ vals[key]['now'] * vals[key]['sample'] }},三分钟前pv:{{ vals[key]['old_val'] * vals[key]['sample'] }},昨天pv:{{ vals[key]['bef_val'] * vals[key]['sample'] }}</span>
+                                    {% else %}
+                                        <span>当前占比:{{ vals[key]['now'] }}%,三分钟前占比:{{ vals[key]['old_val'] }}%,昨天占比:{{ vals[key]['bef_val'] }}%</span>
+                                    {% endif %}
+                                </div>
+                                <div style="clear: both"></div>
+                                {% for val in vals[key] %}
+                                    {% if val in ('old','bef') %}
+                                        {% if vals[key][val] >=1 %}
+                                            {% set wh = 1 %}
+                                        {% else%}
+                                            {% set wh = vals[key][val] %}
+                                        {% endif %}
+                                        {% if wh >=0 %}
+                                            <div style="float:right;margin-right:10%">
+                                                <span style="text-align: center;color:#1f6377;font-size: smaller">采样数据{{ vals[key]['sample'] }}分钟,持续{{ vals['incr']*3 }}分钟{{ Keys[val] }}增长<i class="fas fa-signal"></i></span>
+                                            </div>
+                                        {% else %}
+                                            <div style="float:right;margin-right:15%">
+                                                <span style="text-align: center;color:darkgreen;font-size: smaller">采样数据{{ vals[key]['sample'] }}分钟,持续{{ vals['incr']*3 }}分钟{{ Keys[val] }}减少<i class="fas fa-signal fa-flip-horizontal"></i></span>
+                                            </div>
+                                        {% endif %}
+                                        <div class="progress">
+                                            {% if wh <=0 %}
+                                                {% set wh = 0.01 %}
+                                            {% endif %}
+                                            <div class="progress-bar" style="width:{{ wh*100 }}%; background:tomato;">
+                                                <div class="progress-value">{{ vals[key][val]*100 }}%</div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <div class="radar_background">
+            <div class="radar" style="width:550px;height:550px;transform:translate(-50%, 0%)">
+                <a href="#">业务接口监测中</a>
+            </div>
+        </div>
+    {% endif %}
+{% endblock page %}

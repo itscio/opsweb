@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div" style="margin-bottom: 0.5%;">
+        <div id="active_context" style="float: left;margin-left: 42%">当前集群:{{ g.context }} Node信息</div>&nbsp;
+        <div style="float: right;margin-right: 2%">集群选择:{{ form.select (onchange="javascript:select_context()") }}</div>
+    </div>
+    <div id="html_show"></div>
+    <script>
+        $('#contexts').val('{{ g.context|safe }}');
+        ajax_html_show("/k8s/nodes","html_show");
+        function select_context() {
+            var context = $('#contexts').val();
+            $('#active_context').html('当前集群:'+context);
+            ajax_html_show("/k8s/nodes/"+context,"html_show");
+        }
+    </script>
+{% endblock page %}

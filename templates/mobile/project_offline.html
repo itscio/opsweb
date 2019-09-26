@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:950px;margin-left:20%;margin-top: 2%" id="application">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >线上项目下线申请</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%;margin-bottom: 5%">
+            <form action="/project_offline" method="post" enctype=multipart/form-data>
+                {{ form.csrf_token }}
+                <div>
+                    项目名称:{{ form.project (style="width:120px",autocomplete="off") }}
+                    审核人:{{ form.leader (style="width:210px",placeholder="部门leader邮箱") }}
+                    申请人: <input type="text" id="usr" style="width:75px;text-align: center">
+                </div>
+                <div style="margin-top: 0.8%">GIT地址:{{ form.git_url (style="width:516px") }}</div>
+                <div style="margin-top: 0.8%">{{ form.describe (rows = 4,style="width:570px;resize:vertical",placeholder="下线原因描述:") }}</div>
+                <div style="clear:both;margin-top: 0.8%">{{ form.comment (rows = 4,style="width:570px;resize:vertical;margin-top: 5px",placeholder="备注(可选):") }}</div>
+                <div style="margin-top: 0.8%">{{ form.submit(class="btn btn-primary") }}</div>
+            </form>
+        </div>
+    </div>
+    {% if Msg %}
+        <script>
+            "use strict";
+            js_msg('{{ Msg[1]|safe }}',3000,'{{ Msg[0] }}');
+            if ('{{ Msg[0]|safe }}' ==='success'){
+            setTimeout(function () {
+                location.href='/project_offline_list';
+            },4000);
+            }
+        </script>
+    {% endif %}
+    <script>
+        "use strict";
+        $.input_host('project',{{ projects|safe }});
+        $('#usr').val('{{ g.user|safe }}').attr("readonly","readonly");
+    </script>
+    {% if not Main_Menu['submenu'] %}
+        <script>
+            $('#application').css('margin-left','25%');
+        </script>
+    {% endif %}
+{% endblock page %}

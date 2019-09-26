@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:25%;margin-top: 4%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >项目镜像容器更新/回滚</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%">
+            <form action="/image_update" method="post">
+                {{ form.csrf_token }}
+                <p>选择集群:{{ form.contexts (style="width:190px",onchange="select_k8s_deployment()")}}</p>
+                <p>镜像名称:{{ form.deployment (style="width:190px",onchange="select_project_version()")}}</p>
+                <p>镜像操作:{{ form.action (style="width:190px")}}</p>
+                <p>选择版本:{{ form.version (style="width:190px")}}</p>
+                <p>{{ form.submit (class="btn btn-primary") }}</p>
+            </form>
+        </div>
+    </div>
+    <script>
+        "use strict";
+        function select_k8s_deployment(){
+            var url='/get_k8s_deployment/'+$('#contexts').val();
+            $("#deployment").empty();
+            $("#version").empty();
+            $.ajax({url:url,success:function(data){
+                if (data['values']){
+                    $.each(data['values'],function(i,val){
+                        var option = "<option value='"+val+"'>"+val+"</option>";
+                        $('#deployment').append(option);
+                    });
+                    select_project_version();
+                }
+            }});
+            }
+        function select_project_version() {
+            $("#version").empty();
+            var project = $('#deployment').val();
+            var versions = [];
+            $.ajax({url:"/get_oss_version/"+project,dataType : "json",success:
+            function(data) {$.each(data[project],
+                function(i,val){
+                    var option = "<option value='"+val+"'>"+val+"</option>";
+                    versions.push({'id':i.toString(),'text':val});
+                    $('#version').append(option);});
+                    $('#version').val(data[project][0]);
+            }});
+            }
+        select_k8s_deployment();
+    </script>
+{% endblock page %}

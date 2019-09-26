@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="alarm_show"></div>
+    <script>
+        "use strict";
+        ajax_html_show("/alarm_show","alarm_show");
+        setInterval(function(){
+            ajax_html_show("/alarm_show","alarm_show");
+            },30000);
+    </script>
+    {% if BUSIS %}
+        <div style="clear:both"></div>
+        {% for busi in BUSIS %}
+            <div class="style_border" style="width:46.6%;float:left;overflow: hidden;margin-left: 2%;margin-top: 1%">
+                {{ echarts_js_dependencies(busi) }}
+                {{ echarts_container(busi) }}
+                {{ echarts_js_content(busi) }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    <div style="clear:both"></div>
+    <div class="style_border" style="width:95.3%;float:left;overflow: hidden;margin-left: 2%;margin-top: 1%;">
+        <div style="margin-left: -5.5%;">
+            {{ echarts_js_dependencies(line) }}
+            {{ echarts_container(line) }}
+            {{ echarts_js_content(line) }}
+        </div>
+    </div>
+{% endblock page %}

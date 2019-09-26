@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>平台今日活动用户列表</p></div>
+    <div style="width: 99%">
+        <table id="table_data" class="table table-striped table-bordered table-hover" width="100%">
+        <thead>
+            <tr style="background-color:#F9F9FA">
+                {% for t in tables %}
+                    <td>{{ t }}</td>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+             {% for val in vals %}
+                <tr>
+                    {% for va in val %}
+                        <td>{{ va }}</td>
+                    {% endfor %}
+                </tr>
+             {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',3));
+    </script>
+{% endblock page %}

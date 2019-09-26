@@ -5,12 +5,12 @@ import redis
 import time
 from sso_cas import CASClient
 from flask_sqlalchemy import SQLAlchemy
-import module
+import conf
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('conf/redis.conf')
 app.config.from_pyfile('conf/cas.conf')
-limiter = module.WebLimiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="width: 98%;">
+        <!-- 应用服务列表-->
+        {% if values %}
+            {% if host_info %}
+                {% if app in ('php','tomcat','python','java') %}
+                    <strong>服务器<span style="color:red">{{ host_info[0] }}的{{ app }}应用端口{{ host_info[1] }}</span>使用以下第三方资源:</strong>
+                {% else %}
+                    {% if host_info[1] == 0 %}
+                        <strong>服务器<span style="color:red">{{ host_info[0] }}的{{ app }}应用集群</span>被以下自有资源使用:</strong>
+                    {% else %}
+                        <strong>服务器<span style="color:red">{{ host_info[0] }}的{{ app }}应用端口{{ host_info[1] }}</span>被以下自有资源使用:</strong>
+                    {% endif %}
+                {% endif %}
+            {% else %}
+                <strong>{{ app }}应用服务列表:</strong>
+            {% endif %}
+            <a href="#" style="float: left;margin-top: 1%" onclick="referrer_url()">
+                <span class="icon-hand-left"></span>返回
+            </a>
+            <div class="style_hr"></div>
+            <table class="table table table-hover table-striped table-condensed table-bordered" id="self_table">
+                <thead>
+                    <tr style="background-color:#F9F9FA">
+                    {% for t in tables %}
+                        <th style="text-align: center;vertical-align: middle">{{ t }}</th>
+                    {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for val in values %}
+                        {% if val %}
+                            <tr>
+                                <td style="text-align: center;vertical-align: middle">
+                                    <a href="/resource_pool?application={{ val[1] }}&application-id={{ val[0] }}">
+                                        {{ val[1] }}
+                                    </a>
+                                </td>
+                                <td style="text-align: center;vertical-align: middle">{{ val[2] }}</td>
+                                <td style="text-align: center;vertical-align: middle">
+                                    <a href="/assets_get?type=server&ip={{ val[3] }}&port={{ val[4] }}">
+                                        {{ val[5] }}
+                                    </a>
+                                </td>
+                                {% for va in val[6:] %}
+                                    <td style="text-align: center;vertical-align: middle">{{ va }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+    <div>
+    <script>
+        $(document).ready(table_data('self_table'));
+    </script>
+{% endblock page %}

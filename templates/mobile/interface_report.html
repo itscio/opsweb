@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>线上业务接口服务运行报告</p></div>
+    <div style="float:inside;text-align:left;margin-left: 2%">
+        <span class="icon-hand-right icon-align-center">
+            业务域名:<input id="business_bigdata_select_host" type="text" autocomplete="off" placeholder="输入域名"/>
+        </span>
+        <span class="icon-hand-right icon-align-center" style="margin-left: 1%">
+            域名接口:<input id="business_bigdata_select_uri" type="text" autocomplete="off" placeholder="暂无接口"/>
+        </span>
+    </div>
+    <div style="clear:both"></div>
+    <div class="style_hr" style="width: 97.3%;margin-left: 1%"></div>
+    {% if Bars %}
+        {% if Infos %}
+            <div style="margin-left:1%;margin-top:0.5%;width:48%;float:left;border:1px solid gainsboro;overflow: hidden">
+            {% for key in Infos %}
+                {% if Infos|length >1 %}
+                    <div style="width:48%;float:left;">
+                        {{ echarts_js_dependencies(Infos[key]) }}
+                        {{ echarts_container(Infos[key]) }}
+                        {{ echarts_js_content(Infos[key]) }}
+                    </div>
+                {% else %}
+                    {{ echarts_js_dependencies(Infos[key]) }}
+                    {{ echarts_container(Infos[key]) }}
+                    {{ echarts_js_content(Infos[key]) }}
+                {% endif %}
+            {% endfor %}
+            </div>
+        {% endif %}
+        {% for bar in Bars %}
+            <div style="margin-left:1%;margin-top:0.5%;width:48%;float:left;border:1px solid gainsboro;overflow: hidden">
+                <div style="margin-left: 3%;">
+                    {{ echarts_js_dependencies(bar) }}
+                    {{ echarts_container(bar) }}
+                    {{ echarts_js_content(bar) }}
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+    <script language="JavaScript">
+        $.input_host('business_bigdata_select_host',{{ searchs|safe }},function(){get_uri_lists('business_bigdata_select_host');});
+        var host = $.cookie('business_bigdata_select_host');
+        if (host){
+            $("#business_bigdata_select_host").val(host);
+            business_change_select(host,'/interface_report');
+        }
+    </script>
+{% endblock page %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div"><p>机房资产信息</p></div>
+    <div>
+        <div style="Float:left;margin-top: 0.3%">
+            <strong>
+                机房总数:<span style="color: coral">{{ total[0] }}</span>&nbsp;
+                机柜总数:<span style="color: coral">{{ total[1] }}</span>&nbsp;
+                物理机总数:<span style="color: coral">{{ total[2] }}</span>(
+                已过保数:<a href="/assets_get?type=server&action=expire" style="color:dodgerblue;">{{ total[3] }}</a>,
+                即将过保数:<a href="/assets_get?type=server&action=about_to" style="color: red">{{ total[4] }}</a>)&nbsp;
+                虚拟机总数:<span style="color: coral">{{ total[5] }}</span>
+                疑似下架数:<a href="/assets_get?type=server&action=server_off" style="color:dodgerblue">{{ total[6] }}</a>
+                服务器总数:<span style="color: #5eb95e">{{ total[2]+total[5]+total[6] }}</span>
+            </strong>
+        </div>
+        <div style="Float:right">
+            <form action="/assets_get" method="post" style="margin:0px">
+                    {{ form.csrf_token }}
+                    {{ form.text(cols = 7, rows = 1,placeholder="自动精确或模糊查询",style="border-radius: 5px;") }}{{ form.submit(class="btn btn-link",style="Float:right;padding:0rem 0.8rem") }}&nbsp;&nbsp;{{ form.select(style="Float:right",onchange="select_buy_date()") }}
+            </form>
+        </div>
+    </div>
+    <div style="clear:both"><div class="style_hr"></div></div>
+    <div style="width:100%">
+        {% for value in values %}
+            <div class="panel panel-default" style="width:28% ;float:left;margin-left:4%;margin-top:1%;text-align: center;border: 1px solid #0480be;border-radius:4px">
+                <div class="panel-heading" style="background-color: #0480be;font-size: larger;color:whitesmoke">
+                    <span class="icon-th-large"></span>&nbsp;{{ value[0] }}
+                </div>
+                <div class="panel-body">
+                    <table class="table">
+                        {% for t in tables %}
+                            <th style="text-align: center">{{ t }}</th>
+                        {% endfor %}
+                        <tr>
+                            <td style="text-align: center">{{ value[1] }}</td>
+                            <td style="text-align: center"><a href="/assets_get?aid={{ value[0] }}&type=server&host_type=physical&action=all_list">{{ value[2] }}</a></td>
+                            <td style="text-align: center"><a href="/assets_get?aid={{ value[0] }}&type=server&host_type=vm&action=all_list">{{ value[3] }}</a></td>
+                        </tr>
+                        {% for t in ns %}
+                            <th style="text-align: center">{{ t }}</th>
+                        {% endfor %}
+                        <tr>
+                            <td style="text-align: center"><a href="/assets_get?aid={{ value[0] }}&type=network&action=all_list">{{ value[4] }}</a></td>
+                            <td style="text-align: center"><a href="/assets_get?aid={{ value[0] }}&type=store&action=all_list">{{ value[5] }}</a></td>
+                            <td style="text-align: center"><a href="/assets_deploy/{{ value[0] }}">{{ value[6] }}</a></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <div style="clear:both"><div><br><div class="style_hr"></div></div></div>
+    <script>
+        "use strict";
+        document.onkeydown = function(event){
+        var code = event.keyCode;
+        if(code ==13){
+            document.getElementById("btn1").focus();
+        }
+        }
+    </script>
+{% endblock page %}

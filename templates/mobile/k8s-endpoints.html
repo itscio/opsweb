@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">当前集群:{{ g.context }} endpoints信息</div>
+    <div style="width:97.7%;margin-left: 0.5%">
+        <table class="table table-bordered table-hover table-striped table-condensed" id="table_data">
+            <thead>
+                {% for t in tables %}
+                    <th style="text-align: center">{{ t }}</th>
+                {% endfor %}
+            </thead>
+            <tbody>
+                {% for value in VAULES %}
+                    {% for ip in VAULES[value][0] %}
+                        <tr>
+                            <td style="text-align: left;width: 25%;vertical-align: middle">{{ value }}</td>
+                            <td style="text-align: center">{{ ip[0] }}</td>
+                            <td style="text-align: center">{{ VAULES[value][-1] }}</td>
+                            {% if ip[-1] %}
+                                <td style="text-align: center;color: darkgreen;font-weight: bold">正常</td>
+                            {% else %}
+                                <td style="text-align: center;color: darkred;font-weight: bold">异常</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_data('table_data'));
+    </script>
+{% endblock page %}

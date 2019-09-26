@@ -3,22 +3,25 @@ import redis
 from module import loging,SSH,db_idc,db_op,tools
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import and_,or_,distinct
+from sqlalchemy import and_,distinct
 from influxdb import InfluxDBClient
 from collections import defaultdict
 import datetime
 import time
+import pytz
 from elasticsearch import Elasticsearch
 from functools import reduce
 from multiprocessing.dummy import Pool as ThreadPool
 from tcpping import tcpping
 from kubernetes import client
+from pykafka import KafkaClient
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
 app.config.from_pyfile('../conf/sql.conf')
 app.config.from_pyfile('../conf/es.conf')
 app.config.from_pyfile('../conf/tokens.conf')
+app.config.from_pyfile('../conf/kafka.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -35,6 +38,7 @@ es_hosts = app.config.get('ES_HOSTS')
 es = Elasticsearch(hosts=es_hosts,timeout=60)
 ops_token = app.config.get('OPS_TOKEN')
 redis_token = app.config.get('REDIS_TOKEN')
+KAFKA_HOSTS = app.config.get('KAFKA_HOSTS')
 config,contexts,config_file = tools.k8s_conf()
 @tools.proce_lock()
 def task_run():
@@ -74,20 +78,6 @@ def task_run():
                 if pv_sum:
                     pv_sum = reduce(lambda x, y: x + y, pv_sum)
                     RC_CLUSTER.hset(Key, business[id], pv_sum)
-    except Exception as e:
-        logging.error(e)
-
-    #获取k8s的hpa副本数量
-    try:
-        td = time.strftime('%Y-%m-%d',time.localtime())
-        th = time.strftime('%H:%M',time.localtime())
-        for context in contexts:
-            config.load_kube_config(config_file, context=context)
-            v1 = client.AutoscalingV1Api()
-            ret = v1.list_horizontal_pod_autoscaler_for_all_namespaces()
-            Key = 'op_hpa_chart_%s_%s' %(context,td)
-            for i in ret.items:
-                RC.hset(Key,'%s_%s'%(i.metadata.name,th),i.status.current_replicas)
     except Exception as e:
         logging.error(e)
 
@@ -193,6 +183,7 @@ def get_other_info():
 
 @tools.proce_lock()
 def get_redis_info():
+    loging.write("start %s ......" % get_redis_info.__name__)
     db_third = db_idc.third_resource
     db_redis = db_idc.redis_info
     db_servers = db_idc.idc_servers
@@ -215,7 +206,7 @@ def get_redis_info():
             conf_file = ""
             redis_type = {'master': '否', 'slave': '否', 'cluster': '否'}
             #判断ssh端口是否连通
-            if tcpping(host=ip, port=app_port, timeout=3):
+            if tcpping(host=ip, port=app_port, timeout=5):
                 try:
                     Ssh = SSH.ssh(ip=ip, ssh_port=ssh_port)
                 except:
@@ -239,7 +230,7 @@ def get_redis_info():
                                     try:
                                         result = results['stdout'][0].split()[-1]
                                         if '/' in result:
-                                            conf_file = "/xxxx/redis/etc/{}".format(result.split('/')[-1])
+                                            conf_file = "/usr/local/xxxx/xxxx/etc/{}".format(result.split('/')[-1])
                                         if not conf_file.endswith('.conf'):
                                             cmd = "lsof -p {}|grep 'cwd'".format(pid)
                                             cwd = Ssh.Run(cmd)
@@ -312,13 +303,13 @@ def get_redis_info():
                                                             db_redis.query.filter(and_(db_redis.server_id == server_id, db_redis.port == slave_port)).update(
                                                                 {db_redis.masterauth: masterauth, db_redis.requirepass: requirepass,
                                                                  db_redis.master: '否',db_redis.slave: '是',db_redis.cluster: '否',
-                                                                 db_redis.Master_Host: master_id,db_redis.Master_Port: app_port,db_redis.update_date: update_date})
+                                                                 db_redis.Master_Host: master_id,db_redis.Master_Port: app_port})
                                                             db_idc.DB.session.commit()
                                                         else:
                                                             c = db_redis(server_id=server_id, port=slave_port, masterauth=masterauth,
                                                                          requirepass=requirepass, master='否',
                                                                          slave='是',cluster='否', Master_host=master_id,
-                                                                         Master_Port=app_port, update_date=update_date)
+                                                                         Master_Port=app_port, start_time=update_date,last_time='')
                                                             db_idc.DB.session.add(c)
                                                             db_idc.DB.session.commit()
                                         except:
@@ -346,7 +337,7 @@ def get_redis_info():
                                                  db_redis.slave: redis_type['slave'],
                                                  db_redis.cluster: redis_type['cluster'],
                                                  db_redis.Master_Host: '',
-                                                 db_redis.Master_Port: '', db_redis.update_date: update_date})
+                                                 db_redis.Master_Port: ''})
                                             db_idc.DB.session.commit()
                                         else:
                                             loging.write("add new redis %s  %s  ......" % (ip, app_port))
@@ -354,17 +345,13 @@ def get_redis_info():
                                                          requirepass=requirepass, master=redis_type['master'],
                                                          slave=redis_type['slave'], cluster=redis_type['cluster'],
                                                          Master_host='', Master_Port='',
-                                                         update_date=update_date)
+                                                         start_time=update_date,last_time='')
                                             db_idc.DB.session.add(c)
                                             db_idc.DB.session.commit()
                                 except:
                                     db_idc.DB.session.rollback()
             else:
                 loging.write("delete not exist redis %s  %s  ......" %(ip,app_port))
-                v = db_redis.query.filter(and_(db_redis.server_id==server_ids['%s:%s' %(ip,ssh_port)],db_redis.port==app_port)).all()
-                for c in v:
-                    db_idc.DB.session.delete(c)
-                    db_idc.DB.session.commit()
                 v= db_third.query.filter(and_(db_third.ip==ip,db_third.app_port==app_port)).all()
                 for c in v:
                     db_idc.DB.session.delete(c)
@@ -378,14 +365,15 @@ def get_redis_info():
         logging.error(e)
     finally:
         db_idc.DB.session.remove()
+        loging.write("%s complete!" % get_redis_info.__name__)
 
 @tools.proce_lock()
 def k8s_health_check():
     for context in contexts:
         config.load_kube_config(config_file, context=context)
+        # nodes健康检测
         v1 = client.CoreV1Api()
         try:
-            #nodes健康检测
             ret = v1.list_node(watch=False)
             for i in ret.items:
                 if 'node-role.kubernetes.io/master' in i.metadata.labels:
@@ -394,12 +382,12 @@ def k8s_health_check():
                     node_type = 'node'
                 status = i.status.conditions[-1].type
                 if status != 'Ready':
-                    text = ['**容器平台NODE报警:%s**' % i.metadata.name,'节点类型:%s' %node_type,'节点状态:%s' %status,'需及时处理!']
+                    text = ['**容器平台NODE报警:%s**' % i.metadata.name,'k8s集群:%s' %context,'节点类型:%s' %node_type,'节点状态:%s' %status,'需及时处理!']
                     tools.dingding_msg(text,token=ops_token)
         except Exception as e:
             logging.error(e)
+        # endpoints健康检测
         try:
-            # endpoints健康检测
             ret = v1.list_namespaced_endpoints('default')
             for i in ret.items:
                 try:
@@ -410,7 +398,7 @@ def k8s_health_check():
                                     ip_header = '.'.join(str(info.ip).split('.')[:2])
                                     if '{}.'.format(ip_header) in ('172.16.', '10.10.'):
                                         if not tcpping(host=info.ip, port=infos.ports[0].port, timeout=5):
-                                            text = ['**容器平台endpoints报警:**', 'IP:%s' % info.ip,
+                                            text = ['**容器平台endpoints报警:**','k8s集群:%s' %context, 'IP:%s' % info.ip,
                                                     '服务端口:%s' % infos.ports[0].port, '服务端口不可用,需及时处理!']
                                             tools.dingding_msg(text)
                                 except:
@@ -421,6 +409,59 @@ def k8s_health_check():
                     continue
         except Exception as e:
             logging.error(e)
+        # 获取k8s的hpa副本数量
+        try:
+            td = time.strftime('%Y-%m-%d', time.localtime())
+            th = time.strftime('%H:%M', time.localtime())
+            v1_hpa = client.AutoscalingV1Api()
+            ret = v1_hpa.list_horizontal_pod_autoscaler_for_all_namespaces()
+            Key = 'op_hpa_chart_%s_%s' % (context, td)
+            for i in ret.items:
+                RC.hset(Key, '%s_%s' % (i.metadata.name, th), i.status.current_replicas)
+        except Exception as e:
+            logging.error(e)
+        # 获取pod信息
+        try:
+            db_pods = db_idc.k8s_pods
+            ret = v1.list_namespaced_pod(namespace='default')
+            for i in ret.items:
+                try:
+                    c = db_pods(context=context,pod_ip=i.status.pod_ip,pod_name=i.metadata.name,
+                                node_name=i.spec.node_name,uptime=time.strftime('%Y-%m-%d',time.localtime()))
+                    db_idc.DB.session.add(c)
+                    db_idc.DB.session.commit()
+                except:
+                    continue
+        except Exception as e:
+            logging.error(e)
+        finally:
+            db_idc.DB.session.remove()
+        # 获取event事件信息
+        try:
+            db_events = db_op.k8s_events
+            ret = v1.list_namespaced_event('default')
+            for info in ret.items:
+                timestamp = str(info.first_timestamp)
+                if '+' in timestamp:
+                    timestamp = timestamp.split('+')[0]
+                y, m, d = timestamp.split()[0].split('-')
+                H, M, S = timestamp.split()[1].split(':')
+                try:
+                    timestamp = datetime.datetime(int(y), int(m), int(d), int(H), int(M), int(S),
+                                           tzinfo=pytz.timezone('Asia/Shanghai'))
+                    timestamp = timestamp + datetime.timedelta(hours=8)
+                    timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    c = db_events(context=context,date_time=timestamp,kind=info.involved_object.kind,
+                                  name=info.involved_object.name,namespace=info.involved_object.namespace,
+                                  message=info.message,reason=info.reason,type=info.type)
+                    db_op.DB.session.add(c)
+                    db_op.DB.session.commit()
+                except:
+                    continue
+        except Exception as e:
+            logging.error(e)
+        finally:
+            db_op.DB.session.remove()
 
 @tools.proce_lock()
 def alarm_load():
@@ -489,7 +530,7 @@ def alarm_load():
 
                                     if results[-1].endswith('-rpc.jar'):
                                         pro_jar = results[-1]
-                                        if pro_jar in ['xxxx.jar']:
+                                        if pro_jar in ['xxxx-xxxx-rpc.jar']:
                                             Project =pro_jar.split('.')[0]
                                     else:
                                         for line in results:
@@ -547,6 +588,9 @@ def k8s_ingress_log():
     lte_date = now_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
     gte_date = now_date - datetime.timedelta(minutes=1)
     gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    db_k8s_ingress = db_op.k8s_ingress
+    k8s_domains = db_k8s_ingress.query.with_entities(db_k8s_ingress.domain).all()
+    k8s_domains = [domain[0] for domain in k8s_domains]
     Domains = []
     def auto_delete_pod(pod_name,text):
         try:
@@ -620,17 +664,18 @@ def k8s_ingress_log():
             for infos in res['aggregations']['hosts']['buckets']:
                 try:
                     domain = infos['key']
-                    Domains.append(domain)
-                    counts = int(infos['doc_count'])
-                    #统计域名列表
-                    RC.sadd(k8s_domains_key,domain)
-                    #统计域名访问量
-                    RC.hset('%s_%s_%s'%(Key,domain,td),th,counts)
-                    RC.expire('%s_%s_%s' % (Key, domain, td), 864000)
-                    #状态码统计
-                    vals = {info['key']: info['doc_count'] for info in infos['counts']['buckets']}
-                    RC.hset('%s_%s_%s' % (stat_key, domain, td), th, vals)
-                    RC.expire('%s_%s_%s' % (stat_key, domain, td), 864000)
+                    if domain in k8s_domains:
+                        Domains.append(domain)
+                        counts = int(infos['doc_count'])
+                        #统计域名列表
+                        RC.sadd(k8s_domains_key,domain)
+                        #统计域名访问量
+                        RC.hset('%s_%s_%s'%(Key,domain,td),th,counts)
+                        RC.expire('%s_%s_%s' % (Key, domain, td), 864000)
+                        #状态码统计
+                        vals = {info['key']: info['doc_count'] for info in infos['counts']['buckets']}
+                        RC.hset('%s_%s_%s' % (stat_key, domain, td), th, vals)
+                        RC.expire('%s_%s_%s' % (stat_key, domain, td), 864000)
                 except:
                     continue
         except Exception as e:
@@ -656,8 +701,9 @@ def k8s_ingress_log():
             for infos in res['aggregations']['hosts']['buckets']:
                 try:
                     domain = infos['key']
-                    RC.hset('%s_%s_%s' % (rt_key, domain, td), th,float('%.3f'%infos['avg_resp']['value']))
-                    RC.expire('%s_%s_%s' % (rt_key, domain, td), 864000)
+                    if domain in k8s_domains:
+                        RC.hset('%s_%s_%s' % (rt_key, domain, td), th,float('%.3f'%infos['avg_resp']['value']))
+                        RC.expire('%s_%s_%s' % (rt_key, domain, td), 864000)
                 except:
                     continue
         except Exception as e:
@@ -666,7 +712,7 @@ def k8s_ingress_log():
             for domain in Domains:
                 #业务状态码和响应时间超时报警
                 text = ['**容器平台业务报警:%s**' % domain]
-                stat_vals = 0.0
+                stat_vals = 0.1
                 nd = now_date - datetime.timedelta(minutes=1)
                 th = nd.strftime('%H:%M')
                 vals = RC.hget('%s_%s_%s' % (stat_key, domain, td), th)
@@ -678,31 +724,30 @@ def k8s_ingress_log():
                         total_vals = reduce(lambda x, y: x + y, vals.values())
                     else:
                         total_vals = stat_vals
-                    if stat_vals >0:
-                        diff_vals = float(stat_vals)/float(total_vals)
+                    diff_vals = float(stat_vals)/float(total_vals)
+                    if diff_vals < 0.98:
                         rt_vals = RC.hget('%s_%s_%s' % (rt_key, domain, td), th)
-                        if diff_vals < 0.99:
-                            Key = 'op_k8s_project_alarm'
-                            RC.incr(Key, 1)
-                            RC.expire(Key, 180)
-                            if int(RC.get(Key)) >3:
-                                db_project = db_op.project_list
-                                project = db_project.query.with_entities(distinct(db_project.project)).filter(
-                                    db_project.domain.like('%{}%'.format(domain))).all()
-                                if project:
-                                    db_k8s_deploy = db_op.k8s_deploy
-                                    pod_name = db_k8s_deploy.query.with_entities(db_k8s_deploy.deployment).filter(
-                                        db_k8s_deploy.project == project[0][0]).all()
-                                    if pod_name:
-                                        pod_name = pod_name[0][0]
-                                        text.append("服务可用率:{}%".format('%.2f' % (diff_vals * 100)))
-                                        if rt_vals:
-                                            text.append("服务响应时间:{}ms".format(int(float(rt_vals) * 1000)))
-                                        delete_pod_key = 'op_auto_delete_pod_%s_%s' % (pod_name, td)
-                                        if not RC.exists(delete_pod_key):
-                                            text = auto_delete_pod(pod_name,text)
-                                            tools.dingding_msg(text)
-                                            RC.delete(Key)
+                        Key = 'op_k8s_project_alarm'
+                        RC.incr(Key, 1)
+                        RC.expire(Key, 300)
+                        if int(RC.get(Key)) >3:
+                            db_project = db_op.project_list
+                            project = db_project.query.with_entities(distinct(db_project.project)).filter(
+                                db_project.domain.like('%{}%'.format(domain))).all()
+                            if project:
+                                db_k8s_deploy = db_op.k8s_deploy
+                                pod_name = db_k8s_deploy.query.with_entities(db_k8s_deploy.deployment).filter(
+                                    db_k8s_deploy.project == project[0][0]).all()
+                                if pod_name:
+                                    pod_name = pod_name[0][0]
+                                    text.append("服务可用率:{}%".format('%.2f' % (diff_vals * 100)))
+                                    if rt_vals:
+                                        text.append("服务响应时间:{}ms".format(int(float(rt_vals) * 1000)))
+                                    delete_pod_key = 'op_auto_delete_pod_%s_%s' % (pod_name, td)
+                                    if not RC.exists(delete_pod_key):
+                                        text = auto_delete_pod(pod_name,text)
+                                        tools.dingding_msg(text)
+                                        RC.delete(Key)
         except Exception as e:
             logging.error(e)
     except Exception as e:
@@ -716,20 +761,53 @@ def k8s_ingress_log():
 @tools.proce_lock()
 def Redis_alarm():
     loging.write("start %s ......" %Redis_alarm.__name__)
+    last_time = datetime.datetime.now()
+    last_time = last_time - datetime.timedelta(days=3)
+    last_time = last_time.strftime('%Y-%m-%d')
+    uptime = time.strftime('%Y-%m-%d',time.localtime())
     tm = time.strftime('%Y%m%d%H%M',time.localtime())
     Key = 'yw_check_master_slave'
     redis_m = []
     db_servers = db_idc.idc_servers
     db_redis = db_idc.redis_info
+    # 获取服务器信息
+    blacklist = ('172.16.70.34', '172.16.19.104')
+    server_infos = db_servers.query.with_entities(db_servers.id, db_servers.ip,db_servers.hostname).filter(db_servers.idc_id != 1025).all()
+    server_ids = {str(infos[0]): infos[1] for infos in server_infos}
+    hosts = {str(infos[0]): infos[-1] for infos in server_infos}
+    # 获取主redis信息
+    Masters = db_redis.query.with_entities(db_redis.server_id, db_redis.port, db_redis.requirepass).filter(
+        db_redis.master == '是').all()
+    S_Masters = db_redis.query.with_entities(db_redis.Master_Host, db_redis.Master_Port).filter(
+        and_(db_redis.slave == '是', db_redis.Master_Host != '')).all()
+    S_Masters = set(['%s:%s' % info for info in S_Masters])
+    # 检测redis异常
+    redis_infos = db_redis.query.with_entities(db_redis.server_id, db_redis.port,
+                                               db_redis.cluster,db_redis.last_time
+                                               ).filter(db_redis.last_time >=last_time).all()
+    for infos in redis_infos:
+        try:
+            server_id, port,cluster,last_time= infos
+            if str(server_id) in server_ids:
+                ip = server_ids[str(server_id)]
+                hostname = hosts[str(server_id)]
+                if tcpping(ip,port,timeout=5):
+                    RC_CLUSTER.srem('op_redis_health_check',f"{hostname}:{port}")
+                    db_redis.query.filter(and_(db_redis.server_id == server_id, db_redis.port == port)).update({db_redis.last_time:uptime})
+                    db_idc.DB.session.commit()
+                else:
+                    if cluster == '否':
+                        RC_CLUSTER.sadd('op_redis_health_check',f"{hostname}:{port}")
+                        #异常redis报警
+                        if last_time == uptime:
+                            text = ['**线上Redis服务报警:**',
+                                    "Redis:%s %s" % (hostname,port),
+                                    "服务端口检测异常!",
+                                    '**请及时进行处理!**']
+                            tools.dingding_msg(text)
+        except Exception as e:
+            logging.error(e)
     try:
-        #获取服务器信息
-        blacklist = ('172.16.70.34','172.16.19.104')
-        server_ids = db_servers.query.with_entities(db_servers.id, db_servers.ip).filter(db_servers.idc_id != 1025).all()
-        server_ids = {str(infos[0]): infos[-1] for infos in server_ids}
-        #获取主redis信息
-        Masters = db_redis.query.with_entities(db_redis.server_id,db_redis.port,db_redis.requirepass).filter(db_redis.master=='是').all()
-        S_Masters = db_redis.query.with_entities(db_redis.Master_Host, db_redis.Master_Port).filter(and_(db_redis.slave == '是',db_redis.Master_Host !='')).all()
-        S_Masters = set(['%s:%s' %info for info in S_Masters])
         #主redis写入数据
         for Master in set(Masters):
             server_id, port, requirepass = Master
@@ -848,3 +926,49 @@ def rsync_comment():
     finally:
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
+
+@tools.proce_lock()
+def kafka_topic():
+    try:
+        db_kafka = db_idc.kafka_topic
+        kafka_client = KafkaClient(hosts=KAFKA_HOSTS)
+        for Topic in [str(t,encoding='utf8') for t in kafka_client.topics]:
+            try:
+                offsets_prv = 0.0
+                TOPIC = kafka_client.topics[Topic]
+                Key = 'op_kafka_topic_health'
+                new_offsets = []
+                for id in TOPIC.partitions:
+                    try:
+                        new_offsets.append(TOPIC.partitions[id].latest_available_offset())
+                    except:
+                        continue
+                if new_offsets:
+                    new_offsets = reduce(lambda x, y: x + y, new_offsets)
+                    old_offsets = new_offsets
+                    if RC.hexists(Key,Topic):
+                        old_offsets = float(RC.hget(Key,Topic))
+                    if new_offsets >0 and old_offsets >0:
+                        offsets_prv = float(new_offsets-old_offsets)/old_offsets*100
+                        RC.hset(Key, Topic, new_offsets)
+            except Exception as e:
+                logging.error(e)
+            else:
+                #删除相关topic
+                v = db_kafka.query.filter(db_kafka.topic==Topic).all()
+                if v:
+                    db_kafka.query.filter(db_kafka.topic == Topic).update({db_kafka.partitions:len(TOPIC.partitions),
+                                                                           db_kafka.offsets_prv:offsets_prv,
+                                                                           db_kafka.update_time:time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime())})
+                    db_idc.DB.session.commit()
+                else:
+                    #记录新的topic
+                    c = db_kafka(topic=Topic,partitions=len(TOPIC.partitions),offsets_prv=offsets_prv,
+                                 update_time=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime()))
+                    db_idc.DB.session.add(c)
+                    db_idc.DB.session.commit()
+    except Exception as e:
+        logging.error(e)
+    finally:
+        db_idc.DB.session.remove()

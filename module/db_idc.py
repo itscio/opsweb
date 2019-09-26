@@ -4,6 +4,21 @@ from flask import Flask
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/sql.conf')
+class apscheduler_jobs(DB.Model):
+    __tablename__ = 'apscheduler_jobs'
+    __bind_key__ = 'idc'
+    id = DB.Column(DB.String(200),primary_key=True)
+    next_run_time = DB.Column(DB.BigInteger)
+    job_state = DB.Column(DB.BLOB)
+    def __init__(self,id,next_run_time,job_state):
+        self.id = id
+        self.next_run_time = next_run_time
+        with open(job_state,'rb') as f:
+            self.job_state = f.read()
+    def __repr__(self):
+        values = (self.id,self.next_run_time,self.job_state)
+        return '%s,%s,%r' % values
+
 class idc_servers(DB.Model):
     __tablename__ = 'servers'
     __bind_key__='idc'
@@ -28,7 +43,10 @@ class idc_servers(DB.Model):
     expird_date = DB.Column(DB.String(30))
     status = DB.Column(DB.String(8))
     comment = DB.Column(DB.String(30))
-    def __init__(self,idc_id,ip,ssh_port,s_ip,host_type,hostname,sn,manufacturer,productname,system,cpu_info,cpu_core,mem,disk_size,disk_count,idrac,purch_date,expird_date,status,comment):
+    uptime = DB.Column(DB.String(45))
+    def __init__(self,idc_id,ip,ssh_port,s_ip,host_type,hostname,sn,manufacturer,productname,system,
+                 cpu_info,cpu_core,mem,disk_size,disk_count,idrac,purch_date,expird_date,status,
+                 comment,uptime):
         self.idc_id = idc_id
         self.ip = ip
         self.s_ip = s_ip
@@ -49,9 +67,12 @@ class idc_servers(DB.Model):
         self.expird_date = expird_date
         self.status = status
         self.comment = comment
+        self.uptime = uptime
     def __repr__(self):
-        values=(self.idc_id,self.ip,self.ssh_port,self.s_ip,self.host_type,self.hostname,self.sn,self.manufacturer,self.productname,self.system,self.cpu_info,self.cpu_core,self.mem,self.disk_count,self.disk_size,self.idrac,self.purch_date,self.expird_date,self.status,self.comment)
-        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'%values
+        values=(self.idc_id,self.ip,self.ssh_port,self.s_ip,self.host_type,self.hostname,self.sn,self.manufacturer,
+                self.productname,self.system,self.cpu_info,self.cpu_core,self.mem,self.disk_count,self.disk_size,
+                self.idrac,self.purch_date,self.expird_date,self.status,self.comment,self.uptime)
+        return '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s'%values
 
 class idc_id(DB.Model):
     __tablename__ = 'idc_id'
@@ -288,8 +309,9 @@ class redis_info(DB.Model):
     cluster = DB.Column(DB.String(8))
     Master_Host = DB.Column(DB.String(20))
     Master_Port = DB.Column(DB.String(8))
-    update_date = DB.Column(DB.String(45))
-    def __init__(self,server_id,port,masterauth,requirepass,master,slave,cluster,Master_host,Master_Port,update_date):
+    start_time = DB.Column(DB.String(45))
+    last_time = DB.Column(DB.String(45))
+    def __init__(self,server_id,port,masterauth,requirepass,master,slave,cluster,Master_host,Master_Port,start_time,last_time):
         self.server_id = server_id
         self.port = port
         self.masterauth = masterauth
@@ -299,7 +321,44 @@ class redis_info(DB.Model):
         self.cluster = cluster
         self.Master_Host = Master_host
         self.Master_Port = Master_Port
-        self.update_date = update_date
+        self.start_time = start_time
+        self.last_time = last_time
     def __repr__(self):
-        values=(self.server_id,self.port,self.masterauth,self.requirepass,self.master,self.slave,self.cluster,self.Master_Host,self.Master_Port,self.update_date)
-        return '%i,%i,%s,%s,%s,%s,%s,%s,%i,%s' %values
+        values=(self.server_id,self.port,self.masterauth,self.requirepass,self.master,self.slave,self.cluster,self.Master_Host,self.Master_Port,self.start_time,self.last_time)
+        return '%i,%i,%s,%s,%s,%s,%s,%s,%i,%s,%s' %values
+
+class kafka_topic(DB.Model):
+    __tablename__ = 'kafka_topic'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    topic = DB.Column(DB.String(100))
+    partitions = DB.Column(DB.Integer)
+    offsets_prv = DB.Column(DB.Float)
+    update_time = DB.Column(DB.DateTime)
+    def __init__(self,topic,partitions,offsets_prv,update_time):
+        self.topic = topic
+        self.partitions = partitions
+        self.offsets_prv = offsets_prv
+        self.update_time = update_time
+    def __repr__(self):
+        values=(self.topic,self.partitions,self.offsets_prv,self.update_time)
+        return '%s,%i,%i,%s'%values
+
+class k8s_pods(DB.Model):
+    __tablename__ = 'k8s_pods'
+    __bind_key__='idc'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    context = DB.Column(DB.String(45))
+    pod_ip = DB.Column(DB.String(45))
+    pod_name = DB.Column(DB.String(100))
+    node_name = DB.Column(DB.String(45))
+    uptime = DB.Column(DB.String(45))
+    def __init__(self,context,pod_ip,pod_name,node_name,uptime):
+        self.context = context
+        self.pod_ip = pod_ip
+        self.pod_name = pod_name
+        self.node_name = node_name
+        self.uptime = uptime
+    def __repr__(self):
+        values=(self.context,self.pod_ip,self.pod_name,self.node_name,self.uptime)
+        return '%s,%s,%s,%s,%s'%values

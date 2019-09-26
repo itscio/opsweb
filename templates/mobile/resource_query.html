@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">
+        <a href="#" onclick="referrer_url()" style="float: left;margin-top: 1%"><span class="icon-hand-left"></span>返回</a>
+            <span><strong>{{ busi }}业务应用服务使用情况</strong></span>
+        <div class="style_hr"></div>
+    </div>
+    <div style="width: 99%">
+        <table class="table table-hover table-striped table-condensed table-bordered" id="table_data">
+            <thead>
+                <tr style="background-color:#F9F9FA">
+                    {% for tab in tables %}
+                        <th class="table_list" style="text-align: center">{{ tab }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for vals in values %}
+                    <tr>
+                        <td class="table_list" style="text-align: center"><a href="/resource_pool?application={{ app }}">{{ app }}</a></td>
+                        <td class="table_list" style="text-align: center">{{ vals[1] }}</td>
+                        <td class="table_list" style="text-align: center"><a href="/assets_get?type=server&hostname={{ servers[vals[0]][0] }}">{{ servers[vals[0]][0] }}</a></td>
+                        <td class="table_list" style="text-align: center"><a href="/assets_deploy/{{ servers[vals[0]][1] }}">{{ servers[vals[0]][1] }}</a></td>
+                        {% for val in servers[vals[0]][2:] %}
+                            <td class="table_list" style="text-align: center">{{ val }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',2));
+    </script>
+{% endblock page %}

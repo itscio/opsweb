@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">{{ Topic }}主题信息</div>
+    <div style="width: 99%">
+         <table id="table_data" class="table table-striped table-bordered table-hover table-condensed">
+            <thead>
+                <tr>
+                    {% for tab in ('partition','leader','replicas','ISR','earliest_offset','latest_offset') %}
+                        <td>{{ tab }}</td>
+                    {% endfor %}
+                </tr>
+            </thead>
+             <tbody>
+                 {% for i in  range(LEADER|length) %}
+                    <tr>
+                        <td>{{ i }}</td>
+                        <td>{{ LEADER[i] }}</td>
+                        <td>{{ replicas[i] }}</td>
+                        <td>{{ ISR[i] }}</td>
+                        <td>{{ earliest_offset[i] }}</td>
+                        <td>{{ latest_offset[i] }}</td>
+                    </tr>
+                 {% endfor %}
+             </tbody>
+         </table>
+    </div>
+{% endblock %}

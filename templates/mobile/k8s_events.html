@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="div">当前集群:{{ g.context }} Event信息</div>
+    <div style="width: 98%;margin-left: 1%">
+         <table class="table table-hover table-striped table-condensed table-bordered" id="table_data">
+            <thead>
+                <tr>
+                    {% for t in tables %}
+                        <td style="text-align: center;vertical-align:middle;font-weight: bold">{{ t }}</td>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                    <tr>
+                        {% for val in event[:-1] %}
+                            <td style="text-align: center;vertical-align:middle;">{{val}}</td>
+                        {% endfor %}
+                        {% if event[-1] == 'Normal' %}
+                            <td style="text-align: center;vertical-align:middle;"><span style="color:green">{{event[-1]}}</span></td>
+                        {% else %}
+                            <td style="text-align: center;vertical-align:middle;"><span style="color:red">{{event[-1]}}</span></td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+        $(document).ready(table_order('table_data',0));
+    </script>
+{% endblock %}

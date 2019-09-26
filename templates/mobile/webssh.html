@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block page %}
+    <div id="assets_manage" class="panel panel-info" style="border: 1px solid #0480be ;width:750px;float:left;margin-left:20%;margin-top: 3%">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >WEBSSH登录</h4>
+        </div>
+        <form id="connect" action="" method="post" enctype="multipart/form-data" style="margin-top: 3%">
+            <div>
+                服务器:<input class="form-control" type="text" id="hostname" name="hostname" value="" required>
+                端口:<input class="form-control" type="number" id="port" name="port" placeholder="20443" value="" min=1 max=65535>
+            </div>
+            <div>
+                用户名:<input class="form-control" type="text" id="username" name="username" value="" required>
+                密码:<input class="form-control" type="password" name="password" value="">
+            </div>
+            <input type="hidden" name="_xsrf" value="2|1ed75d29|a7f11d3da6a81f14883e353e337f6641|1552030580"/>
+            <input type="hidden" id="ws_url" value="{{ url }}"/>
+            <button type="submit" class="btn btn-primary">登录</button>
+            <button type="reset" class="btn btn-danger">重设</button>
+        </form>
+    </div>
+    <div id="terminal"></div>
+    <link href="/static/css/xterm.min.css" rel="stylesheet"/>
+    <link href="/static/css/fullscreen.min.css" rel="stylesheet"/>
+    <script src="/static/js/popper.min.js"></script>
+    <script src="/static/js/xterm.min.js"></script>
+    <script src="/static/js/fullscreen.min.js"></script>
+    <script src="/static/js/webssh.js"></script>
+{% endblock page %}

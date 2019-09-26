@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block page %}
+    <div class="panel panel-info" style="float:left;border: 1px solid #0480be ;width:950px;margin-left:20%;margin-top: 2%" id="application">
+        <div class="panel-heading" style="background-color: #0480be">
+            <h4 class="panel-title" style="margin:0px;color:whitesmoke" >线上SQL执行申请</h4>
+        </div>
+        <div class="panel-body" style="margin-top: 5%;margin-bottom: 5%">
+            <form action="/sql_execute" method="post" enctype=multipart/form-data>
+                {{ form.csrf_token }}
+                <div>
+                    <div>服务器:{{ form.sql_server(style="width:210px",autocomplete="off")}}&nbsp;端口:{{ form.sql_port(style="width:80px",autocomplete="off")}}&nbsp;数据库:{{ form.sql_database(style="width:150px",autocomplete="off")}}</div>
+                    <div style="margin-top: 1%">上传文件:{{ form.sql_file (style="width:138px")}}<span style="color: red;font-size: smaller">(只支持zip包文件)</span> &nbsp;文件MD5:{{ form.sql_md5(style="width:208px",placeholder="zip文件的MD5值",autocomplete="off")}}</div>
+                    <div style="margin-top: 1%">审核人:{{ form.leader (style="width:400px",placeholder="部门leader邮箱") }} &nbsp;申请人: <input type="text" id="usr" style="width:67px;text-align: center"></div>
+                    <div style="margin-top: 1%">{{ form.sql_describe (rows = 4,style="width:570px;resize:vertical",placeholder="数据库变更描述:")}}</div>
+                </div>
+                <div style="margin-top: 1%">{{ form.submit(class="btn btn-primary") }}</div>
+            </form>
+        </div>
+    </div>
+    {% if Msg %}
+        <script>
+            "use strict";
+            js_msg('{{ Msg[1]|safe }}',3000,'{{ Msg[0] }}');
+            if ('{{ Msg[0]|safe }}' ==='success'){
+            setTimeout(function () {
+                location.href='/sql_execute_list';
+            },4000);
+            }
+        </script>
+    {% endif %}
+    {% if not Main_Menu['submenu'] %}
+        <script>
+            $('#application').css('margin-left','25%');
+        </script>
+    {% endif %}
+    <script>
+        "use strict";
+        $('#usr').val('{{ g.user|safe }}').attr("readonly","readonly");
+    </script>
+{% endblock page %}

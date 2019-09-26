@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block page %}
+    <div style="padding-top: 6%" align="center">
+        <div class="panel" style="border: 1px solid #0480be ;width: 50%">
+            <div class="panel-heading  alert alert-info" >
+                <h4 class="panel-title" style="margin:0px;line-height: 15px">平台权限申请</h4>
+            </div>
+            <div class="panel-body">
+                <form action="/apply" method="post">
+                    {{ form.csrf_token }}
+                    <p>选择权限:{{ form.select }}</p>
+                    <p>{{ form.submit(class="btn btn-primary") }}</p>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <script language="JavaScript">
+                js_msg('{{ messages[-1] }}',3000,'info');
+                $("select").each(function () {
+　　                  $("#" + this.id).attr("disabled", true);
+                    });
+                $('#btn1').attr("disabled","disabled");
+                setTimeout(function () {
+                location.href='/work_order';
+            },5000);
+            </script>
+        {% endif %}
+    {% endwith %}
+{% endblock %}

@@ -1,0 +1,26 @@
+<div style="width:97.7%;margin-left: 0.5%">
+    <table class="table table-bordered table-hover table-striped table-condensed">
+        <thead>
+            {% for t in tables %}
+                <th style="text-align: center">{{ t }}</th>
+            {% endfor %}
+        </thead>
+        <tbody>
+            {% for node in NODES %}
+                <tr>
+                    <td style="text-align: center">
+                        <a href="/assets_get?type=server&hostname={{ node }}">{{ node }}</a>
+                    </td>
+                    {% for key in keys[:-1] %}
+                        <td style="text-align: center">{{ NODES[node][key] }}</td>
+                    {% endfor %}
+                    {% if NODES[node][keys[-1]] == 'Ready' %}
+                        <td style="text-align: center"><span style="color: darkgreen">{{ NODES[node][keys[-1]] }}</span></td>
+                    {% else %}
+                        <td style="text-align: center"><span style="color: darkred">{{ NODES[node][keys[-1]] }}</span></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
