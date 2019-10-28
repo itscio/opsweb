@@ -833,7 +833,7 @@ def Redis_alarm_task():
                                               db_redis.requirepass).filter(
             and_(db_redis.slave == '是', db_redis.last_time >= last_time)).all()
         # 获取服务器信息
-        blacklist = ('172.16.70.34', '172.16.19.104', '172.16.70.48', '54.69.57.114')
+        blacklist = ('54.69.57.114')
         black_port = [10080]
         server_infos = db_servers.query.with_entities(db_servers.id, db_servers.ip,db_servers.hostname).filter(db_servers.idc_id != 1025).all()
         server_ids = {str(infos[0]): infos[1] for infos in server_infos}
@@ -924,7 +924,7 @@ def kafka_topic():
     finally:
         db_idc.DB.session.remove()
 
-@tools.proce_lock(Host='172.16.68.13')
+@tools.proce_lock()
 def zabbix_network_get():
     db_zabbix = db_idc.zabbix_info
     zapi = ZabbixAPI(url=zabbix_url, user=zabbix_user, password=zabbix_pw)
