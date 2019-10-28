@@ -602,3 +602,20 @@ class k8s_events(DB.Model):
     def __repr__(self):
         values=(self.context,self.date_time,self.kind,self.name,self.namespace,self.message,self.reason,self.type)
         return '%s,%s,%s,%s,%s,%s,%s,%s'%values
+
+class docker_hosts(DB.Model):
+    __tablename__ = 'docker_hosts'
+    __bind_key__='op'
+    id = DB.Column(DB.Integer, primary_key=True,autoincrement=True)
+    deployment = DB.Column(DB.String(100))
+    context = DB.Column(DB.String(100))
+    ip = DB.Column(DB.String(45))
+    hostname = DB.Column(DB.String(100))
+    def __init__(self,deployment,context,ip,hostname):
+        self.deployment = deployment
+        self.context = context
+        self.ip = ip
+        self.hostname = hostname
+    def __repr__(self):
+        values=(self.deployment,self.context,self.ip,self.hostname)
+        return '%s,%s,%s,%s'%values

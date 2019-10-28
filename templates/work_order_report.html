@@ -1,4 +1,4 @@
-<div class="div">运维工单自{{ tt[0] }}至{{ tt[1] }}期间统计报告</div>
+<div class="div">自{{ tt[0] }}至{{ tt[1] }}期间工单统计</div>
 <div>
     {% if INFOS %}
         {% for info in INFOS %}
@@ -16,6 +16,12 @@
             setTimeout(function () {
                 location.href = '/index';
             },3000);
+            $(document).ready(function () {
+        });
         </script>
     {% endif %}
+    <script>
+        $('#input').val("{{ tt[0]|safe }}");
+        $('#input2').val("{{ tt[1]|safe }}");
+    </script>
 </div>

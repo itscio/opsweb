@@ -88,8 +88,8 @@ def assets_query():
 @page_assets_query.route('/project_get/<project>')
 @limiter.limit("60/minute")
 def project_get(project=None):
+    rep = jsonify({'error': 'None', 'url': request.url})
     try:
-        rep = jsonify({'error': 'None', 'url': request.url})
         Key = 'op_project_get_%s' %time.strftime('%H%M%S',time.localtime())
         if project:
            db_project = db_op.project_list
@@ -118,8 +118,8 @@ def project_get(project=None):
 @page_assets_query.route('/hosts_get/<host>/<domain>')
 @limiter.limit("60/minute")
 def hosts_get(host=None,domain=None):
+    rep = jsonify({host: {domain: 'None'}, 'url': request.url.replace('http', 'https')})
     try:
-        rep = jsonify({host:{domain:'None'}, 'url': request.url.replace('http','https')})
         if host:
            db_hosts = db_idc.hosts
            db_servers = db_idc.idc_servers
@@ -134,6 +134,7 @@ def hosts_get(host=None,domain=None):
         logging.error(e)
     finally:
         return rep
+
 
 @page_assets_query.route('/redis_get/<int:port>')
 @limiter.limit("60/minute")

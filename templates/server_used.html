@@ -42,7 +42,7 @@
                 {% for pie in PIES %}
                     {% if pie %}
                         <div style="float:left;margin-left: 1%;margin-top: 1%;width:48%;border:1px solid gainsboro;overflow: hidden">
-                            <div style="height: 330px;margin-left: 20px">
+                            <div style="height: 330px;">
                                 {{ echarts_js_dependencies(pie) }}
                                 {{ echarts_container(pie) }}
                                 {{ echarts_js_content(pie) }}

@@ -77,6 +77,7 @@ def k8s_project_offline(context=None,dm_name=None,offline=None):
         tools.Async_log(g.user, request.url)
         busi_data = defaultdict()
         mounts = None
+        labels = None
         healthcheck = None
         sidecar = None
         tables = ('项目', '业务','集群', '代码包', '最近上线日期', '最近上线时间', '操作')
@@ -87,7 +88,7 @@ def k8s_project_offline(context=None,dm_name=None,offline=None):
             if values:
                 id,project, image, container_port, replicas,re_requests,re_limits = values[0]
 
-                k8s = k8s_resource.k8s_object(context,dm_name, image, container_port, replicas,mounts,healthcheck,sidecar, re_requests, re_limits)
+                k8s = k8s_resource.k8s_object(context,dm_name, image, container_port, replicas,mounts,labels,healthcheck,sidecar, re_requests, re_limits)
                 if k8s.delete_hpa() and k8s.delete_ingress() and k8s.delete_service() and k8s.delete_deployment():
                     db_k8s.query.filter(db_k8s.deployment==dm_name).update({db_k8s.action:'delete'})
                     db_op.DB.session.commit()

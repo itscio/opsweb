@@ -3,14 +3,14 @@ import redis
 from flask import Flask,Blueprint,render_template,render_template_string,g,flash,request,redirect,url_for
 from module import user_auth,MyForm,db_op,loging,task_publish,tools,produce
 import time
-import module
+import conf
 import string
 import importlib
 from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
-limiter = module.WebLimiter()
+limiter = conf.WebLimiter()
 limiter = limiter.limiter
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')

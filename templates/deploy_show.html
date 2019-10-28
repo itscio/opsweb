@@ -11,10 +11,10 @@
             $.get("/deploy_query/{{ redis_key|safe }}",function(data){
             if (data !=""){
                 if (data.indexOf("_End_") < 0){
-                    if(data.indexOf("fail") > 0 || data.indexOf("异常") > 0 ){
+                    if(data.indexOf("fail") > 0 || data.indexOf("异常") > 0 || data.indexOf("失败") > 0){
                         $("#MSG").before('<p>'+data+'&nbsp;<span class="icon-remove" style="color: red"></span></p>');}
                     else{
-                        if (data.indexOf("success")>0 || data.indexOf("正常") > 0){
+                        if (data.indexOf("success")>0 || data.indexOf("正常") > 0 || data.indexOf("成功") > 0){
                             $("#MSG").before('<p>'+data+'&nbsp;<span class="icon-ok" style="color: green"></span></p>');}
                         else{
                             $("#MSG").before('<p>'+data+'</p>');

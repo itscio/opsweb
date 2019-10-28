@@ -245,8 +245,9 @@ class zabbix_info(DB.Model):
     mem_use = DB.Column(DB.Float)
     disk_io = DB.Column(DB.Float)
     openfile = DB.Column(DB.Integer)
+    network = DB.Column(DB.Integer)
     update_time = DB.Column(DB.String(45))
-    def __init__(self,ip,ssh_port,hostname,icmpping,cpu_load,mem_use,disk_io,openfile,update_time):
+    def __init__(self,ip,ssh_port,hostname,icmpping,cpu_load,mem_use,disk_io,openfile,network,update_time):
         self.ip = ip
         self.ssh_port = ssh_port
         self.hostname = hostname
@@ -255,10 +256,12 @@ class zabbix_info(DB.Model):
         self.mem_use = mem_use
         self.disk_io = disk_io
         self.openfile = openfile
+        self.network = network
         self.update_time = update_time
     def __repr__(self):
-        values=(self.ip,self.ssh_port,self.hostname,self.icmpping,self.cpu_load,self.mem_use,self.disk_io,self.openfile,self.update_time)
-        return '%s,%i,%s,%i,%i,%i,%i,%i,%s'%values
+        values=(self.ip,self.ssh_port,self.hostname,self.icmpping,self.cpu_load,
+                self.mem_use,self.disk_io,self.openfile,self.network,self.update_time)
+        return '%s,%i,%s,%i,%i,%i,%i,%i,%i,%s'%values
 
 class crontabs(DB.Model):
     __tablename__ = 'crontabs'

@@ -43,17 +43,14 @@
             </tbody>
         </table>
     </div>
-    <div class="ui-mask" id="mask"></div>
-    <div class="ui-dialog" id="dialogMove">
-        <div class="ui-dialog-title" id="dialogDrag">
-            <div id="title">运维工单</div>
-        </div>
-        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
-        <div>
+    <div class="ui-mask" id="mask" onselectstart="return false"></div>
+    <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
+        <div class="ui-dialog-title" id="dialogDrag"  onselectstart="return false;" >运维工单系统
             <span style="float: right;margin-left: -14%" class="ui-dialog-submit">
                 <a href="javascript:hideDialog();" >关闭</a>
             </span>
         </div>
+        <iframe id="iframe" src="" scrolling="no" style="float: left;border: 0;width:850px;"></iframe>
     </div>
     <script>
         $(document).ready(table_order('table',1));

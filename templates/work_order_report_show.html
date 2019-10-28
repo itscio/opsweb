@@ -18,7 +18,7 @@
             var start_time = $('#input').val();
             var end_time = $('#input2').val();
             console.log(start_time);
-            if (start_time==""||end_time==""){
+            if (start_time===""||end_time===""){
                 js_msg('请选择开始或者结束日期',3000,'error');
             }else{
                 var source = $('#titles').val();
@@ -26,9 +26,5 @@
                 ajax_html_show(url,"html_show");
             }
         }
-        $(document).ready(function () {
-            $('#input').val("{{ tt[0]|safe }}");
-            $('#input2').val("{{ tt[1]|safe }}");
-        });
     </script>
 {% endblock page %}

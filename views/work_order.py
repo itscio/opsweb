@@ -50,6 +50,10 @@ def check_mail(mail):
 @page_work_order.route('/work_comment/<int:work_number>')
 def work_comment(work_number=None):
     comments = []
+    db_work_order = db_op.work_order
+    work_stats = db_work_order.query.with_entities(db_work_order.id).filter(and_(
+        db_work_order.status.in_(('未受理', '未审核', '受理中', '待审批', '审批通过')),
+        db_work_order.work_number == work_number)).all()
     if work_number:
         db_work_comment = db_op.work_comment
         comments = db_work_comment.query.with_entities(db_work_comment.date_time,db_work_comment.user,
@@ -59,7 +63,7 @@ def work_comment(work_number=None):
             comments = ['%s %s:%s'%comment for comment in comments]
         #清除该工单问题备注通知信息
         Redis.hdel('op_work_comment_alarm_%s' % g.dingId,work_number)
-    return render_template('work_comment.html',comments=comments,work_number=work_number)
+    return render_template('work_comment.html',comments=comments,work_number=work_number,work_stats=work_stats)
 
 @page_work_order.route('/work_order')
 def work_order():
@@ -73,7 +77,7 @@ def work_order():
                         'work_repeal': '撤销工单申请',
                         'work_review': '工单申请审核'
                         }
-    return render_template('work_order.html',work_orders=work_orders,work_order_lists=work_order_lists)
+    return render_template('op_front.html',work_orders=work_orders,work_order_lists=work_order_lists)
 
 @page_work_order.route('/work_norun')
 @page_work_order.route('/work_norun/<self>')
@@ -82,8 +86,9 @@ def work_norun(self=None):
         # 未关闭工单展示
         db_work_order = db_op.work_order
         db_sso = db_op.user_sso
-        users = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName).all()
-        users = {info[0]: info[1] for info in users}
+        infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.realName,db_sso.mail).all()
+        users = {info[0]: info[1] for info in infos}
+        mails = {info[0]: info[-1] for info in infos}
         work_lists = db_work_order.query.with_entities(db_work_order.work_number,
                                                         db_work_order.date,
                                                         db_work_order.source,
@@ -97,7 +102,7 @@ def work_norun(self=None):
                                                            db_work_order.applicant,
                                                            db_work_order.status).filter(and_(
                 db_work_order.status.in_(('未审核', '受理中', '待审批')),or_(db_work_order.dingid==g.dingId,
-                                                                    db_work_order.reviewer==g.dingId,
+                                                                    db_work_order.reviewer==mails[g.dingId],
                                                                     db_work_order.approval==g.dingId))).order_by(
                 desc(db_work_order.work_number)).all()
         if work_lists:
@@ -190,11 +195,13 @@ def work_review(self=None):
                         msg = Message("%s运维工单进度通知" % work_number, sender=sender, recipients=[receiver],
                                       cc=cc_mail)
                         if action  == 'review_pass':
+                            result = "部门审核通过"
                             if work_source =='ensure_server_auth':
                                 ensure_url = ''
                                 msg_url = ''
-                            msg.html = '{0}<div>{1}</div><div>{2}</div>'.format(mail_html,'<p style="color:red">工单状态:部门审核通过</p>',ensure_url)
-                            text.append('#### 工单状态:部门审核通过')
+                                result = "部门审核通过,等待运维部门审核"
+                            msg.html = '{0}<div>{1}</div><div>{2}</div>'.format(mail_html,'<p style="color:red">工单状态:%s</p>' %result,ensure_url)
+                            text.append('#### 工单状态:%s' %result)
                             text.append(msg_url)
                         else:
                             msg.html = '%s%s' % (mail_html, '<p style="color:red">工单状态:工单被退回</p>')
@@ -209,7 +216,15 @@ def work_review(self=None):
                         msg = "%s工单审核完成!" %work_number
             else:
                 msg = "工单不需要审核!"
-        work_lists = db_work_order.query.with_entities(db_work_order.work_number,
+        if g.grade[0] == '0':
+            work_lists = db_work_order.query.with_entities(db_work_order.work_number,
+                                                           db_work_order.date,
+                                                           db_work_order.source,
+                                                           db_work_order.applicant,
+                                                           db_work_order.status).filter(
+                db_work_order.status == '未审核').order_by(desc(db_work_order.work_number)).all()
+        else:
+            work_lists = db_work_order.query.with_entities(db_work_order.work_number,
                                                         db_work_order.date,
                                                         db_work_order.source,
                                                         db_work_order.applicant,
@@ -242,6 +257,10 @@ def application():
     source = 'ensure_application'
     try:
         if form.submit.data:
+            db_sso = db_op.user_sso
+            op_mails = db_sso.query.with_entities(db_sso.mail).filter(db_sso.grade.like('1%')).all()
+            op_mails = [mails[0] for mails in op_mails]
+            op_mails.append(server_auth_leader)
             work_number = int(time.time())
             project = form.project.data.strip()
             tag = form.tag.data.strip()
@@ -265,6 +284,8 @@ def application():
                 raise Msg.extend(('error', '%s 邮箱核实未通过,请确认邮箱正确以及审核人登录过该平台!' % leader))
             if leader == g.mail and tools.check_env() !='dev':
                 raise Msg.extend(('error', '%s 邮箱地址与申请人邮箱重复!' % leader))
+            if leader in op_mails:
+                raise Msg.extend(('error', '%s 邮箱地址不能是运维人员邮箱!' % leader))
             val = db_publish_application.query.filter(and_(db_publish_application.project == project, db_publish_application.version == tag)).all()
             if val:
                 raise Msg.extend(('error', '%s:%s申请工单已存在!' %(project,tag)))
@@ -305,9 +326,9 @@ def application():
                                     #上传至oss
                                     try:
                                         auth = oss2.Auth(oss_id, oss_key)
-                                        bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
+                                        bucket = oss2.Bucket(auth, oss_url, 'xxxx')
                                         bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                        sql_url = 'https://xxxx.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
+                                        sql_url = 'https://xxxx.oss-cn-beijing.aliyuncs.com/xxxx/{}'.format(File.filename)
                                     except:
                                         raise Msg.extend(('error', '文件上传oss失败!'))
                                 else:
@@ -439,6 +460,10 @@ def server_auth():
     source = 'ensure_server_auth'
     try:
         if form.submit.data:
+            db_sso = db_op.user_sso
+            op_mails = db_sso.query.with_entities(db_sso.mail).filter(db_sso.grade.like('1%')).all()
+            op_mails = [mails[0] for mails in op_mails]
+            op_mails.append(server_auth_leader)
             work_number = int(time.time())
             leader = form.leader.data.strip()
             servers = form.servers.data.strip()
@@ -448,12 +473,15 @@ def server_auth():
             url = 'https://{0}/{1}?ticket={2}'.format(request.host, source, ticket)
             ensure_url = '<p>工单受理(运维专属链接):<a href="%s">%s</a></p>' % (url,url)
             msg_url = '工单受理:%s' % url
+            review_url = '<p>审核地址:<a href="https://{0}/work_review">https://{0}/work_review</a></p>'.format(request.host)
             if '@' not in leader:
                 raise Msg.extend(('error', '%s 邮箱地址格式错误!' %leader))
             if not check_mail(leader):
                 raise Msg.extend(('error', '%s 邮箱核实未通过,请确认邮箱正确以及审核人登录过该平台!' % leader))
             if leader == g.mail and tools.check_env() !='dev':
                 raise Msg.extend(('error', '%s 邮箱地址与申请人邮箱重复!' % leader))
+            if leader in op_mails:
+                raise Msg.extend(('error', '%s 邮箱地址不能是运维人员邮箱!' % leader))
             val = db_server_auth.query.filter(
                 and_(db_server_auth.servers == servers, db_server_auth.auth_level == auth_level)).all()
             if val:
@@ -509,7 +537,7 @@ def server_auth():
             else:
                 try:
                     msg = Message("服务器权限申请", sender=sender, recipients=[leader, receiver], cc=[g.mail],charset='utf-8')
-                    msg.html = '%s%s' %(mail_html,'<p style="color:red">审核人审核后自动邮件通知</p>')
+                    msg.html = '%s%s%s' %(mail_html,review_url,'<p style="color:red">审核人审核后自动邮件通知</p>')
                     with app.app_context():
                         mail.send(msg)
                     # 发送钉钉
@@ -536,6 +564,10 @@ def sql_execute():
     source = 'ensure_sql_execute'
     try:
         if form.submit.data:
+            db_sso = db_op.user_sso
+            op_mails = db_sso.query.with_entities(db_sso.mail).filter(db_sso.grade.like('1%')).all()
+            op_mails = [mails[0] for mails in op_mails]
+            op_mails.append(server_auth_leader)
             work_number = int(time.time())
             sql_server = form.sql_server.data.strip()
             sql_port = form.sql_port.data.strip()
@@ -550,6 +582,8 @@ def sql_execute():
                 raise Msg.extend(('error', '%s 邮箱核实未通过,请确认邮箱正确以及审核人登录过该平台!' % leader))
             if leader == g.mail and tools.check_env() !='dev':
                 raise Msg.extend(('error', '%s 邮箱地址与申请人邮箱重复!' % leader))
+            if leader in op_mails:
+                raise Msg.extend(('error', '%s 邮箱地址不能是运维人员邮箱!' % leader))
             val = db_sql_execute.query.filter(db_sql_execute.sql_md5 == sql_md5).all()
             if val:
                 raise Msg.extend(('error', '提交的内容工单已存在!'))
@@ -577,7 +611,7 @@ def sql_execute():
                                     auth = oss2.Auth(oss_id, oss_key)
                                     bucket = oss2.Bucket(auth, oss_url, 'xxxx')
                                     bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                    sql_url = 'https://xxxx.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
+                                    sql_url = 'https://xxxx.oss-cn-beijing.aliyuncs.com/xxxx/{}'.format(File.filename)
                                 except:
                                     raise Msg.extend(('error', '文件上传oss失败!'))
                             else:
@@ -672,6 +706,10 @@ def project_offline():
     source = 'ensure_project_offline'
     try:
         if form.submit.data:
+            db_sso = db_op.user_sso
+            op_mails = db_sso.query.with_entities(db_sso.mail).filter(db_sso.grade.like('1%')).all()
+            op_mails = [mails[0] for mails in op_mails]
+            op_mails.append(server_auth_leader)
             work_number = int(time.time())
             project = form.project.data.strip()
             leader = form.leader.data.strip()
@@ -687,6 +725,8 @@ def project_offline():
                 raise Msg.extend(('error', '%s 邮箱核实未通过,请确认邮箱正确以及审核人登录过该平台!' % leader))
             if leader == g.mail and tools.check_env() !='dev':
                 raise Msg.extend(('error', '%s 邮箱地址与申请人邮箱重复!' % leader))
+            if leader in op_mails:
+                raise Msg.extend(('error', '%s 邮箱地址不能是运维人员邮箱!' % leader))
             val = db_project_offline.query.filter(db_project_offline.project == project).all()
             if val:
                 raise Msg.extend(('error', '%s申请工单已存在!' %project))
@@ -778,6 +818,10 @@ def other_work():
     review_url = '<p>审核地址:<a href="https://{0}/work_review">https://{0}/work_review</a></p>'.format(request.host)
     try:
         if form.submit.data:
+            db_sso = db_op.user_sso
+            op_mails = db_sso.query.with_entities(db_sso.mail).filter(db_sso.grade.like('1%')).all()
+            op_mails = [mails[0] for mails in op_mails]
+            op_mails.append(server_auth_leader)
             work_number = int(time.time())
             describe = form.text.data
             title = form.titles.data
@@ -789,6 +833,8 @@ def other_work():
                 raise Msg.extend(('error', '%s 邮箱核实未通过,请确认邮箱正确以及审核人登录过该平台!' % leader))
             if leader == g.mail and tools.check_env() !='dev':
                 raise Msg.extend(('error', '%s 邮箱地址与申请人邮箱重复!' % leader))
+            if leader in op_mails:
+                raise Msg.extend(('error', '%s 邮箱地址不能是运维人员邮箱!' % leader))
             if not describe:
                 raise Msg.extend(('error', '工单内容不能为空!'))
             md5 = Md5.Md5_make(describe)
@@ -831,7 +877,7 @@ def other_work():
                                       approval='',dingid='',status='未审核')
                     if 'VPN' in title:
                         c = db_work_order(date=td, work_number=work_number, source=source, applicant=g.dingId,
-                                          reviewer=leader,approval=server_auth_leader,dingid='',status='待审批')
+                                          reviewer='',approval=server_auth_leader,dingid='',status='待审批')
                     db_op.DB.session.add(c)
                     db_op.DB.session.commit()
                 except Exception as e:
@@ -863,7 +909,7 @@ def other_work():
     except Exception as e:
         Msg.extend(('error', '内部未知错误!'))
         logging.error(e)
-    return render_template('other_work.html',form=form,Msg=Msg)
+    return render_template('other_work.html',form=form,Msg=Msg,server_auth_leader=server_auth_leader)
 
 @page_work_order.route('/work_details/application/<work_number>')
 def work_application_details(work_number=None):
@@ -1494,19 +1540,28 @@ def work_order_show():
         users = {info[0]: info[1] for info in infos}
         mails = {info[-1]: info[1] for info in infos}
         work_lists = []
-        infos = db_work_order.query.with_entities(db_work_order.work_number,
+        if g.grade[0] == '0':
+            infos = db_work_order.query.with_entities(db_work_order.work_number,
                                                       db_work_order.date,
                                                       db_work_order.source,
                                                       db_work_order.applicant,
                                                       db_work_order.reviewer,
                                                       db_work_order.dingid,
-                                                      db_work_order.status).filter(db_work_order.applicant==g.dingId).all()
+                                                      db_work_order.status).order_by(desc(db_work_order.date)).limit(500).all()
+        else:
+            infos = db_work_order.query.with_entities(db_work_order.work_number,
+                                                      db_work_order.date,
+                                                      db_work_order.source,
+                                                      db_work_order.applicant,
+                                                      db_work_order.reviewer,
+                                                      db_work_order.dingid,
+                                                      db_work_order.status).filter(db_work_order.applicant==g.dingId).limit(500).all()
         if infos:
             infos = [list(info) for info in infos]
             for info in infos:
                 Infos=[]
                 applicant = ''
-                reviewer = ''
+                reviewer = mails[server_auth_leader]
                 operater = ''
                 Infos.extend(info[:3])
                 if info[3] in users:

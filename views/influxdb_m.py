@@ -51,7 +51,7 @@ def interface_monitor():
     return render_template('interface_monitor.html',alarms=alarms,Keys=Keys)
 
 @page_influxdb_m.route('/interface_report')
-@user_auth.login_required(grade=8)
+@user_auth.login_required(grade=1)
 def interface_report():
     try:
         Bars = []

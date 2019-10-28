@@ -122,7 +122,7 @@ def work_examine(work_id=None):
             for info in infos:
                 Infos=[]
                 applicant = ''
-                reviewer = ''
+                reviewer = mails[server_auth_leader]
                 operater = ''
                 Infos.extend(info[:3])
                 if info[3] in users:
@@ -459,18 +459,18 @@ def ensure_sql_execute():
 
 @page_examine.route('/ensure_project_offline')
 def ensure_project_offline():
+    db_work_order = db_op.work_order
+    db_project_offline = db_op.project_offline
+    db_sso = db_op.user_sso
+    msg = None
+    source = 'ensure_project_offline'
+    Key = 'new_project_offline_work_number_%s' % dt
+    actions = {'complete': '已完成', 'deny': '已拒绝'}
+    ticket = tools.http_args(request, 'ticket')
+    action = tools.http_args(request, 'action')
+    work_number = tools.http_args(request, 'work_number')
     try:
-        db_work_order = db_op.work_order
-        db_project_offline = db_op.project_offline
-        db_sso = db_op.user_sso
-        msg = None
-        source = 'ensure_project_offline'
-        Key = 'new_project_offline_work_number_%s' % dt
-        #验证票据
-        actions = {'complete': '已完成', 'deny': '已拒绝'}
-        ticket = tools.http_args(request,'ticket')
-        action = tools.http_args(request,'action')
-        work_number = tools.http_args(request,'work_number')
+        # 验证票据
         if ticket or (action == 'activate' and work_number):
             if ticket:
                 work_number = Redis.get('work_order_ticket_%s' %ticket)

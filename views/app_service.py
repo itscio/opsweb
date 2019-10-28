@@ -3,13 +3,16 @@ from flask import Flask,Blueprint,request,render_template,g
 from module import db_op,user_auth,tools,loging,db_idc
 from sqlalchemy import and_,distinct
 import json
+import time
 import redis
 from collections import defaultdict
 from flask_sqlalchemy import SQLAlchemy
 from pyecharts import Tree
+from pykafka import KafkaClient
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
+app.config.from_pyfile('../conf/kafka.conf')
 logging = loging.Error()
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
@@ -17,6 +20,7 @@ redis_password = app.config.get('REDIS_PASSWORD')
 RC = redis.StrictRedis(host=redis_host, port=redis_port,decode_responses=True)
 redis_data = app.config.get('REDIS_DATA')
 RC_CLUSTER = redis.StrictRedis(host=redis_data, port=redis_port,decode_responses=True)
+KAFKA_HOSTS = app.config.get('KAFKA_HOSTS')
 page_app_service = Blueprint('app_service', __name__)
 @page_app_service.route('/crontab')
 def crontab():
@@ -37,9 +41,9 @@ def crontab():
                 VAL.extend(val)
                 VAL.extend(servers[server_id])
                 VALS.append(VAL)
+        return render_template('crontab.html', vals=VALS, tables=tables, lable=lable)
     except Exception as e:
         logging.error(e)
-    return render_template('crontab.html',vals = VALS,tables = tables,lable=lable)
 
 @page_app_service.route('/run_jar')
 @page_app_service.route('/run_jar/<project>')
@@ -77,9 +81,10 @@ def run_jar(project=None):
                     VAL.append(business[business_id])
                 VAL.extend(servers[server_id])
                 VALS.append(VAL)
+        return render_template('run_jar.html', vals=VALS, tables=tables, lable=lable)
     except Exception as e:
         logging.error(e)
-    return render_template('run_jar.html',vals = VALS,tables = tables,lable=lable)
+
 
 @page_app_service.route('/hosts')
 @page_app_service.route('/hosts/<hostname>')
@@ -96,7 +101,7 @@ def hosts(hostname=None):
         host_list = [{"id": str(id), "text": str(info)} for id,info in hostnames if id in exist_ids]
         if not hostname:
             hostname = host_list[0]['text']
-        lable = "线上服务器({0})hosts列表".format(hostname)
+            lable = "线上服务器({0})hosts列表".format(hostname)
         servers = db_servers.query.with_entities(db_servers.id,db_servers.ip,db_servers.ssh_port,db_servers.hostname).filter(db_servers.hostname == hostname).all()
         servers_info = servers[0][1:]
         server_id = servers[0][0]
@@ -107,29 +112,35 @@ def hosts(hostname=None):
             VAL.extend(val)
             VAL.extend(servers_info)
             VALS.append(VAL)
+        return render_template('hosts.html', vals=VALS, tables=tables, lable=lable, host_list=json.dumps(host_list))
     except Exception as e:
         logging.error(e)
-    return render_template('hosts.html',vals = VALS,tables = tables,lable=lable,host_list=json.dumps(host_list))
+
 
 @page_app_service.route('/redis_info')
 def redis_info():
     try:
+        uptime = time.strftime('%Y-%m-%d',time.localtime())
+        redis_unhealth = []
+        if RC_CLUSTER.exists('op_redis_health_check'):
+            redis_unhealth = RC_CLUSTER.smembers('op_redis_health_check')
         lable = "线上REDIS信息汇总"
-        tables = ('host', 'app_port', 'masterauth', 'requirepass', 'role(主)','role(从)','role(集群)','master_host','master_port')
+        tables = ('host', 'app_port', 'masterauth', 'requirepass', 'role(主)','role(从)','role(集群)','master_host','master_port','status')
         db_redis_info = db_idc.redis_info
         VALS = db_redis_info.query.with_entities(db_redis_info.server_id,db_redis_info.port,db_redis_info.masterauth,db_redis_info.requirepass,db_redis_info.master,db_redis_info.slave,
-                                                  db_redis_info.cluster,db_redis_info.Master_Host,db_redis_info.Master_Port).all()
+                                                  db_redis_info.cluster,db_redis_info.Master_Host,db_redis_info.Master_Port,db_redis_info.last_time).all()
         VALS = [list(val) for val in VALS]
         for val in VALS:
             hostname = RC_CLUSTER.hget('op_server_hostnames',val[0])
             if hostname:
                 val[0] = hostname
-            hostname = RC_CLUSTER.hget('op_server_hostnames', val[-2])
+            hostname = RC_CLUSTER.hget('op_server_hostnames', val[7])
             if hostname:
-                val[-2] = hostname
+                val[7] = hostname
+        return render_template('redis_info.html', vals=VALS, tables=tables, lable=lable,
+                                   redis_unhealth=redis_unhealth, uptime=uptime)
     except Exception as e:
         logging.error(e)
-    return render_template('redis_info.html',vals = VALS,tables = tables,lable=lable)
 
 @page_app_service.route('/redis_master/<redis_master>')
 def redis_status(redis_master=None):
@@ -244,6 +255,34 @@ def redis_status(redis_master=None):
     tree = Tree(width='100%', height=600)
     tree.add("", DATA, tree_symbol_size=10, tree_label_text_size=14, tree_leaves_text_size=12, is_toolbox_show=False)
     return render_template('redis_status.html',tree = tree)
+
+@page_app_service.route('/kafka')
+@page_app_service.route('/kafka/<Topic>')
+def kafka_info(Topic=None):
+    try:
+        kafka_client = KafkaClient(hosts=KAFKA_HOSTS)
+        # kafka节点
+        BROKERS = [str(kafka_client.brokers[id].host,encoding='utf8') for id in kafka_client.brokers]
+        # kafka主题
+        TOPICS = [str(t,encoding='utf8') for t in kafka_client.topics]
+        if Topic:
+            TOPIC = kafka_client.topics[Topic]
+            # kafka ISR
+            ISR = {id: [str(host.host,encoding='utf8') for host in TOPIC.partitions[id].isr] for id in TOPIC.partitions}
+            # kafka 副本
+            replicas = {id: [str(host.host,encoding='utf8') for host in TOPIC.partitions[id].replicas] for id in TOPIC.partitions}
+            # kafka LRADER
+            LEADER = {id: str(TOPIC.partitions[id].leader.host,encoding='utf8') for id in TOPIC.partitions}
+            # kafka latest_offset
+            latest_offset = {id: TOPIC.partitions[id].latest_available_offset() for id in TOPIC.partitions}
+            # kafka earliest_offset
+            earliest_offset = {id: TOPIC.partitions[id].earliest_available_offset() for id in TOPIC.partitions}
+            return render_template('kafka_partition_show.html',Topic=Topic, ISR=ISR,
+                                   replicas=replicas, LEADER=LEADER, latest_offset=latest_offset,
+                                   earliest_offset=earliest_offset)
+        return render_template('kafka_show.html',topics=TOPICS, brokes=BROKERS)
+    except Exception as e:
+        logging.error(e)
 
 @page_app_service.before_request
 @user_auth.login_required(grade=1)

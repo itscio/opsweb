@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block page %}
-    <div class="div"><p>{{ g.context }}集群{{ resource }}资源信息</p></div>
+    <div class="div"><p>当前集群:{{ g.context }} {{ resource }}资源信息</p></div>
     {% if resource == 'Pods' %}
         <div style="margin-left: 0.5%;width:97.7%;">
             <table class="table table-bordered">
@@ -116,8 +116,9 @@
         </table>
     </div>
     <div>
-        {% if resource == 'HPA' %}
-            <div style="margin-left:0.5%;margin-top: 1%;width:97.7%;float:left;border:1px solid gainsboro;overflow: hidden">
+        {% if resource == 'HPA'  and valus %}
+            <div style="float:right;margin-right: 1.7%;margin-top: 1%" >选择日期:{{ form.select_date (onchange="set_cookies('select_date')")}}</div>
+            <div style="margin-left:0.5%;width:97.7%;float:left;border:1px solid gainsboro;overflow: hidden">
                 <div style="margin-left: -8%;">
                     {{ echarts_js_dependencies(line) }}
                     {{ echarts_container(line) }}
@@ -172,5 +173,9 @@
             });
         });
         });
+        var td = $.cookie('select_date');
+        if (td){
+           $('#select_date').val(td);
+        }
     </script>
 {% endblock page %}

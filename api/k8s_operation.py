@@ -11,8 +11,8 @@ app.config.from_pyfile('../conf/docker.conf')
 docker_registry = app.config.get('REGISTRY')
 config,contexts,config_file = tools.k8s_conf()
 config.load_kube_config(config_file, context=contexts[0])
-page_k8s_project_update = Blueprint('k8s_project_update',__name__)
-@page_k8s_project_update.route('/k8s_project_update',methods = ['POST'])
+page_k8s_operation = Blueprint('k8s_operation',__name__)
+@page_k8s_operation.route('/k8s_project_update',methods = ['POST'])
 def k8s_project_update():
     db_token = db_op.platform_token
     params = request.get_json()
@@ -55,6 +55,13 @@ def k8s_project_update():
             tools.dingding_msg(text,ops_token)
         return jsonify({'result':'ok'})
 
-@page_k8s_project_update.teardown_request
+@page_k8s_operation.route('/k8s_pod_delete/<context>/<dm_name>')
+def k8s_pod_delete(context=None,dm_name=None):
+    if context and dm_name:
+        Scheduler = produce.SchedulerPublish()
+        Scheduler = Scheduler.Scheduler_mem(k8s_resource.api_delete_pod, [context,dm_name])
+        Scheduler.start()
+    return jsonify({'result':'ok'})
+@page_k8s_operation.teardown_request
 def db_remove(exception):
     db_op.DB.session.remove()

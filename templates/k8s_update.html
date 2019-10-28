@@ -9,8 +9,8 @@
                 {{ form.csrf_token }}
                 <p>选择集群:{{ form.contexts (style="width:190px",onchange="select_k8s_deployment()")}}</p>
                 <p>镜像名称:{{ form.deployment (style="width:190px",onchange="select_project_version()")}}</p>
+                <p>镜像操作:{{ form.action (style="width:190px")}}</p>
                 <p>选择版本:{{ form.version (style="width:190px")}}</p>
-                <p>镜像回滚:{{ form.rollback (style="width:190px",placeholder="容器更新勿填")}}</p>
                 <p>{{ form.submit (class="btn btn-primary") }}</p>
             </form>
         </div>
@@ -27,14 +27,16 @@
                         var option = "<option value='"+val+"'>"+val+"</option>";
                         $('#deployment').append(option);
                     });
+                    select_project_version();
                 }
             }});
             }
         function select_project_version() {
+            $("#version").empty();
             var project = $('#deployment').val();
             var versions = [];
             $.ajax({url:"/get_oss_version/"+project,dataType : "json",success:
-            function(data) {$('#version').empty();$.each(data[project],
+            function(data) {$.each(data[project],
                 function(i,val){
                     var option = "<option value='"+val+"'>"+val+"</option>";
                     versions.push({'id':i.toString(),'text':val});
@@ -43,6 +45,5 @@
             }});
             }
         select_k8s_deployment();
-        select_project_version();
     </script>
 {% endblock page %}

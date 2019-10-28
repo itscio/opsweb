@@ -28,11 +28,11 @@
     </head>
     <body>
         {% set Main_Menu = g.Base_Menu %}
-        <div style="float:left;width:9.5%;height: 35px;background-color:#353C48" id="logo">
+        <div style="float:left;width:9.5%;height: 40px;background-color:#353C48" id="logo">
             <div style="margin-top: 0.5%">
-                <div style="margin-left: 8%">
+                <div style="margin-left: 1%">
                     <a href="/index" target="_self">
-                        <img style="width:130px;" src="/static/images/logo.gif">
+                        <img style="width:96%;height: 38px;" src="/static/images/logo.gif">
                     </a>
                 </div>
             </div>
@@ -51,7 +51,7 @@
                 </a>
             </div>
         </div>
-        <div style="height:1.5px; border-top:1.5px solid #353C48;width:100%;clear:both;"></div>
+        <div style="height:1.3px; border-top:1.3px solid gainsboro;width:100%;clear:both;" id="hr_div"></div>
         {% if Main_Menu['submenu'] %}
             <nav id="navbar" class="">
                 <ul>
@@ -101,7 +101,7 @@
         <div style="clear:both;"></div>
     </body>
     <footer>
-        <div style="margin-top: 5%">xxxx公司|版权所有© 2009-{{ g.ym }} xxxx|运维邮箱:yw@xxxx.com</div>
+        <div style="margin-top: 2%">xxxx科技股份有限公司|版权所有© 2009-{{ g.ym }} xx科技|运维邮箱:xx@xxx.com</div>
     </footer>
     <div class="ui-mask" id="mask" onselectstart="return false"></div>
     <div class="ui-dialog" id="dialogMove" onselectstart='return false;'>
@@ -124,6 +124,8 @@
     {% if not Main_Menu['submenu'] %}
         <script>
             $('#Page').removeClass('Page').addClass('Page_other');
+            $('#hr_div').hide();
+            $('#infos').css({'height':'40px'});
         </script>
     {% endif %}
 </html>

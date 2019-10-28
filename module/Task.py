@@ -9,7 +9,7 @@ import datetime
 import requests
 from influxdb import InfluxDBClient
 from multiprocessing.dummy import Pool as ThreadPool
-from module import loging,db_op,db_idc,SSH,ip_adress,Mysql,tools,Md5
+from module import loging,db_op,db_idc,SSH,Mysql,tools
 from sqlalchemy import distinct,and_
 from collections import defaultdict
 from functools import reduce
@@ -112,8 +112,9 @@ def counts_logs(vals):
     except Exception as e:
         logging.error(e)
 
-def count_es_logs():
+def query_es_logs():
     try:
+        loging.write('start %s running......' % query_es_logs.__name__)
         dt = time.strftime('%Y-%m-%d',time.localtime())
         now_date = datetime.datetime.now()
         lte_date = now_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
@@ -247,8 +248,8 @@ def count_es_logs():
     except Exception as e:
         logging.error(e)
 
-def server_per():
-    loging.write('start %s running......' %server_per.__name__)
+def get_server_per():
+    loging.write('start %s running......' %get_server_per.__name__)
     db_server = db_idc.idc_servers
     db_zabbix = db_idc.zabbix_info
     host_infos = db_server.query.with_entities(db_server.ip, db_server.ssh_port, db_server.hostname,
@@ -299,7 +300,7 @@ def server_per():
                     db_idc.DB.session.commit()
                 else:
                     v = db_zabbix(ip=host, ssh_port=ssh_port, hostname=hostname, icmpping=icmpping, cpu_load=cpu_load,
-                                  mem_use=mem_use, disk_io=disk_io, openfile=openfile, update_time=tm)
+                                  mem_use=mem_use, disk_io=disk_io, openfile=openfile,network=0, update_time=tm)
                     db_idc.DB.session.add(v)
                     db_idc.DB.session.commit()
                 # 写入influxdb数据库
@@ -321,8 +322,8 @@ def server_per():
     finally:
         db_idc.DB.session.remove()
 
-@tools.proce_lock(Host='172.16.68.13')
-def get_assets_infos():
+@tools.proce_lock()
+def assets_infos():
     dt = time.strftime('%Y-%m-%d', time.localtime())
     db_store = db_idc.idc_store
     db_server = db_idc.idc_servers
@@ -499,9 +500,9 @@ def get_assets_infos():
         db_idc.DB.session.remove()
 
 @tools.proce_lock()
-def auto_discovery():
+def auto_discovery_task():
     try:
-        loging.write("start %s ......" % auto_discovery.__name__)
+        loging.write("start %s ......" %auto_discovery_task.__name__)
         db_ips = db_idc.resource_ip
         db_idc_id = db_idc.idc_id
         db_third = db_idc.third_resource
@@ -591,12 +592,12 @@ def auto_discovery():
     except Exception as e:
         logging.error(e)
     finally:
-        loging.write("%s complete" %auto_discovery.__name__)
+        loging.write("%s complete" %auto_discovery_task.__name__)
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def get_app_service():
+def app_service_task():
     def app_service(info):
         apps = defaultdict()
         app_ports = []
@@ -768,7 +769,7 @@ def get_app_service():
                 finally:
                     Ssh.Close()
     try:
-        loging.write("start run %s ......" %get_app_service.__name__)
+        loging.write("start run %s ......" %app_service_task.__name__)
         db_server = db_idc.idc_servers
         db_third = db_idc.third_resource
         db_project = db_op.project_list
@@ -788,12 +789,12 @@ def get_app_service():
     except Exception as e:
         logging.error(e)
     finally:
-        loging.write("%s complete!"  %get_app_service.__name__)
+        loging.write("%s complete!"  %app_service_task.__name__)
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def get_project_app():
+def project_app_task():
     def get_third_app(app_list):
         try:
             project_id, project, ip, ssh_port, app_port = app_list
@@ -888,7 +889,7 @@ def get_project_app():
         db_idc.DB.session.remove()
 
 @tools.proce_lock()
-def es_get_log_status():
+def es_log_status():
     lte_date = datetime.datetime.now()
     gte_date = lte_date - datetime.timedelta(minutes=1)
     lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
@@ -920,7 +921,7 @@ def es_get_log_status():
         logging.error(e)
 
 @tools.proce_lock()
-def es_get_log_time():
+def es_log_time():
     lte_date = datetime.datetime.now()
     gte_date = lte_date - datetime.timedelta(minutes=1)
     lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
@@ -950,8 +951,8 @@ def es_get_log_time():
         logging.error(e)
 
 @tools.proce_lock()
-def cron_run_task():
-    loging.write("start run %s ......" %cron_run_task.__name__)
+def cron_task_run():
+    loging.write("start run %s ......" %cron_task_run.__name__)
     MY_SQL = Mysql.MYSQL(db='mysql')
     try:
         # 清理资产资源表残留信息
@@ -983,14 +984,14 @@ def cron_run_task():
     except Exception as e:
         logging.error(e)
     finally:
-        loging.write("complete %s !" % cron_run_task.__name__)
+        loging.write("complete %s !" % cron_task_run.__name__)
         MY_SQL.Close()
         db_idc.DB.session.remove()
 
 @tools.proce_lock()
-def get_project_lists():
+def project_lists_task():
     try:
-        loging.write("start %s ......" %get_project_lists.__name__)
+        loging.write("start %s ......" %project_lists_task.__name__)
         db_project = db_op.project_list
         db_business = db_op.business
         dt = time.strftime('%Y-%m-%d', time.localtime())
@@ -1065,11 +1066,11 @@ def get_project_lists():
     except Exception as e:
         logging.error(e)
     finally:
-        loging.write("complete %s !" %get_project_lists.__name__)
+        loging.write("complete %s !" %project_lists_task.__name__)
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def business_performance():
+def business_performance_task():
     #获取业务接口性能数据
     loging.write("start business_performance ......")
     dy = datetime.datetime.now()
@@ -1368,36 +1369,36 @@ def business_performance():
                     except Exception as e:
                         logging.error(e)
                         continue
+                # 接口性能恢复通知
+                if alarm_values and RC.exists(alarm_lists):
+                    url_lists = RC.smembers(alarm_lists)
+                    alarms = [url for url in alarm_values if int(alarm_values[url]['incr']) >2]
+                    for url in url_lists:
+                        if url not in alarms:
+                            business = RC.hget(url_busi_key, url)
+                            text = ['**线上业务:%s**' %business, "业务接口:%s" % url, '**接口性能恢复正常!**']
+                            RC.srem(alarm_lists, url)
+                            #发送报警恢复信息
+                            if business not in ['web']:
+                                tools.dingding_msg(text)
+                RC.expire(alarm_lists, 86400)
+                RC.expire(url_busi_key, 86400)
     except Exception as e:
         logging.error(e)
     finally:
-        # 接口性能恢复通知
-        if alarm_values and RC.exists(alarm_lists):
-            url_lists = RC.smembers(alarm_lists)
-            alarms = [url for url in alarm_values if int(alarm_values[url]['incr']) >2]
-            for url in url_lists:
-                if url not in alarms:
-                    business = RC.hget(url_busi_key, url)
-                    text = ['**线上业务:%s**' %business, "业务接口:%s" % url, '**接口性能恢复正常!**']
-                    RC.srem(alarm_lists, url)
-                    #发送报警恢复信息
-                    if business not in ['web']:
-                        tools.dingding_msg(text)
-        RC.expire(alarm_lists,86400)
-        RC.expire(url_busi_key, 86400)
         db_op.DB.session.remove()
         loging.write("complete business_performance !")
 
 @tools.proce_lock()
-def reboot_tomcat():
+def reboot_tomcat_task():
+    loging.write("start %s ......" % reboot_tomcat_task.__name__)
+    lte_date = datetime.datetime.now()
+    gte_date = lte_date - datetime.timedelta(minutes=5)
+    lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
+    db_project = db_op.project_list
+    Msg = []
     try:
-        loging.write("start %s ......" %reboot_tomcat.__name__)
-        lte_date = datetime.datetime.now()
-        gte_date = lte_date - datetime.timedelta(minutes=5)
-        lte_date = lte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
-        gte_date = gte_date.strftime('%Y-%m-%dT%H:%M:%S+08:00')
-        db_project = db_op.project_list
-        Msg = []
         def action(reboot_lists, text, reboot=False):
             try:
                 cmds = {6695: "weather_v3", 5661: "tomcat-L1", 5662: "tomcat-L2",6671:'tomcat-whapi1'}
@@ -1427,7 +1428,7 @@ def reboot_tomcat():
                                             except Exception as e:
                                                 logging.error(e)
                                                 continue
-                                        text.append("%s:%s -> %s:%s" % (host,ssh_port,app_port,project))
+                                        text.append("%s %s ->%s" % (host,app_port,project))
 
             except Exception as e:
                 logging.error(e)
@@ -1531,11 +1532,11 @@ def reboot_tomcat():
         for msg in Msg:
             if len(msg) > 1:
                 tools.dingding_msg(msg)
-        loging.write("complete %s !" % reboot_tomcat.__name__)
+        loging.write("complete %s !" %reboot_tomcat_task.__name__)
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def business_monitor(check_url=None):
+def business_monitor_task(check_url=None):
     try:
         td = time.strftime("%Y-%m-%d %H:%M:00", time.localtime())
         checks = []
@@ -1581,22 +1582,19 @@ def business_monitor(check_url=None):
                 if ipaddress:
                     for ip in set(ipaddress):
                         try:
-                            isp = ip_adress.Search(ip)
-                            if isp:
-                                isp = isp.split(',')[-1]
                             url = URL.split('/')
                             url[2]= ip
                             url = '/'.join(url)
                             error_alarm = 'error_%s_%s'%(URL,ip)
                             recovery_alarm = 'recovery_%s_%s' % (URL, ip)
-                            text = ['项目:%s' % project, "线上版本:%s" % version,'监控接口:%s' % URL,'解析IP:%s' % ip, 'ISP线路:%s' % isp,'**健康检测失败!**']
+                            text = ['项目:%s' % project, "线上版本:%s" % version,'监控接口:%s' % URL,'解析IP:%s' % ip,'**健康检测失败!**']
                             try:
                                 if method == 'post':
                                     resp = requests.post(url, data={'src': 1}, headers=headers,timeout=5)
                                 else:
                                     resp = requests.get(url,headers=headers,timeout=5)
                             except Exception as e:
-                                loging.write(e)
+                                logging.error(e)
                                 if check_url:
                                     checks.append(ip)
                                 else:
@@ -1623,7 +1621,7 @@ def business_monitor(check_url=None):
                                         RC.expire(recovery_alarm,600)
                                         if int(RC.get(recovery_alarm)) >2:
                                             text = ['项目:%s' % project, "线上版本:%s" % version, '监控接口:%s' % URL,
-                                            '解析IP:%s' % ip, 'ISP线路:%s' % isp, '**服务恢复正常!**']
+                                            '解析IP:%s' % ip,'**服务恢复正常!**']
                                             try:
                                                 tools.dingding_msg(text,alart_token)
                                                 #自动解除报警锁定及故障状态
@@ -1658,7 +1656,7 @@ def business_monitor(check_url=None):
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def es_business_data():
+def business_data():
     tm = datetime.datetime.now()
     tt = tm.strftime('%H:%M')
     td = time.strftime("%Y-%m-%d", time.localtime())
@@ -1728,7 +1726,7 @@ def es_business_data():
         logging.error(e)
 
 @tools.proce_lock()
-def influxdb_counts():
+def influxdb_counts_task():
     dt = datetime.datetime.now()
     tt = dt - datetime.timedelta(hours=1)
     nt = dt.strftime('%Y-%m-%dT%H:00:00Z')
@@ -1763,7 +1761,7 @@ def influxdb_counts():
                 continue
 
 @tools.proce_lock()
-def influxdb_alarm():
+def influxdb_alarm_task():
     dt = datetime.datetime.now()
     tt = dt - datetime.timedelta(days=3)
     nt = dt.strftime('%Y-%m-%dT00:00:00Z')
@@ -1801,19 +1799,19 @@ def influxdb_alarm():
         logging.error(e)
 
 @tools.proce_lock()
-def zabbix_counts():
-    dict_load = defaultdict()
-    dict_mem = defaultdict()
-    dict_openfile = defaultdict()
+def zabbix_counts_task():
+    max_load = defaultdict()
+    max_mem = defaultdict()
+    max_openfile = defaultdict()
     free_load = []
     free_mem = []
     free_openfile = []
     now_time = datetime.datetime.now()
-    dt = now_time - datetime.timedelta(minutes=15)
-    dt = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    dd = now_time - datetime.timedelta(days=3)
+    dd = dd.strftime('%Y-%m-%dT%H:%M:%SZ')
     Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw, 'zabbix_infos')
-    cmd = "select mean(*) from server_infos where time >='%s' group by hostname" % dt
     try:
+        cmd = "select mean(*) from server_infos where time >='%s' group by hostname" % dd
         results = Influx_cli.query(cmd)
         if results:
             for key in results.keys():
@@ -1822,31 +1820,34 @@ def zabbix_counts():
                     for infos in results[key]:
                         try:
                             if infos['mean_cpu_load'] >= 0:
-                                dict_load[hostname] = infos['mean_cpu_load']
+                                max_load[hostname] = infos['mean_cpu_load']
                             if infos['mean_mem_use'] >= 0:
-                                dict_mem[hostname] = infos['mean_mem_use']
+                                max_mem[hostname] = infos['mean_mem_use']
                             if infos['mean_openfile'] >= 0:
-                                dict_openfile[hostname] = infos['mean_openfile']
+                                max_openfile[hostname] = infos['mean_openfile']
                         except:
                             continue
     except Exception as e:
         logging.error(e)
     try:
-        if dict_load:
-            loads = sorted(dict_load.items(), key=lambda item: int(item[1]), reverse=True)
+        if max_load:
+            loads = sorted(max_load.items(), key=lambda item: int(item[1]), reverse=True)
             RC_CLUSTER.set('op_zabbix_server_load_top',loads[:20])
-            free_load = [info[0] for info in loads if int(info[-1]) <=3]
-        if dict_mem:
-            mems = sorted(dict_mem.items(), key=lambda item: int(item[1]), reverse=True)
+            max_loads = sorted(max_load.items(), key=lambda item: int(item[1]), reverse=True)
+            free_load = [info[0] for info in max_loads if int(info[-1]) <=3]
+        if max_mem:
+            mems = sorted(max_mem.items(), key=lambda item: int(item[1]), reverse=True)
             RC_CLUSTER.set('op_zabbix_server_mem_top', mems[:20])
-            free_mem = [info[0] for info in mems if int(info[-1]) <= 5]
-        if dict_openfile:
-            openfiles = sorted(dict_openfile.items(), key=lambda item: int(item[1]), reverse=True)
+            max_mems = sorted(max_mem.items(), key=lambda item: int(item[1]), reverse=True)
+            free_mem = [info[0] for info in max_mems if int(info[-1]) <= 3]
+        if max_openfile:
+            openfiles = sorted(max_openfile.items(), key=lambda item: int(item[1]), reverse=True)
             RC_CLUSTER.set('op_zabbix_server_openfile_top', openfiles[:20])
-            free_openfile = [info[0] for info in openfiles if int(info[-1]) <= 1024]
+            max_openfiles = sorted(max_openfile.items(), key=lambda item: int(item[1]), reverse=True)
+            free_openfile = [info[0] for info in max_openfiles if int(info[-1]) <= 700]
         if free_load and free_mem and free_openfile:
             RC_CLUSTER.set('op_zabbix_free_servers',set(free_load)&set(free_mem)&set(free_openfile))
         for key in ('op_zabbix_server_load_top','op_zabbix_server_mem_top','op_zabbix_server_openfile_top','op_zabbix_free_servers'):
-            RC_CLUSTER.expire(key,360)
+            RC_CLUSTER.expire(key,86400)
     except Exception as e:
         logging.error(e)

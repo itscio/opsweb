@@ -29,26 +29,33 @@
                                 <td class="table_list" style="text-align: center"></td>
                             {% endif %}
                         {% endfor %}
-                        {% for va in val[4:-2] %}
+                        {% for va in val[4:-3] %}
                             {% if va == '是' %}
                                 <td class="table_list" style="text-align: center;color: red;font-weight:bold">{{ va }}</td>
                             {% else %}
                                 <td class="table_list" style="text-align: center">{{ va }}</td>
                             {% endif %}
                         {% endfor %}
-                        {% if '.' in val[-2]  %}
-                            <td class="table_list" style="text-align: center">{{ val[-2] }}</td>
+                        {% if '.' in val[-3]  %}
+                            <td class="table_list" style="text-align: center">{{ val[-3] }}</td>
                         {% else %}
                             <td class="table_list" style="text-align: center">
-                                {% if val[-2] %}
-                                    <a href="/assets_get?type=server&hostname={{ val[-2] }}">{{ val[-2] }}</a>
-                                    <a href="/redis_master/{{ val[-2] }}:{{ val[-1] }}" style="color:dodgerblue;float: right ">
+                                {% if val[-3] %}
+                                    <a href="/assets_get?type=server&hostname={{ val[-3] }}">{{ val[-3] }}</a>
+                                    <a href="/redis_master/{{ val[-3] }}:{{ val[-2] }}" style="color:dodgerblue;float: right ">
                                         <i class="fas fa-code-branch fa-rotate-90" ></i>
                                     </a>
                                 {% endif %}
                             </td>
                         {% endif %}
-                        <td class="table_list" style="text-align: center">{{ val[-1] }}</td>
+                        <td class="table_list" style="text-align: center">{{ val[-2] }}</td>
+                        {% if "%s:%s" %(val[0],val[1]) in redis_unhealth %}
+                            <td class="table_list" style="text-align: center;color: red">服务异常</td>
+                        {% elif val[-1] != uptime %}
+                            <td class="table_list" style="text-align: center;color: blueviolet">疑似下架</td>
+                        {% else %}
+                            <td class="table_list" style="text-align: center;color: green">服务正常</td>
+                        {% endif %}
                     </tr>
                  {% endfor %}
              {% endif %}

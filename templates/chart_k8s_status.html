@@ -2,6 +2,7 @@
 {% block page %}
     <div class="div"><p>容器平台业务运行状态</p></div>
     <div style="float:left;margin-left:0.5%;margin-bottom: -0.5%">选择域名:<select id="select" onchange="select_domain()"></select></div>
+    <div style="float:left;margin-left: 1%;margin-bottom: -0.5%" >选择日期:{{ form.select_date (onchange="set_cookies('select_date')")}}</div>
     {% if charts %}
         {% for chart in charts %}
             <div style="margin-left:0.5%;margin-top: 1%;width:97.7%;float:left;border:1px solid gainsboro;overflow: hidden">
@@ -26,5 +27,9 @@
         {% if domain %}
             $('#select').val("{{ domain|safe }}");
         {% endif %}
+        var td = $.cookie('select_date');
+        if (td){
+           $('#select_date').val(td);
+        }
     </script>
 {% endblock page %}

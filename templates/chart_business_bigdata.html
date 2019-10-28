@@ -8,7 +8,7 @@
             域名接口:<input id="business_bigdata_select_uri" type="text" autocomplete="off" placeholder="暂无接口"/>
         </span>
         <span class="icon-calendar icon-align-center" style="margin-left: 1%">
-            选择日期:{{ form.select_date (onchange="set_cookies('business_bigdata_select_date')") }}
+            选择日期:{{ form.select_date (onchange="set_cookies('select_date')") }}
         </span>
     </div>
     <div style="clear:both"></div>
@@ -29,10 +29,10 @@
     <script language="JavaScript">
         $.input_host('business_bigdata_select_host',{{ searchs|safe }},function(){get_uri_lists('business_bigdata_select_host');});
         var host = $.cookie('business_bigdata_select_host');
-        var date = $.cookie('business_bigdata_select_date');
+        var date = $.cookie('select_date');
         if (host){
             $("#business_bigdata_select_host").val(host);
-            $("#business_bigdata_select_date").val(date);
+            $("#select_date").val(date);
             business_change_select(host,'/');
         }
     </script>

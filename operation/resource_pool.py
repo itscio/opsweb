@@ -76,30 +76,36 @@ def resource_pool(action=None,id=None):
     third_indexs = []
     # 按照项目查找
     if tools.http_args(request,'project'):
-        project = tools.http_args(request,'project')
-        servers = db_server.query.with_entities(db_server.ip,db_server.ssh_port,db_server.hostname).all()
-        servers = {'%s:%s'%(info[0],info[1]):info[2] for info in servers}
-        values = db_project.query.with_entities(db_project.id,db_project.ip,
-                                                db_project.ssh_port, db_project.resource, db_project.app_port,
-                                                db_project.sys_args, db_project.env).filter(
-            db_project.project == project).order_by(db_project.ip).all()
-        if values:
-            values = [list(val) for val in values if '%s:%s'%(val[1],val[2]) in servers ]
-            for val in values:
-                val.insert(3,servers['%s:%s'%(val[1],val[2])])
-            values.insert(0, tables[1:])
-        third_id = db_project_third.query.with_entities(db_project_third.third_id).filter(
-            db_project_third.project == project).all()
-        if third_id:
-            third_id = tuple([val[0] for val in third_id])
-            third_values = db_third.query.with_entities(db_third.id, db_third.resource_type, db_third.cluster_type,
-                                                        db_third.ip, db_third.ssh_port, db_third.app_port).filter(
-                db_third.id.in_(third_id)).order_by(db_third.resource_type).all()
-            if third_values:
-                third_values = [list(val) for val in third_values]
-                for val in third_values:
-                    val.insert(5, servers['%s:%s'%(val[3],val[4])])
-                third_values.insert(0, third_tables[1:])
+        try:
+            project = tools.http_args(request,'project')
+            servers = db_server.query.with_entities(db_server.ip,db_server.ssh_port,db_server.hostname).all()
+            servers = {'%s:%s'%(info[0],info[1]):info[2] for info in servers}
+            values = db_project.query.with_entities(db_project.id,db_project.ip,
+                                                    db_project.ssh_port, db_project.resource, db_project.app_port,
+                                                    db_project.sys_args, db_project.env).filter(
+                db_project.project == project).order_by(db_project.ip).all()
+            if values:
+                values = [list(val) for val in values if '%s:%s'%(val[1],val[2]) in servers ]
+                for val in values:
+                    val.insert(3,servers['%s:%s'%(val[1],val[2])])
+                values.insert(0, tables[1:])
+        except Exception as e:
+            logging.error(e)
+        try:
+            third_id = db_project_third.query.with_entities(db_project_third.third_id).filter(
+                db_project_third.project == project).all()
+            if third_id:
+                third_id = tuple([val[0] for val in third_id])
+                third_values = db_third.query.with_entities(db_third.id, db_third.resource_type, db_third.cluster_type,
+                                                            db_third.ip, db_third.ssh_port, db_third.app_port).filter(
+                    db_third.id.in_(third_id)).order_by(db_third.resource_type).all()
+                if third_values:
+                    third_values = [list(val) for val in third_values]
+                    for val in third_values:
+                        val.insert(5, servers['%s:%s'%(val[3],val[4])])
+                    third_values.insert(0, third_tables[1:])
+        except Exception as e:
+            logging.error(e)
         return render_template('resource_info.html', values=values, third_values=third_values, project=project, third_indexs=third_indexs,form=form)
     # 按照应用服务查找
     if tools.http_args(request,'application'):
@@ -112,55 +118,65 @@ def resource_pool(action=None,id=None):
         servers = {'%s:%s' % (info[0], info[1]): info[2] for info in servers}
         if app_id:
             if app in ('tomcat', 'python','php'):
-                host_info = db_project.query.with_entities(db_project.ip,db_project.ssh_port,db_project.app_port).filter(
-                    db_project.id == app_id).all()
-                if host_info:
-                    host_info = [servers['%s:%s'%(host_info[0][0],host_info[0][1])],host_info[0][-1]]
-                    third_id = db_project_third.query.with_entities(db_project_third.third_id).filter(
-                        and_(db_project_third.project_id == app_id)).all()
-                    if third_id:
-                        third_id = [val[0] for val in third_id]
-                        values = db_third.query.with_entities(db_third.id, db_third.resource_type, db_third.cluster_type,
-                                                          db_third.ip, db_third.ssh_port, db_third.app_port).filter(
-                        db_third.id.in_(tuple(third_id))).order_by(db_third.resource_type).all()
-                        if values:
-                            values = [list(val) for val in values]
+                try:
+                    host_info = db_project.query.with_entities(db_project.ip,db_project.ssh_port,db_project.app_port).filter(
+                        db_project.id == app_id).all()
+                    if host_info:
+                        host_info = [servers['%s:%s'%(host_info[0][0],host_info[0][1])],host_info[0][-1]]
+                        third_id = db_project_third.query.with_entities(db_project_third.third_id).filter(
+                            and_(db_project_third.project_id == app_id)).all()
+                        if third_id:
+                            third_id = [val[0] for val in third_id]
+                            values = db_third.query.with_entities(db_third.id, db_third.resource_type, db_third.cluster_type,
+                                                              db_third.ip, db_third.ssh_port, db_third.app_port).filter(
+                            db_third.id.in_(tuple(third_id))).order_by(db_third.resource_type).all()
+                            if values:
+                                values = [list(val) for val in values]
+                except Exception as e:
+                    logging.error(e)
             else:
-                host_info = db_third.query.with_entities(db_third.ip,db_third.ssh_port, db_third.app_port).filter(
-                    db_third.id == app_id).all()
-                if host_info:
-                    host_info = [servers['%s:%s' % (host_info[0][0], host_info[0][1])], host_info[0][-1]]
-                    project_id = db_project_third.query.with_entities(db_project_third.project_id).filter(
-                    and_(db_project_third.third_id == app_id)).all()
-                    if project_id:
-                        project_id = [val[0] for val in project_id]
-                        values = db_project.query.with_entities(db_project.id, db_project.resource, db_project.ip,
-                                                        db_project.ssh_port, db_project.app_port).filter(
-                    db_project.id.in_(tuple(project_id))).order_by(db_project.resource).all()
-                        if values:
-                            values = [list(val) for val in values]
-                            for i, vals in enumerate(values):
-                                vals.insert(2, '非集群')
-                                values[i] = vals
+                try:
+                    host_info = db_third.query.with_entities(db_third.ip,db_third.ssh_port, db_third.app_port).filter(
+                        db_third.id == app_id).all()
+                    if host_info:
+                        host_info = [servers['%s:%s' % (host_info[0][0], host_info[0][1])], host_info[0][-1]]
+                        project_id = db_project_third.query.with_entities(db_project_third.project_id).filter(
+                        and_(db_project_third.third_id == app_id)).all()
+                        if project_id:
+                            project_id = [val[0] for val in project_id]
+                            values = db_project.query.with_entities(db_project.id, db_project.resource, db_project.ip,
+                                                            db_project.ssh_port, db_project.app_port).filter(
+                        db_project.id.in_(tuple(project_id))).order_by(db_project.resource).all()
+                            if values:
+                                values = [list(val) for val in values]
+                                for i, vals in enumerate(values):
+                                    vals.insert(2, '非集群')
+                                    values[i] = vals
+                except Exception as e:
+                    logging.error(e)
         else:
-            if app in ('php', 'tomcat', 'python'):
-                values = db_project.query.with_entities(db_project.id, db_project.resource, db_project.ip,
-                                                        db_project.ssh_port, db_project.app_port).filter(
-                    db_project.resource == app).order_by(db_project.ip).all()
-                if values:
-                    values = [list(val) for val in values]
-                    for i, vals in enumerate(values):
-                        vals.insert(2, '非集群')
-                        values[i] = vals
-            else:
-                values = db_third.query.with_entities(db_third.id, db_third.resource_type, db_third.cluster_type,
-                                                      db_third.ip, db_third.ssh_port, db_third.app_port).filter(
-                    db_third.resource_type == app).order_by(db_third.ip).all()
-                if values:
-                    values = [list(val) for val in values]
+            try:
+                if app in ('php', 'tomcat', 'python'):
+                    values = db_project.query.with_entities(db_project.id, db_project.resource, db_project.ip,
+                                                            db_project.ssh_port, db_project.app_port).filter(
+                        db_project.resource == app).order_by(db_project.ip).all()
+                    if values:
+                        values = [list(val) for val in values]
+                        for i, vals in enumerate(values):
+                            vals.insert(2, '非集群')
+                            values[i] = vals
+                else:
+                    values = db_third.query.with_entities(db_third.id, db_third.resource_type, db_third.cluster_type,
+                                                          db_third.ip, db_third.ssh_port, db_third.app_port).filter(
+                        db_third.resource_type == app).order_by(db_third.ip).all()
+                    if values:
+                        values = [list(val) for val in values]
+            except Exception as e:
+                logging.error(e)
         if values:
             for val in values:
-                val.insert(5,servers['%s:%s'%(val[3],val[4])])
+                if '%s:%s'%(val[3],val[4]) in servers:
+                    val.insert(5,servers['%s:%s'%(val[3],val[4])])
         return render_template('application_list.html', values=values, app=app, tables=tables, host_info=host_info,form=form)
     # 第三方资源回收接口
     if tools.http_args(request,'action') == 'recyle' and tools.http_args(request,'ip') and tools.http_args(request,'ssh_port') and tools.http_args(request,'app_port'):

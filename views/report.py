@@ -281,28 +281,32 @@ def work_order_report_show():
     start_time = tm.strftime('%Y-%m-%d')
     end_time = time.strftime('%Y-%m-%d', time.localtime())
     return render_template('work_order_report_show.html',form=form,tt=(start_time,end_time))
+
 @page_report.route('/work_order_report')
 @page_report.route('/work_order_report/<start_time>/<end_time>/<source>')
-def work_order_report(start_time=None,end_time=None,source=None):
+def work_order_report(start_time=None,end_time=None,source='all_order'):
     INFOS = []
     db_sso = db_op.user_sso
     db_work_order = db_op.work_order
     dm_key = 'op_work_order_report_dm'
     stat_key = 'op_work_order_report_status'
     dep_key = 'op_work_order_report_department'
-    if not source:
-        tm = datetime.datetime.now() - datetime.timedelta(days=180)
+    if not start_time or not end_time:
+        tm = datetime.datetime.now() - datetime.timedelta(days=7)
         start_time = tm.strftime('%Y-%m-%d')
         end_time = time.strftime('%Y-%m-%d',time.localtime())
-        source = 'ensure_application'
     try:
         infos = db_sso.query.with_entities(db_sso.dingunionid, db_sso.department,db_sso.realName).all()
         departments = {info[0]: info[1] for info in infos}
         users = {info[0]: info[-1] for info in infos}
         #统计运维工单状态
         try:
-            vals = db_work_order.query.with_entities(db_work_order.status,func.count(db_work_order.status)).filter(and_(
+            if source != 'all_order':
+                vals = db_work_order.query.with_entities(db_work_order.status,func.count(db_work_order.status)).filter(and_(
                 db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).group_by(db_work_order.status).all()
+            else:
+                vals = db_work_order.query.with_entities(db_work_order.status,func.count(db_work_order.status)).filter(and_(
+                    db_work_order.date >=start_time,db_work_order.date<=end_time)).group_by(db_work_order.status).all()
             pie = Pie("运维工单状态统计", width='100%', height='100%', title_pos='center', title_text_size=14)
             pie_vals = [val[0] for val in vals]
             pie_counts = [int(val[1]) for val in vals]
@@ -313,8 +317,12 @@ def work_order_report(start_time=None,end_time=None,source=None):
             logging.error(e)
         #统计月度工单数量及受理率
         try:
-            vals = db_work_order.query.with_entities(db_work_order.date,db_work_order.status).filter(and_(
+            if source != 'all_order':
+                vals = db_work_order.query.with_entities(db_work_order.date,db_work_order.status).filter(and_(
                 db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).all()
+            else:
+                vals = db_work_order.query.with_entities(db_work_order.date, db_work_order.status).filter(and_(
+                    db_work_order.date >= start_time,db_work_order.date <= end_time)).all()
             if vals:
                 for val in vals:
                     dm,status = val
@@ -340,8 +348,12 @@ def work_order_report(start_time=None,end_time=None,source=None):
             logging.error(e)
         #工单申请数量部门排名
         try:
-            vals = db_work_order.query.with_entities(db_work_order.applicant).filter(and_(
+            if source != 'all_order':
+                vals = db_work_order.query.with_entities(db_work_order.applicant).filter(and_(
                 db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).all()
+            else:
+                vals = db_work_order.query.with_entities(db_work_order.applicant).filter(and_(
+                db_work_order.date >=start_time,db_work_order.date<=end_time)).all()
             if vals:
                 for val in vals:
                     RC.hincrby(dep_key,departments[val[0]])
@@ -357,10 +369,15 @@ def work_order_report(start_time=None,end_time=None,source=None):
             logging.error(e)
         #工单申请数量个人排名
         try:
-            vals = db_work_order.query.with_entities(db_work_order.applicant,func.count(db_work_order.applicant)).filter(and_(
+            if source != 'all_order':
+                vals = db_work_order.query.with_entities(db_work_order.applicant,func.count(db_work_order.applicant)).filter(and_(
                 db_work_order.source == source,db_work_order.date >=start_time,db_work_order.date<=end_time)).group_by(
-                db_work_order.applicant).order_by(
-                desc(func.count(db_work_order.applicant))).limit(15).all()
+                db_work_order.applicant).order_by(desc(func.count(db_work_order.applicant))).limit(15).all()
+            else:
+                vals = db_work_order.query.with_entities(db_work_order.applicant,
+                                                         func.count(db_work_order.applicant)).filter(and_(
+                    db_work_order.date >= start_time,db_work_order.date <= end_time)).group_by(
+                    db_work_order.applicant).order_by(desc(func.count(db_work_order.applicant))).limit(15).all()
             vals = [list(val) for val in vals]
             for val in vals:
                 val[0] = users[val[0]]

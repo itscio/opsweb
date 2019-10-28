@@ -4,6 +4,7 @@ from module import user_auth,loging,tools,db_idc,db_op,MyForm
 import redis
 import urllib
 import json
+from importlib import reload
 from functools import reduce
 from influxdb import InfluxDBClient
 import importlib
@@ -275,7 +276,7 @@ def chart_third_resource():
         bar = Bar("线上应用服务实例汇总",title_pos='center',width='110%',height='300px')
         bar.add("",bar_values,bar_counts, mark_point=["max", "min"], is_yaxislabel_align=True,is_toolbox_show=False, xaxis_interval=0,legend_pos='100%',xaxis_rotate=30)
         #取前8个最多的实例
-        for value in values[:8]:
+        for value in values[:10]:
             app = str(value[0])
             Key = 'chart_third_resource_%s_%s' %(th,app)
             if Redis.exists(Key):
@@ -503,20 +504,20 @@ def chart_center_hosts():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_business_bigdata',methods = ['GET', 'POST'])
-@user_auth.login_required(grade=8)
+@user_auth.login_required(grade=1)
 def chart_business_bigdata():
     try:
+        importlib.reload(MyForm)
+        form = MyForm.FormData()
+        tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
+        tm = tm.strftime('%H:%M')
+        dt = time.strftime('%Y-%m-%d', time.localtime())
+        tm_vals = []
+        Lines = []
+        host = ''
+        uri = ''
+        searchs = []
         try:
-            importlib.reload(MyForm)
-            form = MyForm.FormBusinessBigdata()
-            tm = datetime.datetime.now() - datetime.timedelta(minutes=1)
-            tm = tm.strftime('%H:%M')
-            dt = time.strftime('%Y-%m-%d', time.localtime())
-            tm_vals = []
-            Lines = []
-            host = ''
-            uri = ''
-            searchs = []
             hosts = RC_CLUSTER.smembers('api_domain_lists_%s' % dt)
             hosts = [host for host in hosts]
             if hosts:
@@ -536,8 +537,8 @@ def chart_business_bigdata():
         if host:
             try:
                 #生成时间表
-                if 'business_bigdata_select_date' in request.cookies:
-                    dt = request.cookies['business_bigdata_select_date']
+                if 'select_date' in request.cookies:
+                    dt = request.cookies['select_date']
                 for d in range(0, 24):
                     for t in range(0, 60):
                         if int(d) < 10:
@@ -575,15 +576,16 @@ def chart_business_bigdata():
             except Exception as e:
                 logging.error(e)
             #详细数据获取
+            vals4xx = OrderedDict()
+            vals5xx = OrderedDict()
+            vals100 = OrderedDict()
+            vals200 = OrderedDict()
+            vals500 = OrderedDict()
+            vals1000 = OrderedDict()
+            avg_resp = OrderedDict()
+            VALS = {'status_4xx': vals4xx, 'status_5xx': vals5xx, 'resp_100': vals100, 'resp_200': vals200,
+                    'resp_500': vals500, 'resp_1000': vals1000, 'avg_resp': avg_resp}
             try:
-                vals4xx = OrderedDict()
-                vals5xx = OrderedDict()
-                vals100 = OrderedDict()
-                vals200 = OrderedDict()
-                vals500 = OrderedDict()
-                vals1000 = OrderedDict()
-                avg_resp = OrderedDict()
-                VALS = {'status_4xx': vals4xx, 'status_5xx': vals5xx, 'resp_100': vals100, 'resp_200': vals200, 'resp_500': vals500, 'resp_1000': vals1000,'avg_resp':avg_resp}
                 for tm in tm_vals:
                     Key = 'domain_api_infos_%s_%s_%s' % (host, dt, tm)
                     if uri:
@@ -688,7 +690,7 @@ def chart_business_bigdata():
         try:
             resp = make_response(render_template('chart_business_bigdata.html',form=form,Lines=Lines,searchs=searchs,dt=dt))
             resp.set_cookie('business_bigdata_select_host',host,path='/')
-            resp.set_cookie('business_bigdata_select_date',dt, path='/')
+            resp.set_cookie('select_date',dt, path='/')
         except Exception as e:
             logging.error(e)
         return resp
@@ -698,17 +700,17 @@ def chart_business_bigdata():
         return render_template('Message.html')
 
 @page_chart_center.route('/chart_business_collect',methods = ['GET', 'POST'])
-@user_auth.login_required(grade=8)
+@user_auth.login_required(grade=1)
 def chart_business_collect():
     try:
+        tm = datetime.datetime.now() - datetime.timedelta(days=30)
+        tm = tm.strftime('%Y-%m-%dT%H:%M:%SZ')
+        dt = time.strftime('%Y-%m-%d', time.localtime())
+        Lines = []
+        host = ''
+        uri = ''
+        searchs = []
         try:
-            tm = datetime.datetime.now() - datetime.timedelta(days=30)
-            tm = tm.strftime('%Y-%m-%dT%H:%M:%SZ')
-            dt = time.strftime('%Y-%m-%d', time.localtime())
-            Lines = []
-            host = ''
-            uri = ''
-            searchs = []
             hosts = RC_CLUSTER.smembers('api_domain_lists_%s' % dt)
             hosts = [host for host in hosts]
             if hosts:
@@ -732,15 +734,15 @@ def chart_business_collect():
                 tm = urllib.parse.unquote(request.cookies['select_datatime'])
                 tm = tm.replace('.000','')
             #详细数据获取
+            vals4xx = OrderedDict()
+            vals5xx = OrderedDict()
+            vals100 = OrderedDict()
+            vals200 = OrderedDict()
+            vals500 = OrderedDict()
+            vals1000 = OrderedDict()
+            avg_resp = OrderedDict()
+            pv_vals = OrderedDict()
             try:
-                vals4xx = OrderedDict()
-                vals5xx = OrderedDict()
-                vals100 = OrderedDict()
-                vals200 = OrderedDict()
-                vals500 = OrderedDict()
-                vals1000 = OrderedDict()
-                avg_resp = OrderedDict()
-                pv_vals = OrderedDict()
                 VALS = {'status_4xx': vals4xx, 'status_5xx': vals5xx, 'resp_100': vals100, 'resp_200': vals200, 'resp_500': vals500, 'resp_1000': vals1000,'avg_resp':avg_resp,'pv':pv_vals}
                 cmd = "select * from " + ' "analysis%s" ' %time.strftime('%Y',time.localtime()) + "WHERE time >= '%s' and host='%s' and uri='%s'" % (tm, host, uri)
                 result = Influx_cli.query(cmd)
@@ -843,20 +845,20 @@ def chart_business_collect():
 
 @page_chart_center.route('/chart_k8s_status')
 @page_chart_center.route('/chart_k8s_status/<domain>')
-@user_auth.login_required(grade=1)
+@user_auth.login_required(grade=6)
 def chart_k8s_status(domain=None):
     try:
+        reload(MyForm)
+        form = MyForm.FormData()
         td = time.strftime("%Y-%m-%d", time.localtime())
+        if 'select_date' in request.cookies:
+            td = request.cookies['select_date']
         charts = []
         vals = OrderedDict()
         now_date = datetime.datetime.now()
-        db_project = db_op.project_list
-        all_domains = db_project.query.with_entities(distinct(db_project.domain)).all()
-        all_domains = [domains[0].split(',') for domains in all_domains if domains[0]]
-        all_domains = set([domain for domains in all_domains for domain in domains])
         k8s_domains_key = 'op_k8s_domains_%s' % td
         domains_menu = RC.smembers(k8s_domains_key)
-        domains_menu = [domain for domain in domains_menu if domain in all_domains]
+        domains_menu = [domain for domain in domains_menu]
         if not domain:
             domain = domains_menu[0]
         for i in range(10):
@@ -927,9 +929,10 @@ def chart_k8s_status(domain=None):
                          datazoom_range=[v for v in range(100, 10)],
                          datazoom_type='both', legend_pos='70%', yaxis_formatter='ms')
             charts.append(line)
+        return render_template('chart_k8s_status.html', charts=charts, domains_menu=domains_menu, domain=domain,form=form)
     except Exception as e:
         logging.error(e)
-    return render_template('chart_k8s_status.html', charts=charts,domains_menu=domains_menu,domain=domain)
+
 
 @page_chart_center.before_request
 @user_auth.login_required(grade=10)

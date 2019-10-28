@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_,distinct
 from influxdb import InfluxDBClient
 from collections import defaultdict
+from pyzabbix.api import ZabbixAPI
 import datetime
 import time
 import pytz
@@ -22,7 +23,11 @@ app.config.from_pyfile('../conf/sql.conf')
 app.config.from_pyfile('../conf/es.conf')
 app.config.from_pyfile('../conf/tokens.conf')
 app.config.from_pyfile('../conf/kafka.conf')
+app.config.from_pyfile('../conf/zabbix.conf')
 logging = loging.Error()
+zabbix_url = app.config.get('ZABBIX_URL')
+zabbix_user = app.config.get('ZABBIX_USER')
+zabbix_pw = app.config.get('ZABBIX_PW')
 redis_host = app.config.get('REDIS_HOST')
 redis_port = app.config.get('REDIS_PORT')
 redis_password = app.config.get('REDIS_PASSWORD')
@@ -41,7 +46,7 @@ redis_token = app.config.get('REDIS_TOKEN')
 KAFKA_HOSTS = app.config.get('KAFKA_HOSTS')
 config,contexts,config_file = tools.k8s_conf()
 @tools.proce_lock()
-def task_run():
+def task_cron_run():
     try:
         # 获取业务访问数据
         db_business = db_op.business
@@ -82,7 +87,7 @@ def task_run():
         logging.error(e)
 
 @tools.proce_lock()
-def get_other_info():
+def other_info_task():
     db_project_other = db_op.project_other
     db_crontabs = db_idc.crontabs
     db_servers = db_idc.idc_servers
@@ -182,8 +187,8 @@ def get_other_info():
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def get_redis_info():
-    loging.write("start %s ......" % get_redis_info.__name__)
+def redis_info_task():
+    loging.write("start %s ......" % redis_info_task.__name__)
     db_third = db_idc.third_resource
     db_redis = db_idc.redis_info
     db_servers = db_idc.idc_servers
@@ -230,7 +235,7 @@ def get_redis_info():
                                     try:
                                         result = results['stdout'][0].split()[-1]
                                         if '/' in result:
-                                            conf_file = "/usr/local/xxxx/xxxx/etc/{}".format(result.split('/')[-1])
+                                            conf_file = "/xxxx/xxxx/xxxx/redis/etc/{}".format(result.split('/')[-1])
                                         if not conf_file.endswith('.conf'):
                                             cmd = "lsof -p {}|grep 'cwd'".format(pid)
                                             cwd = Ssh.Run(cmd)
@@ -365,10 +370,11 @@ def get_redis_info():
         logging.error(e)
     finally:
         db_idc.DB.session.remove()
-        loging.write("%s complete!" % get_redis_info.__name__)
+        loging.write("%s complete!" %redis_info_task.__name__)
 
 @tools.proce_lock()
-def k8s_health_check():
+def k8s_check_task():
+    loging.write("start %s ......" % k8s_check_task.__name__)
     for context in contexts:
         config.load_kube_config(config_file, context=context)
         # nodes健康检测
@@ -426,12 +432,14 @@ def k8s_health_check():
             ret = v1.list_namespaced_pod(namespace='default')
             for i in ret.items:
                 try:
-                    c = db_pods(context=context,pod_ip=i.status.pod_ip,pod_name=i.metadata.name,
-                                node_name=i.spec.node_name,uptime=time.strftime('%Y-%m-%d',time.localtime()))
-                    db_idc.DB.session.add(c)
-                    db_idc.DB.session.commit()
-                except:
-                    continue
+                    val = db_pods.query.filter(and_(db_pods.pod_name==i.metadata.name,db_pods.node_name==i.spec.node_name)).all()
+                    if not val:
+                        c = db_pods(context=context,pod_ip=i.status.pod_ip,pod_name=i.metadata.name,
+                                    node_name=i.spec.node_name,uptime=time.strftime('%Y-%m-%d %H:%M:%S',time.localtime()))
+                        db_idc.DB.session.add(c)
+                        db_idc.DB.session.commit()
+                except Exception as e:
+                    logging.error(e)
         except Exception as e:
             logging.error(e)
         finally:
@@ -464,9 +472,9 @@ def k8s_health_check():
             db_op.DB.session.remove()
 
 @tools.proce_lock()
-def alarm_load():
+def alarm_load_task():
     try:
-        loging.write("start %s ......" %alarm_load.__name__)
+        loging.write("start %s ......" %alarm_load_task.__name__)
         whitelist = []
         dict_load = defaultdict()
         db_server = db_idc.idc_servers
@@ -474,7 +482,9 @@ def alarm_load():
         db_project = db_op.project_list
         db_project_other = db_op.project_other
         Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw, 'zabbix_infos')
-        host_infos = db_zabbix.query.with_entities(db_zabbix.ip, db_zabbix.ssh_port,db_zabbix.hostname,db_zabbix.update_time).filter(and_(db_zabbix.cpu_load > 100, db_zabbix.icmpping == 1)).all()
+        host_infos = db_zabbix.query.with_entities(db_zabbix.ip, db_zabbix.ssh_port,db_zabbix.hostname,
+                                                   db_zabbix.update_time).filter(and_(db_zabbix.cpu_load > 100,
+                                                                                      db_zabbix.icmpping == 1)).all()
         Key = "op_alarm_load_whitelist"
         if RC_CLUSTER.exists(Key):
             whitelist = RC_CLUSTER.smembers(Key)
@@ -495,8 +505,7 @@ def alarm_load():
                                     for infos in results[key]:
                                         if infos['mean_cpu_load'] >100:
                                             dict_load[hostname] = (host,ssh_port,int(infos['mean_cpu_load']))
-                except Exception as e:
-                    logging.error(e)
+                except:
                     continue
         #进行重启操作
         if dict_load:
@@ -505,15 +514,8 @@ def alarm_load():
                 # 判断ssh是否可以登录
                 try:
                     Ssh = SSH.ssh(ip=host,ssh_port=ssh_port)
-                except Exception as e:
-                    if not hostname.startswith('nj'):
-                        Ssh_Key = "op_ssh_login_fail_%s" %hostname
-                        RC.incr(Ssh_Key,1)
-                        RC.expire(Ssh_Key,350)
-                        if int(RC.get(Ssh_Key)) >5:
-                            tools.dingding_msg(text,token=ops_token)
-                        else:
-                            tools.dingding_msg(text)
+                except:
+                    continue
                 else:
                     try:
                         Key = 'op_alarm_load_%s' % hostname
@@ -530,7 +532,7 @@ def alarm_load():
 
                                     if results[-1].endswith('-rpc.jar'):
                                         pro_jar = results[-1]
-                                        if pro_jar in ['xxxx-xxxx-rpc.jar']:
+                                        if pro_jar in ['xxxx.jar']:
                                             Project =pro_jar.split('.')[0]
                                     else:
                                         for line in results:
@@ -555,7 +557,6 @@ def alarm_load():
                                                 text = ['**线上服务重启:%s**' % hostname, "CPU持续{0}分钟平均使用率:{1}%".format(ctime,cpu_load),
                                                         "相关进程:{0}".format(Project), '**服务重启成功!**']
                                                 token = None
-
                                         else:
                                             # 判断是否是jar项目
                                             server_id = db_server.query.with_entities(db_server.id).filter(db_server.hostname==hostname).all()
@@ -571,12 +572,12 @@ def alarm_load():
                     finally:
                         Ssh.Close()
     finally:
-        loging.write("%s complete!" % alarm_load.__name__)
+        loging.write("%s complete!" %alarm_load_task.__name__)
         db_idc.DB.session.remove()
         db_op.DB.session.remove()
 
 @tools.proce_lock()
-def k8s_ingress_log():
+def ingress_log():
     td = time.strftime('%Y-%m-%d', time.localtime())
     th = time.strftime('%H:%M', time.localtime())
     Key = 'op_k8s_ingress_log'
@@ -615,7 +616,7 @@ def k8s_ingress_log():
                 text.append('**自动处理问题pod数量:{}**'.format(counts))
             return text
     try:
-        loging.write('start %s ......' % k8s_ingress_log.__name__)
+        loging.write('start %s ......' % ingress_log.__name__)
         # 获取容器平台并发访问数据
         try:
             body = {"query": {"range": {"time_iso8601": {"gte": "%s" % gte_date, "lte": "%s" % lte_date}}},
@@ -756,148 +757,98 @@ def k8s_ingress_log():
         db_op.DB.session.remove()
         for key in (k8s_domains_key,k8s_pv_key):
             RC.expire(key,864000)
-        loging.write('complete %s !' % k8s_ingress_log.__name__)
+        loging.write('complete %s !' %ingress_log.__name__)
 
 @tools.proce_lock()
-def Redis_alarm():
-    loging.write("start %s ......" %Redis_alarm.__name__)
-    last_time = datetime.datetime.now()
-    last_time = last_time - datetime.timedelta(days=3)
-    last_time = last_time.strftime('%Y-%m-%d')
-    uptime = time.strftime('%Y-%m-%d',time.localtime())
-    tm = time.strftime('%Y%m%d%H%M',time.localtime())
-    Key = 'yw_check_master_slave'
-    redis_m = []
-    db_servers = db_idc.idc_servers
-    db_redis = db_idc.redis_info
-    # 获取服务器信息
-    blacklist = ('172.16.70.34', '172.16.19.104')
-    server_infos = db_servers.query.with_entities(db_servers.id, db_servers.ip,db_servers.hostname).filter(db_servers.idc_id != 1025).all()
-    server_ids = {str(infos[0]): infos[1] for infos in server_infos}
-    hosts = {str(infos[0]): infos[-1] for infos in server_infos}
-    # 获取主redis信息
-    Masters = db_redis.query.with_entities(db_redis.server_id, db_redis.port, db_redis.requirepass).filter(
-        db_redis.master == '是').all()
-    S_Masters = db_redis.query.with_entities(db_redis.Master_Host, db_redis.Master_Port).filter(
-        and_(db_redis.slave == '是', db_redis.Master_Host != '')).all()
-    S_Masters = set(['%s:%s' % info for info in S_Masters])
+def Redis_alarm_task():
+    loging.write("start %s ......" %Redis_alarm_task.__name__)
     # 检测redis异常
-    redis_infos = db_redis.query.with_entities(db_redis.server_id, db_redis.port,
-                                               db_redis.cluster,db_redis.last_time
-                                               ).filter(db_redis.last_time >=last_time).all()
-    for infos in redis_infos:
+    def check_online(info):
         try:
-            server_id, port,cluster,last_time= infos
+            server_id, port, cluster, last_time = info
             if str(server_id) in server_ids:
                 ip = server_ids[str(server_id)]
                 hostname = hosts[str(server_id)]
-                if tcpping(ip,port,timeout=5):
-                    RC_CLUSTER.srem('op_redis_health_check',f"{hostname}:{port}")
-                    db_redis.query.filter(and_(db_redis.server_id == server_id, db_redis.port == port)).update({db_redis.last_time:uptime})
+                if tcpping(ip, port, timeout=3):
+                    RC_CLUSTER.srem('op_redis_health_check', f"{hostname}:{port}")
+                    db_redis.query.filter(and_(db_redis.server_id == server_id, db_redis.port == port)).update(
+                        {db_redis.last_time: uptime})
                     db_idc.DB.session.commit()
                 else:
                     if cluster == '否':
-                        RC_CLUSTER.sadd('op_redis_health_check',f"{hostname}:{port}")
-                        #异常redis报警
+                        RC_CLUSTER.sadd('op_redis_health_check', f"{hostname}:{port}")
+                        # 异常redis报警
                         if last_time == uptime:
-                            text = ['**线上Redis服务报警:**',
-                                    "Redis:%s %s" % (hostname,port),
-                                    "服务端口检测异常!",
-                                    '**请及时进行处理!**']
-                            tools.dingding_msg(text)
+                            key = f'op_redis_alarm_{hostname}_{port}'
+                            RC.incr(key,1)
+                            if int(RC.get(key)) >2:
+                                text = ['**线上Redis服务报警:**',
+                                        "Redis:%s %s" % (hostname, port),
+                                        "服务端口检测异常!",
+                                        '**请及时进行处理!**']
+                                tools.dingding_msg(text)
+                                RC.expire(key,360)
         except Exception as e:
             logging.error(e)
+    def check_slave(info):
+        server_id, sport, requirepass = info
+        if str(server_id) in server_ids:
+            sip = server_ids[str(server_id)]
+            if sip not in blacklist and int(sport) not in black_port:
+                try:
+                    RC = redis.StrictRedis(sip, int(sport), decode_responses=True)
+                    if requirepass:
+                        RC = redis.StrictRedis(sip, int(sport), password=requirepass, decode_responses=True)
+                except Exception as e:
+                    logging.error(e)
+                else:
+                    info = RC.info()
+                    if 'master_link_status' in info:
+                        if  info['master_link_status'] != 'up':
+                            text = ['**线上Redis同步报警:**',
+                                    "Redis:%s:%s" % (sip, sport),
+                                    "master_link_status:%s" %info['master_link_status'],
+                                    '**请及时进行处理!**']
+                            # redis异常报警
+                            key = f'op_redis_alarm_{sip}_{sport}'
+                            RC.incr(key,1)
+                            if int(RC.get(key)) >2:
+                                token = ops_token
+                                if int(sport) in (8379, 6387, 17379):
+                                    token = redis_token
+                                tools.dingding_msg(text, token=token)
+                                RC.expire(key,360)
     try:
-        #主redis写入数据
-        for Master in set(Masters):
-            server_id, port, requirepass = Master
-            try:
-                mip = server_ids[str(server_id)]
-            except:
-                continue
-            try:
-                RC = redis.StrictRedis(mip, int(port), decode_responses=True)
-                if requirepass:
-                    RC = redis.StrictRedis(mip, int(port), password=requirepass, decode_responses=True)
-            except:
-                continue
-            else:
-                RC.set(Key, tm)
-                RC.expire(Key, 360)
-                redis_m.append((int(server_id),int(port)))
-        def check_slave(info):
-            #检查从reids是否同步
-            server_id,port = info
-            if int(port) not in [10080]:
-                #获取从redis端口列表
-                slave_ports = db_redis.query.with_entities(distinct(db_redis.port)).filter(and_(db_redis.Master_Host==server_id,db_redis.Master_Port==port)).all()
-                if slave_ports:
-                    slave_ports = [int(sport[0]) for sport in slave_ports]
-                    for slave_port in slave_ports:
-                        #获取从redis信息
-                        redis_lists = db_redis.query.with_entities(db_redis.server_id,db_redis.port,db_redis.requirepass).filter(and_(db_redis.slave=='是',db_redis.port==slave_port)).all()
-                        for info in redis_lists:
-                            text = None
-                            slave_lists = []
-                            server_id,sport,requirepass = info
-                            try:
-                                sip = server_ids[str(server_id)]
-                            except:
-                                continue
-                            else:
-                                try:
-                                    RC = redis.StrictRedis(sip, int(sport), decode_responses=True)
-                                    if requirepass:
-                                        RC = redis.StrictRedis(sip, int(sport), password=requirepass, decode_responses=True)
-                                except:
-                                    continue
-                                else:
-                                    #获取从redis时间戳
-                                    mvals = db_redis.query.with_entities(db_redis.Master_Host, db_redis.Master_Port).filter(and_(db_redis.server_id == server_id, db_redis.port == sport)).all()
-                                    mip,mport = mvals[0]
-                                    mip = server_ids[str(mip)]
-                                    val = RC.get(Key)
-                                    try:
-                                        RC = redis.StrictRedis(mip, int(mport), decode_responses=True)
-                                        if requirepass:
-                                            RC = redis.StrictRedis(mip, int(mport), password=requirepass,
-                                                                   decode_responses=True)
-                                    except:
-                                        continue
-                                    else:
-                                        if sip not in blacklist:
-                                            mval = RC.get(Key)
-                                            if mval and not val:
-                                                text = ['**线上Redis同步报警:**',
-                                                        "同步Redis:%s:%s 验证数据:%s"%(mip,mport,mval),
-                                                        "延时Redis:%s:%s 验证数据:%s" % (sip, sport,val),
-                                                        "数据同步异常!",
-                                                        '**请及时进行处理!**']
-                            if text:
-                                alarm_info = '%s:%s' % (server_id, sport)
-                                #判断节点redis
-                                if alarm_info in S_Masters:
-                                    vals = db_redis.query.with_entities(db_redis.server_id,db_redis.port).filter(and_(db_redis.Master_Host==server_id,db_redis.Master_Port==sport)).all()
-                                    if vals:
-                                        slave_lists.extend(['%s:%s'%val for val in vals])
-                                if alarm_info not in slave_lists:
-                                    #redis异常报警
-                                    token = ops_token
-                                    if int(sport) in (8379,6387,17379):
-                                        token = redis_token
-                                    tools.dingding_msg(text,token=token)
-        if redis_m:
-            time.sleep(60)
-            pool = ThreadPool(5)
-            pool.map(check_slave,set(redis_m))
-            pool.close()
-            pool.join()
+        last_time = datetime.datetime.now()
+        last_time = last_time - datetime.timedelta(days=3)
+        last_time = last_time.strftime('%Y-%m-%d')
+        uptime = time.strftime('%Y-%m-%d', time.localtime())
+        db_servers = db_idc.idc_servers
+        db_redis = db_idc.redis_info
+        redis_infos = db_redis.query.with_entities(db_redis.server_id, db_redis.port,
+                                                   db_redis.cluster, db_redis.last_time
+                                                   ).filter(db_redis.last_time >= last_time).all()
+        # 获取从redis列表
+        Slaves = db_redis.query.with_entities(db_redis.server_id, db_redis.port,
+                                              db_redis.requirepass).filter(
+            and_(db_redis.slave == '是', db_redis.last_time >= last_time)).all()
+        # 获取服务器信息
+        blacklist = ('172.16.70.34', '172.16.19.104', '172.16.70.48', '54.69.57.114')
+        black_port = [10080]
+        server_infos = db_servers.query.with_entities(db_servers.id, db_servers.ip,db_servers.hostname).filter(db_servers.idc_id != 1025).all()
+        server_ids = {str(infos[0]): infos[1] for infos in server_infos}
+        hosts = {str(infos[0]): infos[-1] for infos in server_infos}
+        pool = ThreadPool(10)
+        pool.map(check_online, redis_infos)
+        pool.map(check_slave, Slaves)
+        pool.close()
+        pool.join()
     finally:
         db_idc.DB.session.remove()
-        loging.write("%s complete !" % Redis_alarm.__name__)
+        loging.write("%s complete !" %Redis_alarm_task.__name__)
 
 @tools.proce_lock()
-def rsync_comment():
+def rsync_comment_task():
     try:
         #获取服务器信息
         db_server = db_idc.idc_servers
@@ -972,3 +923,49 @@ def kafka_topic():
         logging.error(e)
     finally:
         db_idc.DB.session.remove()
+
+@tools.proce_lock(Host='172.16.68.13')
+def zabbix_network_get():
+    db_zabbix = db_idc.zabbix_info
+    zapi = ZabbixAPI(url=zabbix_url, user=zabbix_user, password=zabbix_pw)
+    dt = datetime.datetime.now()
+    now_time = time.mktime(dt.timetuple())
+    old_time = dt - datetime.timedelta(days=1)
+    old_time = time.mktime(old_time.timetuple())
+    try:
+        result = zapi.host.get(monitored_hosts=1, output='extend')
+        results = {infos['hostid']:infos['host'] for infos in result}
+        hostids = [infos['hostid'] for infos in result]
+        items = zapi.item.get(hostids=hostids, output=["hostid", "itemid"], search={"key_": 'net.if.'})
+        for item in items:
+            key = "op_zabbix_network_hostid_%s" %item["hostid"]
+            RC_CLUSTER.lpush(key,item["itemid"])
+        itemids = [info['itemid'] for info in items]
+        vals = zapi.trend.get(itemids=itemids, time_from=old_time, time_till=now_time, output=["itemid", "value_max"])
+        for val in vals:
+            key = "op_zabbix_network_itemid_%s" %val["itemid"]
+            RC_CLUSTER.lpush(key,val["value_max"])
+        for hostid in results:
+            hostname = results[hostid]
+            key = "op_zabbix_network_hostid_%s" %hostid
+            if RC_CLUSTER.exists(key):
+                max_val = []
+                for itemid in RC_CLUSTER.lrange(key,0,-1):
+                    key = "op_zabbix_network_itemid_%s" %itemid
+                    if RC_CLUSTER.exists(key):
+                        max_val.extend(RC_CLUSTER.lrange(key,0,-1))
+                if max_val:
+                   max_val = [int(val) for val in max_val]
+                   db_zabbix.query.filter(db_zabbix.hostname==hostname).update({db_zabbix.network:max(max_val)})
+                   db_idc.DB.session.commit()
+        for hostid in hostids:
+            key = "op_zabbix_network_hostid_%s" % hostid
+            RC_CLUSTER.delete(key)
+        for itemid in itemids:
+            key = "op_zabbix_network_itemid_%s" % itemid
+            RC_CLUSTER.delete(key)
+    except Exception as e:
+       logging.error(e)
+    finally:
+       zapi.user.logout()
+       db_idc.DB.session.remove()

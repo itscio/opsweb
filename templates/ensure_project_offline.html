@@ -34,7 +34,15 @@
                                 </a>
                             </td>
                             <td class="td_style" style="text-align: center">
-                                <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看或者填写工单问题备注"><i class="fas fa-edit"></i></a>
+                                {% if value[2] in ['未受理','未审核','受理中','待审批','审批通过'] %}
+                                    <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="填写工单问题备注">
+                                        <span style="color:darkgreen;font-size: large"><i class="far fa-comment-dots"></i></span>
+                                    </a>
+                                {% else %}
+                                    <a href="#" onclick="work_details_show('/work_comment/{{ value[0]|safe }}')" class="mintip" title="查看工单问题备注">
+                                        <span style="color: #0058a3;font-size: large"><i class="far fa-comment-dots"></i></span>
+                                    </a>
+                                {% endif %}
                             </td>
                             <td class="td_style" style="text-align: center">
                                 {% if value[2] == '未受理' %}

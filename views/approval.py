@@ -39,24 +39,25 @@ def apply():
             db_op.DB.session.add(v)
             db_op.DB.session.commit()
             flash('权限申请提交完成、请等待审批!')
-    except:
-        pass
-    return render_template('apply.html', form=form, ym=ym)
+        return render_template('apply.html', form=form, ym=ym)
+    except Exception as e:
+        logging.error(e)
+
 
 #权限申请审批
 @page_approval.route('/approval',methods = ['GET', 'POST'])
 @user_auth.login_required(grade=0)
 def approval():
+    tools.Async_log(g.user, request.url)
+    dt = time.strftime('%Y-%m-%d', time.localtime())
+    db_approval = db_op.user_approval
+    db_sso = db_op.user_sso
+    db_permission = db_op.permission
+    tables = ('申请人', '部门', '申请日期', '申请权限', '审批状态', '操作')
+    action = tools.http_args(request, 'action')
+    id = tools.http_args(request, 'id')
+    status = {'allow': '审批通过', 'deny': '审批拒绝'}
     try:
-        tools.Async_log(g.user, request.url)
-        dt = time.strftime('%Y-%m-%d', time.localtime())
-        db_approval = db_op.user_approval
-        db_sso = db_op.user_sso
-        db_permission = db_op.permission
-        tables = ('申请人','部门','申请日期', '申请权限', '审批状态', '操作')
-        action = tools.http_args(request,'action')
-        id = tools.http_args(request,'id')
-        status = {'allow': '审批通过', 'deny': '审批拒绝'}
         # 判断访问参数
         if action in ('allow', 'deny') and id:
             #验证操作人是否真实

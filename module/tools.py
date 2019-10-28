@@ -44,8 +44,8 @@ def Async_log(user,url):
     try:
         td = time.strftime('%Y-%m-%d', time.localtime())
         tm = time.strftime('%H:%M:%S', time.localtime())
-        url = url.replace('op_servers', 'xx.xxx.com')
-        if 'xx.xxx.com' in url and not url.endswith('/index'):
+        url = url.replace('op_xxxx', 'op.xxxx.com')
+        if 'xx.xxxx.com' in url and not url.endswith('/index'):
             ip = session['remote_ip']
             Key = 'op_http_log_%s' %td
             Redis.hset(Key,tm,[ip,user,url])

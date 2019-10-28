@@ -11,14 +11,16 @@
             });
         });
     {% endif %}
-    MsgBot.action.text({
-          delay: 800,
-          action: {
-              value: '',
-              placeholder: '填写完请按回车键!'
-          }
-        }).then(function (res) {
-            var url = '/input_work_comment/{{ work_number|safe }}/'+res.value;
-            $.ajax({url:url});
-        });
+    {% if work_stats %}
+        MsgBot.action.text({
+              delay: 800,
+              action: {
+                  value: '',
+                  placeholder: '填写完请按回车键!'
+              }
+            }).then(function (res) {
+                var url = '/input_work_comment/{{ work_number|safe }}/'+res.value;
+                $.ajax({url:url});
+            });
+    {% endif %}
 </script>

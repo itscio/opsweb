@@ -98,7 +98,7 @@ def get_project_version(project=None):
         return jsonify({'results': None})
 
 @page_ajax_api.route('/assets_info/<action>',methods = ['POST'])
-@user_auth.login_required(grade=1)
+@user_auth.login_required(grade=10)
 def assets_info(action=None):
     try:
         if action == 'update':
@@ -117,7 +117,7 @@ def assets_info(action=None):
         return abort(400)
 
 @page_ajax_api.route('/alarm_load_whitelist/<action>/<hostname>',methods = ['GET', 'POST'])
-@user_auth.login_required(grade=1)
+@user_auth.login_required(grade=10)
 def alarm_load_whitelist(hostname=None,action=None):
     result = {'status': 'error', 'infos': '确认失败!'}
     try:
@@ -174,7 +174,7 @@ def msg_id():
         return jsonify({'stats':200})
 
 @page_ajax_api.route('/modify_ops_comment', methods=['POST'])
-@user_auth.login_required(grade=1)
+@user_auth.login_required(grade=10)
 def modify_ops_comment():
     status = None
     infos = '同步备注信息失败!'
@@ -190,14 +190,14 @@ def modify_ops_comment():
         return jsonify({'status':status,'infos':infos})
 
 @page_ajax_api.route('/get_oss_version/<project>')
-@user_auth.login_required(grade=1)
+@user_auth.login_required(grade=10)
 def get_oss_version(project=None):
     versions = []
     try:
         if project:
             tt = time.strftime('%Y',time.localtime())
             auth = oss2.Auth(oss_id, oss_key)
-            bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
+            bucket = oss2.Bucket(auth, oss_url, 'xxxx')
             db_packages = db_op.k8s_packages
             packages = db_packages.query.with_entities(db_packages.package).filter(db_packages.deployment==project).all()
             if packages:
@@ -205,7 +205,7 @@ def get_oss_version(project=None):
                 for obj in oss2.ObjectIterator(bucket):
                     if obj.key.endswith('.war') or obj.key.endswith('.tar.gz') or obj.key.endswith('.jar'):
                         obj_name  = obj.key.split('/')[-1].replace('_','-')
-                        if obj_name.startswith('%s-%s'%(package_name,tt)):
+                        if obj_name.startswith('%s-%s'%(package_name,tt)) or obj_name.startswith('%s-tag-%s'%(package_name,tt)):
                             try:
                                 ver = obj_name.split(tt)[-1].split('.')[0]
                                 version = '%s%s'%(tt,ver)

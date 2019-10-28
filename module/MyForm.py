@@ -337,7 +337,7 @@ class MyFormOtherWork(Form):
 class MyFormWorkOrderReport(Form):
     input = StringField('input', validators=[DataRequired()],id='input')
     input2 = StringField('input2', validators=[DataRequired()], id='input2')
-    choices = [('ensure_application','代码上线工单'),('ensure_server_auth','机器权限工单'),('ensure_sql_execute','SQL执行工单'),('ensure_project_offline','项目下线工单'),
+    choices = [('all_order','---全部工单---'),('ensure_application','代码上线工单'),('ensure_server_auth','机器权限工单'),('ensure_sql_execute','SQL执行工单'),('ensure_project_offline','项目下线工单'),
                 ('ensure_other_work','其它事项工单')]
     titles = SelectField(choices=choices, id='titles')
     submit = SubmitField('生成报告',id='btn1')

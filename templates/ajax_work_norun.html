@@ -11,7 +11,11 @@
             {% if work_lists %}
                 {% for value in work_lists %}
                     <tr>
-                        <td class="td_style" style="text-align: center"><a href="/{{ value[2] }}?action=query&work_number={{ value[0] }}" class="mintip" title="工单操作">{{ value[0] }}</a></td>
+                        {% if value[-1] == '未审核' %}
+                            <td class="td_style" style="text-align: center"><a href="/work_review">{{ value[0] }}</a></td>
+                        {% else %}
+                            <td class="td_style" style="text-align: center"><a href="/{{ value[2] }}?action=query&work_number={{ value[0] }}">{{ value[0] }}</a></td>
+                        {% endif %}
                         <td class="td_style" style="text-align: center">{{ value[1] }}</td>
                         <td class="td_style" style="text-align: center">{{ source_types[value[2]] }}</td>
                         {% for val in value[3:] %}

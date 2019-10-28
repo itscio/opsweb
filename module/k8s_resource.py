@@ -68,7 +68,7 @@ def download_war(object,version,docker_args,run_args,redis_key):
                 Redis.lpush(redis_key, '%s package download from oss ......' %package)
                 _flow_log('%s package download from oss ......' %package)
                 auth = oss2.Auth(oss_id, oss_key)
-                bucket = oss2.Bucket(auth, oss_url, 'xxxxops')
+                bucket = oss2.Bucket(auth, oss_url, 'xxxx')
                 oss_project_path = None
                 try:
                     if not os.path.exists('%s/%s' %(dockerfile_path,dm_name)):
@@ -126,7 +126,7 @@ def download_war(object,version,docker_args,run_args,redis_key):
                     for line in ("COPY ./run.sh /opt/",
                                  "RUN chmod +x /opt/run.sh",
                                  "ENV  LC_ALL en_US.UTF-8",
-                                 "CMD /opt/run.sh"):
+                                 "CMD  /opt/run.sh"):
                         f.write('%s\n' % line)
                         #生成docker_run启动脚本文件
                 if run_args:
@@ -306,6 +306,31 @@ class k8s_object(object):
         secrets = client.V1LocalObjectReference('registrysecret')
         preference_key = self.dm_name
         project_values = ['xxxx']
+        host_aliases = []
+        db_docker_hosts = db_op.docker_hosts
+        values = db_docker_hosts.query.with_entities(db_docker_hosts.ip,db_docker_hosts.hostname).filter(and_(
+            db_docker_hosts.deployment==self.dm_name,db_docker_hosts.context==self.context)).all()
+        db_op.DB.session.remove()
+        if values:
+            ips = []
+            for value in values:
+                try:
+                    ip,hostname = value
+                    key = "op_docker_hosts_%s" %ip
+                    Redis.lpush(key,hostname)
+                    ips.append(ip)
+                except Exception as e:
+                    logging.error(e)
+            for ip in set(ips):
+                try:
+                    key = "op_docker_hosts_%s" % ip
+                    if Redis.exists(key):
+                        hostnames = Redis.lrange(key,0,-1)
+                        if hostnames:
+                            host_aliases.append(client.V1HostAlias(hostnames=hostnames,ip=ip))
+                    Redis.delete(key)
+                except Exception as e:
+                    logging.error(e)
         if self.labels:
             if 'deploy' in self.labels:
                 preference_key = self.labels['deploy']
@@ -316,6 +341,7 @@ class k8s_object(object):
             spec=client.V1PodSpec(containers=containers,
               image_pull_secrets=[secrets],
               volumes=volumes,
+              host_aliases = host_aliases,
               affinity=client.V1Affinity(
                   node_affinity=client.V1NodeAffinity(
                       preferred_during_scheduling_ignored_during_execution = [
@@ -507,18 +533,26 @@ def check_pod(context,dm_name,replicas,old_pods,redis_key):
 def delete_pod(context,dm_name):
     try:
         namespace = "default"
-        config.load_kube_config(config_file,context)
-        api_instance = client.CoreV1Api()
-        ret = api_instance.list_namespaced_pod(namespace=namespace)
-        for i in ret.items:
-            if i.metadata.name.startswith(dm_name):
-                api_instance.delete_namespaced_pod(name=i.metadata.name,
-                                                   namespace=namespace,
-                                                   body=client.V1DeleteOptions())
+        if dm_name:
+            config.load_kube_config(config_file,context)
+            api_instance = client.CoreV1Api()
+            ret = api_instance.list_namespaced_pod(namespace=namespace)
+            for i in ret.items:
+                if '-'.join(i.metadata.name.split('-')[:-2]) in dm_name:
+                    api_instance.delete_namespaced_pod(name=i.metadata.name,
+                                                       namespace=namespace,
+                                                       body=client.V1DeleteOptions())
         return True
     except Exception as e:
         logging.error(e)
         return False
+
+def api_delete_pod(args):
+    try:
+        context, dm_name = args
+        delete_pod(context, dm_name)
+    except Exception as e:
+        logging.error(e)
 
 def object_deploy(args):
     try:
