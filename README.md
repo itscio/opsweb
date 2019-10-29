@@ -94,19 +94,19 @@
     - 通过分布式全局锁,进程锁,实现多机多进程部署后台单任务运行
     — 新增工单系统、工单统计报表功能    
 # 界面展示
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/01.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/01.jpg)
 # 资产管理
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/02.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/02.jpg)
 # K8s管理
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/6.jpg)
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/7.jpg)
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/03.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/6.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/7.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/03.jpg)
 # 工单系统
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/4.jpg)
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/5.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/4.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/5.jpg)
 # 日志分析及监控报警
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/8.jpg)
-![show](https://raw.githubusercontent.com/wylok/sparrow/master/static/images/9.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/8.jpg)
+![show](https://github.com/wylok/opsweb/blob/master/static/images/9.jpg)
 # 问题解答： #
     - 关于sql配置文件格式问题，请参考下面示例：
       SQLALCHEMY_BINDS = {'库名': 'mysql://用户名:密码@IP地址:端口/库名?charset=utf8'}
