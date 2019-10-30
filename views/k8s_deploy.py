@@ -248,7 +248,7 @@ def ingress_apply():
             else:
                 # 从数据库读取ingress信息
                 Rules = []
-                domain_infos = db_ingress.query.with_entities(distinct(db_ingress.domain)).all()
+                domain_infos = db_ingress.query.with_entities(distinct(db_ingress.domain)).filter(db_ingress.context==context).all()
                 domain_infos = [ domain[0] for domain in domain_infos]
                 for domain in domain_infos:
                     paths = []
@@ -268,15 +268,16 @@ def ingress_apply():
                                                                http=client.V1beta1HTTPIngressRuleValue(
                                                                    paths=paths)))
                     else:
-                        path, serviceName, servicePort = Rules_infos[0]
-                        Rules.append(client.V1beta1IngressRule(host=domain,
-                                                               http=client.V1beta1HTTPIngressRuleValue(
-                                                                   paths=[client.V1beta1HTTPIngressPath(
-                                                                       client.V1beta1IngressBackend(
-                                                                           service_name=serviceName,
-                                                                           service_port=int(servicePort)
-                                                                       ))])
-                                                               ))
+                        if Rules_infos:
+                            path, serviceName, servicePort = Rules_infos[0]
+                            Rules.append(client.V1beta1IngressRule(host=domain,
+                                                                   http=client.V1beta1HTTPIngressRuleValue(
+                                                                       paths=[client.V1beta1HTTPIngressPath(
+                                                                           client.V1beta1IngressBackend(
+                                                                               service_name=serviceName,
+                                                                               service_port=int(servicePort)
+                                                                           ))])
+                                                                   ))
                 spec = client.V1beta1IngressSpec(rules=Rules)
                 ingress = client.V1beta1Ingress(
                     api_version='extensions/v1beta1',
