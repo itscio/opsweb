@@ -414,11 +414,13 @@ def assets():
 @page_Assets.route('/assets_deploy/business/<busi>/<idc>')
 @user_auth.login_required(grade=1)
 def assets_deploy(room=None,busi=None,idc=None):
-    CONFS = defaultdict
-    INFOS = defaultdict
-    BUSIS = defaultdict
-    busi_vals = defaultdict
-    idc_vals = defaultdict
+    vals = []
+    IDCS = defaultdict()
+    CONFS = defaultdict()
+    INFOS = defaultdict()
+    BUSIS = defaultdict()
+    busi_vals = defaultdict()
+    idc_vals = defaultdict()
     db_dic_id = db_idc.idc_id
     db_server = db_idc.idc_servers
     db_third = db_idc.third_resource
@@ -459,12 +461,12 @@ def assets_deploy(room=None,busi=None,idc=None):
                                                      db_server.host_type, db_server.cpu_core, db_server.mem).filter(db_server.ip.in_(tuple(self_ips + third_ips))).all()
             except Exception as e:
                 logging.error(e)
+        CONFS = {val[0]: val[3:] for val in vals}
+        INFOS = {val[0]: [] for val in vals}
+        BUSIS = {val[0]: [] for val in vals}
+        hostnames = {val[1]: val[0] for val in vals}
+        ips = tuple([val[1] for val in vals])
         try:
-            CONFS = {val[0]:val[3:] for val in vals}
-            INFOS = {val[0]:[] for val in vals}
-            BUSIS = {val[0]: [] for val in vals}
-            hostnames = {val[1]:val[0] for val in vals}
-            ips = tuple([val[1] for val in vals])
             if room:
                 #获取业务信息
                 busi_vals = db_busi.query.with_entities(db_busi.id,db_busi.business).all()

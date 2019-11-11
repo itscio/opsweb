@@ -10,7 +10,7 @@ import time
 import redis
 from sqlalchemy import and_,desc
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask
+from flask import Flask,g
 from sqlalchemy import distinct
 app = Flask(__name__)
 DB = SQLAlchemy(app)
@@ -68,7 +68,7 @@ def download_war(object,version,docker_args,run_args,redis_key):
                 Redis.lpush(redis_key, '%s package download from oss ......' %package)
                 _flow_log('%s package download from oss ......' %package)
                 auth = oss2.Auth(oss_id, oss_key)
-                bucket = oss2.Bucket(auth, oss_url, 'xxxx')
+                bucket = oss2.Bucket(auth, oss_url, 'ops')
                 oss_project_path = None
                 try:
                     if not os.path.exists('%s/%s' %(dockerfile_path,dm_name)):
@@ -305,7 +305,7 @@ class k8s_object(object):
         # Create and configurate a spec section
         secrets = client.V1LocalObjectReference('registrysecret')
         preference_key = self.dm_name
-        project_values = ['xxxx']
+        project_values = ['']
         host_aliases = []
         db_docker_hosts = db_op.docker_hosts
         values = db_docker_hosts.query.with_entities(db_docker_hosts.ip,db_docker_hosts.hostname).filter(and_(
@@ -406,14 +406,14 @@ class k8s_object(object):
             # 从数据库读取ingress信息
             api_instance = client.ExtensionsV1beta1Api()
             Rules = []
-            domain_infos = db_ingress.query.with_entities(distinct(db_ingress.domain)).all()
+            domain_infos = db_ingress.query.with_entities(distinct(db_ingress.domain)).filter(db_ingress.context==self.context).all()
             domain_infos = [domain[0] for domain in domain_infos]
             for domain in domain_infos:
                 paths = []
                 Rules_infos = db_ingress.query.with_entities(db_ingress.path,
                                                              db_ingress.serviceName, db_ingress.servicePort
                                                              ).filter(and_(db_ingress.domain == domain,
-                                                                           db_ingress.context == context)).all()
+                                                                           db_ingress.context == self.context)).all()
                 for infos in Rules_infos:
                     path, serviceName, servicePort = infos
                     if path:
@@ -426,15 +426,16 @@ class k8s_object(object):
                                                            http=client.V1beta1HTTPIngressRuleValue(
                                                                paths=paths)))
                 else:
-                    path, serviceName, servicePort = Rules_infos[0]
-                    Rules.append(client.V1beta1IngressRule(host=domain,
-                                                           http=client.V1beta1HTTPIngressRuleValue(
-                                                               paths=[client.V1beta1HTTPIngressPath(
-                                                                   client.V1beta1IngressBackend(
-                                                                       service_name=serviceName,
-                                                                       service_port=int(servicePort)
-                                                                   ))])
-                                                           ))
+                    if Rules_infos:
+                        path, serviceName, servicePort = Rules_infos[0]
+                        Rules.append(client.V1beta1IngressRule(host=domain,
+                                                               http=client.V1beta1HTTPIngressRuleValue(
+                                                                   paths=[client.V1beta1HTTPIngressPath(
+                                                                       client.V1beta1IngressBackend(
+                                                                           service_name=serviceName,
+                                                                           service_port=int(servicePort)
+                                                                       ))])
+                                                               ))
             spec = client.V1beta1IngressSpec(rules=Rules)
             ingress = client.V1beta1Ingress(
                 api_version='extensions/v1beta1',
@@ -558,7 +559,7 @@ def object_deploy(args):
     try:
         namespace = "default"
         (context,project, object, version, image, docker_args,run_args, container_port, ingress_port, replicas,
-     domain, re_requests, mounts,labels,healthcheck, sidecar, re_limits, redis_key) = args
+     domain, re_requests, mounts,labels,healthcheck, sidecar, re_limits, redis_key,user) = args
     except Exception as e:
         logging.error(e)
     else:
@@ -635,7 +636,8 @@ def object_deploy(args):
                                                re_limits=str(re_limits).replace("'",'"'), action='create',
                                                healthcheck=healthcheck,
                                                update_date=time.strftime('%Y-%m-%d', time.localtime()),
-                                               update_time=time.strftime('%H:%M:%S', time.localtime()))
+                                               update_time=time.strftime('%H:%M:%S', time.localtime()),
+                                               user=user)
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                     #记录docker启动参数
@@ -679,7 +681,7 @@ def object_update(args):
         text = None
         labels = None
         allcontexts = []
-        context,new_image,version,rollback,redis_key,channel = args
+        context,new_image,version,rollback,redis_key,channel,user = args
         dm_name = new_image.split('/')[-1].split(':')[0]
         # 获取已部署镜像部署信息
         values = db_k8s.query.with_entities(db_k8s.project, db_k8s.container_port, db_k8s.image, db_k8s.war,
@@ -754,7 +756,8 @@ def object_update(args):
                                                re_limits=str(re_limits).replace("'", '"'), action=action,
                                                healthcheck=healthcheck,
                                                update_date=time.strftime('%Y-%m-%d', time.localtime()),
-                                               update_time=time.strftime('%H:%M:%S', time.localtime()))
+                                               update_time=time.strftime('%H:%M:%S', time.localtime()),
+                                               user=user)
                                     db_op.DB.session.add(v)
                                     db_op.DB.session.commit()
                                     if rollback:

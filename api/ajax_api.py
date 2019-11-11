@@ -197,7 +197,7 @@ def get_oss_version(project=None):
         if project:
             tt = time.strftime('%Y',time.localtime())
             auth = oss2.Auth(oss_id, oss_key)
-            bucket = oss2.Bucket(auth, oss_url, 'xxxx')
+            bucket = oss2.Bucket(auth, oss_url, 'ops')
             db_packages = db_op.k8s_packages
             packages = db_packages.query.with_entities(db_packages.package).filter(db_packages.deployment==project).all()
             if packages:
@@ -205,7 +205,9 @@ def get_oss_version(project=None):
                 for obj in oss2.ObjectIterator(bucket):
                     if obj.key.endswith('.war') or obj.key.endswith('.tar.gz') or obj.key.endswith('.jar'):
                         obj_name  = obj.key.split('/')[-1].replace('_','-')
-                        if obj_name.startswith('%s-%s'%(package_name,tt)) or obj_name.startswith('%s-tag-%s'%(package_name,tt)):
+                        project_name = project.replace('_','-')
+                        if obj_name.startswith('%s-%s'%(package_name,tt)) or obj_name.startswith('%s-tag-%s'%(package_name,tt)) \
+                                or obj_name.startswith('%s-%s'%(project_name,tt)):
                             try:
                                 ver = obj_name.split(tt)[-1].split('.')[0]
                                 version = '%s%s'%(tt,ver)

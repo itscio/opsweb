@@ -1809,14 +1809,17 @@ def zabbix_counts_task():
     now_time = datetime.datetime.now()
     dd = now_time - datetime.timedelta(days=3)
     dd = dd.strftime('%Y-%m-%dT%H:%M:%SZ')
+    db_zabbix = db_idc.zabbix_info
     Influx_cli = InfluxDBClient(influxdb_host, influxdb_port, influxdb_user, influxdb_pw, 'zabbix_infos')
     try:
-        cmd = "select mean(*) from server_infos where time >='%s' group by hostname" % dd
+        hostnames = db_zabbix.query.with_entities(db_zabbix.hostname).filter(db_zabbix.network<=30000).all()
+        hostnames = [host[0] for host in hostnames if host]
+        cmd = f"select mean(*) from server_infos where time >='{dd}' group by hostname"
         results = Influx_cli.query(cmd)
         if results:
             for key in results.keys():
                 hostname = key[-1]['hostname']
-                if not hostname.startswith('nj'):
+                if not hostname.startswith('nj') and hostname in hostnames:
                     for infos in results[key]:
                         try:
                             if infos['mean_cpu_load'] >= 0:
@@ -1829,6 +1832,8 @@ def zabbix_counts_task():
                             continue
     except Exception as e:
         logging.error(e)
+    finally:
+        db_idc.DB.session.remove()
     try:
         if max_load:
             loads = sorted(max_load.items(), key=lambda item: int(item[1]), reverse=True)
@@ -1844,7 +1849,7 @@ def zabbix_counts_task():
             openfiles = sorted(max_openfile.items(), key=lambda item: int(item[1]), reverse=True)
             RC_CLUSTER.set('op_zabbix_server_openfile_top', openfiles[:20])
             max_openfiles = sorted(max_openfile.items(), key=lambda item: int(item[1]), reverse=True)
-            free_openfile = [info[0] for info in max_openfiles if int(info[-1]) <= 700]
+            free_openfile = [info[0] for info in max_openfiles if int(info[-1]) <= 900]
         if free_load and free_mem and free_openfile:
             RC_CLUSTER.set('op_zabbix_free_servers',set(free_load)&set(free_mem)&set(free_openfile))
         for key in ('op_zabbix_server_load_top','op_zabbix_server_mem_top','op_zabbix_server_openfile_top','op_zabbix_free_servers'):

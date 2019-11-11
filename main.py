@@ -15,7 +15,6 @@ from views import Assets,business,approval
 from views import work_order
 from operation import examine,assets_manage,resource_pool
 from module import tools,user_auth,produce
-from mobiles import mobile
 from flask_debugtoolbar import DebugToolbarExtension
 import conf
 class MyFlask(Flask):
@@ -36,7 +35,6 @@ app.debug = False
 task_run = produce.SchedulerBackgroud()
 toolbar = DebugToolbarExtension(app)
 ssl._create_default_https_context = ssl._create_unverified_context
-app.register_blueprint(mobile.page_mobile)
 app.register_blueprint(Assets.page_Assets)
 app.register_blueprint(assets_manage.page_assets_manage)
 app.register_blueprint(publish.page_publish)

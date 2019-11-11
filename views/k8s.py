@@ -12,7 +12,6 @@ from functools import reduce
 from pyecharts import Line
 from importlib import reload
 from sqlalchemy import desc,and_
-from dateutil.tz import tzutc
 app = Flask(__name__)
 DB = SQLAlchemy(app)
 app.config.from_pyfile('../conf/redis.conf')
@@ -319,14 +318,20 @@ def nodes(context=None):
                                                                                              'beta.kubernetes.io/os',
                                                                                              'kubernetes.io/hostname',
                                                                                              'node-role.kubernetes.io/master')}
+            storage = None
+            if 'ephemeral-storage' in i.status.allocatable:
+                storage = '%iG' %round(int(i.status.allocatable['ephemeral-storage'])/1024/1024/1024)
+            memory = None
+            if 'memory' in i.status.allocatable:
+                memory = '%iG' %round(int(i.status.allocatable['memory'].split('Ki')[0])/1024/1024)
             NODES[i.metadata.name] = {
                 'node_type':node_type,
                 'flannel':flannel,
                 'cpu':i.status.allocatable['cpu'],
                 'cpu_load':'{0}%'.format(cpu_load),
-                'memory':i.status.allocatable['memory'],
+                'memory':memory,
                 'mem_used':'{0}%'.format(mem_used),
-                'storage':i.status.allocatable['ephemeral-storage'],
+                'storage':storage,
                 'lables': labels,
                 'version':i.status.node_info.kubelet_version,
                 'status':i.status.conditions[-1].type
@@ -358,7 +363,7 @@ def endpoints():
                         for info in infos.addresses:
                             try:
                                 ip_header = '.'.join(str(info.ip).split('.')[:2])
-                                if '{}.'.format(ip_header) in ('172.16.','10.10.'):
+                                if '{}.'.format(ip_header) in ('',''):
                                     if tcpping(host=info.ip, port=infos.ports[0].port, timeout=3):
                                         Infos.append([info.ip,True])
                                     else:
@@ -384,6 +389,35 @@ def events():
         db_events.context==g.context).order_by(
         desc(db_events.date_time)).limit(500).all()
     return render_template('k8s_events.html',events=events,tables=tables)
+
+@page_k8s.route('/k8s/pv')
+def pv():
+    tables=('pv_name','storage','access_modes','server','path','pv_claim','status')
+    v1 = client.CoreV1Api()
+    ret = v1.list_persistent_volume()
+    pvs = defaultdict()
+    for i in ret.items:
+        val = []
+        try:
+            val.append(i.spec.capacity['storage'])
+            val.append(i.spec.access_modes[0])
+            if i.spec.glusterfs:
+                val.append(i.spec.glusterfs.endpoints)
+                val.append(i.spec.glusterfs.path)
+            if i.spec.nfs:
+                val.append(i.spec.nfs.server)
+                val.append(i.spec.nfs.path)
+            if i.spec.claim_ref:
+                val.append(i.spec.claim_ref.name)
+            else:
+                val.append(None)
+            val.append(i.status.phase)
+        except Exception as e:
+            logging.error(e)
+        else:
+            if val:
+                pvs[i.metadata.name] = val
+    return render_template('k8s_pv.html', pvs=pvs, tables=tables)
 
 @page_k8s.before_request
 @user_auth.login_required(grade=1)

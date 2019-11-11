@@ -91,7 +91,7 @@ def deployment_create():
             if object and version  and replicas:
                 if object.endswith('.war') or object.endswith('.tar.gz') or object.endswith('.jar'):
                     dm_name = object.split('.')[0]
-                    image = "%s/%s:%s" %(docker_registry[context],dm_name,version)
+                    image = "%s/%s/%s:%s" %(docker_registry[context],context,dm_name,version)
                     docker_file = "%s/%s" %(dockerfile_path,dm_name)
                     if not os.path.exists(docker_file):
                         os.makedirs(docker_file)
@@ -112,7 +112,7 @@ def deployment_create():
                                                                                      ingress_port,replicas,
                                                                                      domain,re_requests,mounts,labels,
                                                                                      healthcheck,sidecar,re_limits,
-                                                                                     redis_key])
+                                                                                     redis_key,g.user])
                     Scheduler.start()
                     return render_template('deploy_show.html',redis_key=redis_key)
                 else:
@@ -140,7 +140,7 @@ def image_update():
             context = form.contexts.data
             action = form.action.data
             if version:
-                image = "%s/%s:%s" % (docker_registry[context], deployment, version)
+                image = "%s/%s/%s:%s" % (docker_registry[context],context, deployment, version)
                 if action =='rollback':
                     rollback = True
                     val = db_deploy.query.filter(db_deploy.image==image).all()
@@ -149,7 +149,7 @@ def image_update():
                         return render_template('Message.html')
                 redis_key = 'op_k8s_update_%s' % time.strftime('%Y%m%d%H%M%S', time.localtime())
                 Scheduler = produce.SchedulerPublish()
-                Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [context,image,version,rollback,redis_key,'web'])
+                Scheduler = Scheduler.Scheduler_mem(k8s_resource.object_update, [context,image,version,rollback,redis_key,'web',g.user])
                 Scheduler.start()
                 return render_template('deploy_show.html',redis_key=redis_key)
     except Exception as e:

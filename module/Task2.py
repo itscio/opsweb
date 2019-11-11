@@ -235,7 +235,7 @@ def redis_info_task():
                                     try:
                                         result = results['stdout'][0].split()[-1]
                                         if '/' in result:
-                                            conf_file = "/xxxx/xxxx/xxxx/redis/etc/{}".format(result.split('/')[-1])
+                                            conf_file = "/usr/local/redis/etc/{}".format(result.split('/')[-1])
                                         if not conf_file.endswith('.conf'):
                                             cmd = "lsof -p {}|grep 'cwd'".format(pid)
                                             cwd = Ssh.Run(cmd)
@@ -376,45 +376,46 @@ def redis_info_task():
 def k8s_check_task():
     loging.write("start %s ......" % k8s_check_task.__name__)
     for context in contexts:
-        config.load_kube_config(config_file, context=context)
-        # nodes健康检测
-        v1 = client.CoreV1Api()
-        try:
-            ret = v1.list_node(watch=False)
-            for i in ret.items:
-                if 'node-role.kubernetes.io/master' in i.metadata.labels:
-                    node_type = 'master'
-                else:
-                    node_type = 'node'
-                status = i.status.conditions[-1].type
-                if status != 'Ready':
-                    text = ['**容器平台NODE报警:%s**' % i.metadata.name,'k8s集群:%s' %context,'节点类型:%s' %node_type,'节点状态:%s' %status,'需及时处理!']
-                    tools.dingding_msg(text,token=ops_token)
-        except Exception as e:
-            logging.error(e)
-        # endpoints健康检测
-        try:
-            ret = v1.list_namespaced_endpoints('default')
-            for i in ret.items:
-                try:
-                    for infos in i.subsets:
-                        try:
-                            for info in infos.addresses:
-                                try:
-                                    ip_header = '.'.join(str(info.ip).split('.')[:2])
-                                    if '{}.'.format(ip_header) in ('172.16.', '10.10.'):
-                                        if not tcpping(host=info.ip, port=infos.ports[0].port, timeout=5):
-                                            text = ['**容器平台endpoints报警:**','k8s集群:%s' %context, 'IP:%s' % info.ip,
-                                                    '服务端口:%s' % infos.ports[0].port, '服务端口不可用,需及时处理!']
-                                            tools.dingding_msg(text)
-                                except:
-                                    continue
-                        except:
-                            continue
-                except:
-                    continue
-        except Exception as e:
-            logging.error(e)
+        if context:
+            config.load_kube_config(config_file, context=context)
+            # nodes健康检测
+            v1 = client.CoreV1Api()
+            try:
+                ret = v1.list_node(watch=False)
+                for i in ret.items:
+                    if 'node-role.kubernetes.io/master' in i.metadata.labels:
+                        node_type = 'master'
+                    else:
+                        node_type = 'node'
+                    status = i.status.conditions[-1].type
+                    if status != 'Ready':
+                        text = ['**容器平台NODE报警:%s**' % i.metadata.name,'k8s集群:%s' %context,'节点类型:%s' %node_type,'节点状态:%s' %status,'需及时处理!']
+                        tools.dingding_msg(text,token=ops_token)
+            except Exception as e:
+                logging.error(e)
+            # endpoints健康检测
+            try:
+                ret = v1.list_namespaced_endpoints('default')
+                for i in ret.items:
+                    try:
+                        for infos in i.subsets:
+                            try:
+                                for info in infos.addresses:
+                                    try:
+                                        ip_header = '.'.join(str(info.ip).split('.')[:2])
+                                        if '{}.'.format(ip_header) in ('', ''):
+                                            if not tcpping(host=info.ip, port=infos.ports[0].port, timeout=5):
+                                                text = ['**容器平台endpoints报警:**','k8s集群:%s' %context, 'IP:%s' % info.ip,
+                                                        '服务端口:%s' % infos.ports[0].port, '服务端口不可用,需及时处理!']
+                                                tools.dingding_msg(text)
+                                    except:
+                                        continue
+                            except:
+                                continue
+                    except:
+                        continue
+            except Exception as e:
+                logging.error(e)
         # 获取k8s的hpa副本数量
         try:
             td = time.strftime('%Y-%m-%d', time.localtime())
@@ -493,7 +494,7 @@ def alarm_load_task():
             host,ssh_port,hostname,update_time=infos
             if time.strftime('%Y-%m-%d',time.localtime()) in update_time:
                 try:
-                    if not host.startswith('172.16.19.'):
+                    if not host.startswith(''):
                         now_time = datetime.datetime.now()
                         dt = now_time - datetime.timedelta(minutes=10)
                         dt = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -532,7 +533,7 @@ def alarm_load_task():
 
                                     if results[-1].endswith('-rpc.jar'):
                                         pro_jar = results[-1]
-                                        if pro_jar in ['xxxx.jar']:
+                                        if pro_jar in ['']:
                                             Project =pro_jar.split('.')[0]
                                     else:
                                         for line in results:
@@ -794,6 +795,7 @@ def Redis_alarm_task():
         server_id, sport, requirepass = info
         if str(server_id) in server_ids:
             sip = server_ids[str(server_id)]
+            hostname = hosts[str(server_id)]
             if sip not in blacklist and int(sport) not in black_port:
                 try:
                     RC = redis.StrictRedis(sip, int(sport), decode_responses=True)
@@ -802,15 +804,18 @@ def Redis_alarm_task():
                 except Exception as e:
                     logging.error(e)
                 else:
+                    del_key = "yw_check_master_slave"
+                    if RC.exists(del_key):
+                        RC.delete(del_key)
                     info = RC.info()
                     if 'master_link_status' in info:
                         if  info['master_link_status'] != 'up':
                             text = ['**线上Redis同步报警:**',
-                                    "Redis:%s:%s" % (sip, sport),
+                                    "Redis:%s:%s" % (hostname, sport),
                                     "master_link_status:%s" %info['master_link_status'],
                                     '**请及时进行处理!**']
                             # redis异常报警
-                            key = f'op_redis_alarm_{sip}_{sport}'
+                            key = f'op_redis_alarm_{hostname}_{sport}'
                             RC.incr(key,1)
                             if int(RC.get(key)) >2:
                                 token = ops_token
@@ -833,7 +838,7 @@ def Redis_alarm_task():
                                               db_redis.requirepass).filter(
             and_(db_redis.slave == '是', db_redis.last_time >= last_time)).all()
         # 获取服务器信息
-        blacklist = ('54.69.57.114')
+        blacklist = ('', '', '', '')
         black_port = [10080]
         server_infos = db_servers.query.with_entities(db_servers.id, db_servers.ip,db_servers.hostname).filter(db_servers.idc_id != 1025).all()
         server_ids = {str(infos[0]): infos[1] for infos in server_infos}

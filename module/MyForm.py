@@ -316,6 +316,7 @@ class MyFormOtherWork(Form):
     text = TextAreaField(validators=[DataRequired()],id='text')
     choices = [('OPS开通申请', 'OPS开通申请'),
                ('VPN开通申请', 'VPN开通申请'),
+               ('后台权限申请', '后台权限申请'),
                ('大数据相关申请','大数据相关申请'),
                ('权限相关申请','权限相关申请'),
                 ('新项目部署申请', '新项目部署申请'),

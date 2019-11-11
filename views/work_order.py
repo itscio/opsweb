@@ -326,9 +326,9 @@ def application():
                                     #上传至oss
                                     try:
                                         auth = oss2.Auth(oss_id, oss_key)
-                                        bucket = oss2.Bucket(auth, oss_url, 'xxxx')
+                                        bucket = oss2.Bucket(auth, oss_url, 'ops')
                                         bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                        sql_url = 'https://xxxx.oss-cn-beijing.aliyuncs.com/xxxx/{}'.format(File.filename)
+                                        sql_url = 'https://ops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
                                     except:
                                         raise Msg.extend(('error', '文件上传oss失败!'))
                                 else:
@@ -609,9 +609,9 @@ def sql_execute():
                                 try:
                                     #上传至oss
                                     auth = oss2.Auth(oss_id, oss_key)
-                                    bucket = oss2.Bucket(auth, oss_url, 'xxxx')
+                                    bucket = oss2.Bucket(auth, oss_url, 'ops')
                                     bucket.put_object_from_file('op_download/%s' %File.filename,file_path)
-                                    sql_url = 'https://xxxx.oss-cn-beijing.aliyuncs.com/xxxx/{}'.format(File.filename)
+                                    sql_url = 'https://ops.oss-cn-beijing.aliyuncs.com/op_download/{}'.format(File.filename)
                                 except:
                                     raise Msg.extend(('error', '文件上传oss失败!'))
                             else:
@@ -812,13 +812,13 @@ def other_work():
     form = MyForm.MyFormOtherWork()
     db_other_work = db_op.other_work
     db_work_order = db_op.work_order
+    db_sso = db_op.user_sso
     Msg = []
     source = 'ensure_other_work'
     receiver = app.config.get('DEFAULT_RECEIVER')
     review_url = '<p>审核地址:<a href="https://{0}/work_review">https://{0}/work_review</a></p>'.format(request.host)
     try:
         if form.submit.data:
-            db_sso = db_op.user_sso
             op_mails = db_sso.query.with_entities(db_sso.mail).filter(db_sso.grade.like('1%')).all()
             op_mails = [mails[0] for mails in op_mails]
             op_mails.append(server_auth_leader)
@@ -827,6 +827,8 @@ def other_work():
             title = form.titles.data
             leader = form.input.data
             assign = form.assign.data
+            if assign != 'default':
+                receiver = assign
             if '@' not in leader:
                 raise Msg.extend(('error', '邮箱格式错误!'))
             if not check_mail(leader):
@@ -873,11 +875,15 @@ def other_work():
                     db_op.DB.session.add(c)
                     db_op.DB.session.commit()
                     # 记录任务流水状态
+                    dingid = ''
+                    if assign != 'default':
+                        dingid = db_sso.query.with_entities(db_sso.dingunionid).filter(db_sso.mail==receiver).all()
+                        dingid = dingid[0][0]
                     c = db_work_order(date=td,work_number=work_number, source=source,applicant=g.dingId,reviewer =leader,
-                                      approval='',dingid='',status='未审核')
-                    if 'VPN' in title:
+                                      approval='',dingid=dingid,status='未审核')
+                    if 'VPN' in title or '后台' in title:
                         c = db_work_order(date=td, work_number=work_number, source=source, applicant=g.dingId,
-                                          reviewer='',approval=server_auth_leader,dingid='',status='待审批')
+                                          reviewer='',approval=server_auth_leader,dingid=dingid,status='待审批')
                     db_op.DB.session.add(c)
                     db_op.DB.session.commit()
                 except Exception as e:
@@ -885,14 +891,12 @@ def other_work():
                     logging.error(e)
                 else:
                     try:
-                        if assign != 'default':
-                            receiver = assign
                         #记录受理人邮箱
                         Redis.set('op_other_work_receiver_%s' % work_number, receiver)
                         msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver,leader],
                                       cc=[g.mail],charset='utf-8')
                         msg.html = '%s%s%s' % (mail_html, '<p style="color:red">审核人审核后自动邮件通知</p>', review_url)
-                        if 'VPN' in title:
+                        if 'VPN' in title or '后台' in title:
                             msg = Message("运维其它事项申请工单", sender=sender, recipients=[receiver],
                                           cc=[g.mail], charset='utf-8')
                             msg.html = '%s%s' % (mail_html, '<p style="color:red">审核人审批后自动邮件通知</p>')

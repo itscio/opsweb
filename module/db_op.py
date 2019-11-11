@@ -272,8 +272,9 @@ class k8s_deploy(DB.Model):
     action = DB.Column(DB.String(45))
     update_date = DB.Column(DB.String(45))
     update_time = DB.Column(DB.String(45))
+    user = DB.Column(DB.String(45))
     def __init__(self,project,context,deployment,image,war,container_port,replicas,re_requests,re_limits,
-                 healthcheck,action,update_date,update_time):
+                 healthcheck,action,update_date,update_time,user):
         self.project = project
         self.context = context
         self.deployment = deployment
@@ -287,10 +288,11 @@ class k8s_deploy(DB.Model):
         self.healthcheck = healthcheck
         self.update_date = update_date
         self.update_time = update_time
+        self.user = user
     def __repr__(self):
         values=(self.project,self.context,self.deployment,self.image,self.war,self.container_port,self.replicas,self.re_requests,self.re_limits,
-                self.healthcheck,self.action,self.update_date,self.update_time)
-        return '%s,%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s,%s'%values
+                self.healthcheck,self.action,self.update_date,self.update_time,self.user)
+        return '%s,%s,%s,%s,%s,%i,%i,%s,%s,%s,%s,%s,%s,%s'%values
 
 class docker_run(DB.Model):
     __tablename__ = 'docker_run'

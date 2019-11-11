@@ -73,7 +73,7 @@ class SchedulerPublish(object):
         self.executors = {'default': ThreadPoolExecutor(10), 'processpool': ProcessPoolExecutor(5)}
         self.job_defaults = {'coalesce': False, 'max_instances': 1}
         self.scheduler.configure(timezone=pytz.timezone('Asia/Shanghai'),job_defaults=self.job_defaults,executors=self.executors)
-    def Scheduler_mem(self,func,args = []):
+    def Scheduler_mem(self,func,args = None):
         self.scheduler.add_job(func,'date', run_date=self.run_date,args=[args],id=self.tm,replace_existing=True)
         return self.scheduler
 #并发后台执行

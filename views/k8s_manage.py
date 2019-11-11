@@ -3,9 +3,8 @@ from flask import Flask,Blueprint,g,request,jsonify,render_template,redirect,url
 from module import user_auth,loging,tools,db_idc,db_op,k8s_resource
 from kubernetes import client
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import distinct,desc
+from sqlalchemy import distinct,desc,and_
 import redis
-import time
 from collections import defaultdict
 app = Flask(__name__)
 DB = SQLAlchemy(app)
@@ -108,7 +107,9 @@ def k8s_project_offline(context=None,dm_name=None,offline=None):
             dm_names.extend(names)
             for dm_name in names:
                 vals = db_k8s_deploy.query.with_entities(db_k8s_deploy.project,db_k8s_deploy.context,db_k8s_deploy.war,db_k8s_deploy.update_date,
-                                                         db_k8s_deploy.update_time).filter(db_k8s_deploy.deployment==dm_name[0]).order_by(desc(db_k8s_deploy.id)).all()
+                                                         db_k8s_deploy.update_time).filter(and_(db_k8s_deploy.deployment==dm_name[0],
+                                                                                                db_k8s_deploy.context==context)
+                                                                                           ).order_by(desc(db_k8s_deploy.id)).all()
                 if vals:
                     dm_name.extend(vals[0])
                     vals = db_project.query.with_entities(db_project.business_id).filter(db_project.project == vals[0][0]).limit(1).all()
