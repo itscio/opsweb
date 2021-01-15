@@ -1,6 +1,4 @@
-基于容器化的CI/CD及自动化运维管理平台,由于定制化开发的原因，使用sso方式登录验证、平台配置文件及依赖底层数据源众多,适合具有python二次开发能力的运维爱好者.
-
-项目demo地址(因数据源不全，部分页面无法展示):http://122.51.190.191  登陆账号:guest 密码:guest
+基于容器化的CI/CD及自动化运维管理平台,由于定制化开发的原因，使用sso方式登录验证、平台配置文件及依赖底层数据源众多,无法直接部署运行，需要具有python二次开发能力.
 
 别忘了给个star^_^
 
@@ -127,4 +125,3 @@
       INFLUXDB_PASSWORD = ''
       INFLUXDB_DB = ''
     - 关于启动报Failed to find Flask application or factory in module ‘opweb.conf’报错问题,在最新的版本中已经修复。
-author:wylok@126.com
